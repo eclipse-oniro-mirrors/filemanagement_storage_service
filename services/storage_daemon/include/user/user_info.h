@@ -18,8 +18,27 @@
 
 namespace OHOS {
 namespace StorageDaemon {
-class UserInfo {
+enum UserState {
+    USER_CREAT,
+    USER_START,
+    USER_STOP,
+};
 
+class UserInfo {
+    int32_t userId;
+    UserState state;
+
+    UserInfo(int32_t id, UserState state)
+    {
+        this->userId = id;
+        this->state = state;
+    }
+
+    UserInfo(const UserInfo& userInfo)
+    {
+        this->userId = userInfo.userId;
+        this->state = userInfo.state;
+    }
 };
 } // STORAGE_DAEMON
 } // OHOS

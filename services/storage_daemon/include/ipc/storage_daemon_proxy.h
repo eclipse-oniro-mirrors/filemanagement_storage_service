@@ -22,6 +22,18 @@
 namespace OHOS {
 namespace StorageDaemon {
 class StorageDaemonProxy : public IRemoteProxy<IStorageDaemon> {
+public:
+    virtual void Shutdown() override;
+
+    virtual int32_t Mount(string volId, uint32_t flags) override;
+    virtual int32_t UMount(string volId) override;
+    virtual int32_t Check(string volId) override;
+    virtual int32_t Format(string voldId) override;
+
+    virtual int32_t AddUser(int32_t userId) override;
+    virtual int32_t RemoveUser(int32_t userId) override;
+    virtual int32_t PrepareUserDirs(int32_t userId, uint32_t flags) override;
+    virtual int32_t DestroyUserDirs(int32_t userId, uint32_t flags) override;
 private:
     static inline BrokerDelegator<StorageServiceProxy> delegator_;
 };

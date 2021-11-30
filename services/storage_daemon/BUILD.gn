@@ -12,20 +12,23 @@
 # limitations under the License.
 
 config("storage_daemon_config") {
-    include_dirs = [
-        "include"
-        "//utils/native/lite/include"
-    ]
+  include_dirs = [
+    "include",
+    "//utils/native/base/include",
+  ]
 }
 
 ohos_executable("storage_daemon") {
-    sources = [
-        "main.cpp"
-    ]
+  sources = [ "main.cpp" ]
 
-    configs = [ ":storage_daemon_config"]
+  configs = [ ":storage_daemon_config" ]
 
-    subsystem_name = "storage_manager"
-    part_name = "storage_standard"
-    install_enable = true
+  external_deps = [
+    "hiviewdfx_hilog_native:libhilog",
+    "ipc:ipc_core",
+  ]
+
+  subsystem_name = "storage_manager"
+  part_name = "storage_standard"
+  install_enable = true
 }

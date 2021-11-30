@@ -12,11 +12,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-#include "ipc/storage_damon_stub.h"
+#ifndef STORAGE_DAEMON_UTILS_ERRNO_H
+#define STORAGE_DAEMON_UTILS_ERRNO_H
 
 namespace OHOS {
 namespace StorageDaemon {
-StorageDaemonStub::StorageDaemonStub() {}
-} // StorageDaemon
-} // OHOS
+constexpr int32_t E_OK = 0;
+
+constexpr int32_t E_PERMISSION_DENIED = 1;  // no permission
+constexpr int32_t E_IPC_ERROR = 2;          // ipc error
+constexpr int32_t E_EXIST = 3;              // exist
+}
+}
+
+#endif // STORAGE_DAEMON_UTILS_ERRNO_H

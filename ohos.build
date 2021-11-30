@@ -3,8 +3,8 @@
   "parts": {
     "storage_standard": {
       "module_list": [
-        "//foundation/storage_manager/services/storage_daemon:storage_daemon",
-      ],
+        "//foundation/storage_manager/services/storage_daemon:storage_daemon"
+      ]
     }
   }
 }

@@ -22,6 +22,32 @@ namespace OHOS {
 namespace StorageDaemon {
 class IStorageDaemon : public IRemoteBroker {
 public:
+    enum {
+        SHUTDOWN = 1,
+
+        MOUNT,
+        UMOUNT,
+        CHECK,
+        FORMAT,
+
+        ADD_USER,
+        DEL_USER,
+        PREPARE_USER_DIRS,
+        DESTROY_USER_DIRS,
+    };
+
+    virtual void Shutdown();
+
+    virtual int32_t Mount(string volId, uint32_t flags);
+    virtual int32_t UMount(string volId);
+    virtual int32_t Check(string volId);
+    virtual int32_t Format(string voldId);
+
+    virtual int32_t AddUser(int32_t userId);
+    virtual int32_t RemoveUser(int32_t userId);
+    virtual int32_t PrepareUserDirs(int32_t userId, uint32_t flags);
+    virtual int32_t DestroyUserDirs(int32_t userId, uint32_t flags);
+
     DECLARE_INTERFACE_DESCRIPTOR(u"ohos.StorageDaemon");
 };
 } // STORAGE_DAEMON

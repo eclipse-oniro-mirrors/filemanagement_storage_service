@@ -13,13 +13,57 @@
  * limitations under the License.
  */
 
-#include "ipc/storage_damon.h"
+#include "ipc/storage_daemon.h"
+#include "user/user_manager.h"
 
 namespace OHOS {
 namespace StorageDaemon {
 
 StorageDaemon::StorageDaemon() {}
+int32_t Shutdown()
+{
 
-};
+}
+
+int32_t Mount(string volId)
+{
+
+}
+
+int32_t UMount(string volId)
+{
+
+}
+
+int32_t Check(string volId)
+{
+
+}
+
+int32_t Format(string voldId)
+{
+
+}
+
+int32_t AddUser(int32_t userId)
+{
+    return UserManager::Instance()->AddUser(userId);
+}
+
+int32_t RemoveUser(int32_t userId)
+{
+    return UserManager::Instance()->RemoveUser(userId);
+}
+
+int32_t PrepareUserDirs(int32_t userId, uint32_t flags)
+{
+    return UserManager::Instance()->PrepareUserDirs(userId, flags);
+}
+
+int32_t DestroyUserDirs(int32_t userId, uint32_t flags)
+{
+    return UserManager::Instance()->DestroyUserDirs(userId, flags);
+}
+
 } // StorageDaemon
 } // OHOS
