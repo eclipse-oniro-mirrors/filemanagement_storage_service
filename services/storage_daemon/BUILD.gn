@@ -29,6 +29,8 @@ ohos_executable("storage_daemon") {
     "ipc/src/storage_daemon_proxy.cpp",
 
     "user/src/user_manager.cpp",
+
+    "utils/file_utils.cpp",
   ]
 
   configs = [

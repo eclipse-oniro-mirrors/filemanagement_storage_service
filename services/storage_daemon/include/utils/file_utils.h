@@ -12,19 +12,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef STORAGE_DAEMON_UTILS_ERRNO_H
-#define STORAGE_DAEMON_UTILS_ERRNO_H
+#ifndef STORAGE_DAEMON_UTILS_FILE_UTILS_H
+#define STORAGE_DAEMON_UTILS_FILE_UTILS_H
+#include <stdint.h>
+#include <sys/types.h>
+#include <string>
 
 namespace OHOS {
 namespace StorageDaemon {
-constexpr int32_t E_OK = 0;
-constexpr int32_t E_ERR = -1;
-
-constexpr int32_t E_PERMISSION_DENIED = 1;  // no permission
-constexpr int32_t E_IPC_ERROR = 2;          // ipc error
-constexpr int32_t E_EXIST = 3;              // exist
-constexpr int32_t E_WRONG_TYPE = 4;         // wrong file type
+int32_t PrepareDir(const std::string &path, mode_t mode, uid_t uid, gid_t gid);
+int32_t DestroyDir(const std::string &path);
 }
 }
 
-#endif // STORAGE_DAEMON_UTILS_ERRNO_H
+#endif // STORAGE_DAEMON_UTILS_FILE_UTILS_H

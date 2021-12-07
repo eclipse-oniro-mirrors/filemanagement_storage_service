@@ -25,7 +25,7 @@ namespace OHOS {
 namespace StorageDaemon {
 class UserManager final {
 public:
-    virtual ~UserManager();
+    virtual ~UserManager() = default;
     static UserManager* Instance();
 
     int32_t AddUser(int32_t userId);
@@ -33,7 +33,11 @@ public:
     int32_t PrepareUserDirs(int32_t userId, uint32_t flags);
     int32_t DestroyUserDirs(int32_t userId, uint32_t flags);
 private:
-    UserManager();
+    int32_t PrepareUserEl1Dirs(int32_t userId);
+    int32_t PrepareUserEl2Dirs(int32_t userId);
+    int32_t DestroyUserEl1Dirs(int32_t userId);
+    int32_t DestroyUserEl2Dirs(int32_t userId);
+    UserManager() = default;
     DISABLE_COPY_ASSIGN_MOVE(UserManager);
 
 private:

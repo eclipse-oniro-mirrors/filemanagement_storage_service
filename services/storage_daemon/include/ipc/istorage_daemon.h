@@ -37,6 +37,11 @@ public:
         DESTROY_USER_DIRS,
     };
 
+    enum { // TODO tmp for user
+        CRYPTO_FLAG_EL1 = 1,
+        CRYPTO_FLAG_EL2,
+    };
+
     virtual int32_t Shutdown();
 
     virtual int32_t Mount(std::string volId, uint32_t flags);

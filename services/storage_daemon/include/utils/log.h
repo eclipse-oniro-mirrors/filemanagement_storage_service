@@ -18,7 +18,7 @@
 
 
 #ifndef LOG_DOMAIN
-#define LOG_DOMAIN 0    // 待申请, 0临时调试使用
+#define LOG_DOMAIN 0    // TODO tmp value 0, need request unique LOG_DOMAIN
 #endif
 
 namespace OHOS {
