@@ -25,9 +25,10 @@ enum UserState {
 };
 
 class UserInfo {
+private:
     int32_t userId;
     UserState state;
-
+public:
     UserInfo(int32_t id, UserState state)
     {
         this->userId = id;

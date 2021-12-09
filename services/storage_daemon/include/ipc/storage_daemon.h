@@ -17,12 +17,13 @@
 #define OHOS_STORAGE_DAEMON_STORAGE_DAEMON_H
 
 #include "ipc/storage_daemon_stub.h"
+#include "utils/errno.h"
 
 namespace OHOS {
 namespace StorageDaemon {
 class StorageDaemon : StorageDaemonStub {
 public:
-    virtual void Shutdown() override;
+    virtual int32_t Shutdown() override;
 
     virtual int32_t Mount(string volId, uint32_t flags) override;
     virtual int32_t UMount(string volId) override;

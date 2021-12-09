@@ -17,6 +17,8 @@
 #include "utils/errno.h"
 #include "utils/log.h"
 
+namespace OHOS {
+namespace StorageDaemon {
 UserManager::UserManager()
 {}
 
@@ -35,7 +37,7 @@ int32_t UserManager::AddUser(int32_t userId)
         return E_EXIST;
     }
 
-    users.insert({ userInfo, UserInfo(userId, USER_CREAT) };
+    users.insert({ userId, UserInfo(userId, USER_CREAT) });
     return E_OK;
 }
 
@@ -48,10 +50,12 @@ int32_t UserManager::RemoveUser(int32_t userId)
 
 int32_t UserManager::PrepareUserDirs(int32_t userId, uint32_t flags)
 {
-
+    return E_OK;
 }
 
 int32_t UserManager::DestroyUserDirs(int32_t userId, uint32_t flags)
 {
-
+    return E_OK;
 }
+} // StorageDaemon
+} // OHOS

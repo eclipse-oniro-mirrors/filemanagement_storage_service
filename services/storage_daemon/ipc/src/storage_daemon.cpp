@@ -19,30 +19,30 @@
 namespace OHOS {
 namespace StorageDaemon {
 
-StorageDaemon::StorageDaemon() {}
+// StorageDaemon::StorageDaemon() {}
 int32_t Shutdown()
 {
-
+    return E_OK;
 }
 
 int32_t Mount(string volId)
 {
-
+    return E_OK;
 }
 
 int32_t UMount(string volId)
 {
-
+    return E_OK;
 }
 
 int32_t Check(string volId)
 {
-
+    return E_OK;
 }
 
 int32_t Format(string voldId)
 {
-
+    return E_OK;
 }
 
 int32_t AddUser(int32_t userId)

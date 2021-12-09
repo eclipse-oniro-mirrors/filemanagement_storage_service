@@ -16,9 +16,17 @@
 #ifndef OHOS_STORAGE_DAEMON_USER_MANAGER_H
 #define OHOS_STORAGE_DAEMON_USER_MANAGER_H
 
+#include <unordered_map> 
+
 #include "user/user_info.h"
 #include "nocopyable.h"
 
+#define DISABLE_COPY_ASSIGN_MOVE(ClassName) \
+    ClassName(const ClassName &) = delete; \
+    ClassName(ClassName &&) = delete; \
+    ClassName& operator=(const ClassName &) = delete; \
+    ClassName& operator=(ClassName &&) = delete
+    
 namespace OHOS {
 namespace StorageDaemon {
 class UserManager final {
@@ -36,7 +44,7 @@ private:
 
 private:
     static UserManager* instance;
-    std::unorded_map<int32_t, UserInfo> users;
+    std::unordered_map<int32_t, UserInfo> users;
 };
 } // STORAGE_DAEMON
 } // OHOS

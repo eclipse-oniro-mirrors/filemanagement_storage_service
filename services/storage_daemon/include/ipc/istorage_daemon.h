@@ -16,10 +16,13 @@
 #ifndef OHOS_STORAGE_DAEMON_ISTORAGE_DAEMON_H
 #define OHOS_STORAGE_DAEMON_ISTORAGE_DAEMON_H
 
+#include <string>
+
 #include "iremote_broker.h"
 
 namespace OHOS {
 namespace StorageDaemon {
+using namespace std;
 class IStorageDaemon : public IRemoteBroker {
 public:
     enum {
@@ -36,7 +39,7 @@ public:
         DESTROY_USER_DIRS,
     };
 
-    virtual void Shutdown();
+    virtual int32_t Shutdown();
 
     virtual int32_t Mount(string volId, uint32_t flags);
     virtual int32_t UMount(string volId);

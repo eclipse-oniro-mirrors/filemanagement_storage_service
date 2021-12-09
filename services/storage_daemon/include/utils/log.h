@@ -22,7 +22,7 @@
 #endif
 
 namespace OHOS {
-namespace Storage_Daemon {
+namespace StorageDaemon {
 
 static constexpr OHOS::HiviewDFX::HiLogLabel LOG_LABEL = { LOG_CORE, LOG_DOMAIN, "StorageDaemon" };
 
@@ -35,7 +35,7 @@ static constexpr OHOS::HiviewDFX::HiLogLabel LOG_LABEL = { LOG_CORE, LOG_DOMAIN,
 #define LOGW(fmt, ...) PRINT_LOG(Warn, fmt, ##__VA_ARGS__)
 #define LOGE(fmt, ...) PRINT_LOG(Error, fmt, ##__VA_ARGS__)
 #define LOGF(fmt, ...) PRINT_LOG(Fatal, fmt, ##__VA_ARGS__)
-}
-}
+} // StorageDaemon
+} // OHOS
 
 #endif // STORAGE_DAEMON_UTILS_LOG_H

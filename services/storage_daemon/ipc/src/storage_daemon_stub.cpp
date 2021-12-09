@@ -15,6 +15,7 @@
 
 #include "ipc/storage_daemon_stub.h"
 #include "utils/errno.h"
+#include "utils/log.h"
 
 namespace OHOS {
 namespace StorageDaemon {
@@ -31,12 +32,12 @@ int32_t StorageDaemonStub::OnRemoteRequest(uint32_t code, MessageParcel &data,
         case SHUTDOWN: err = HandleShutdown(); break;
 
         case ADD_USER: err = HandleAddUser(data, reply); break;
-        case REMOVE_USER: err = HandleRemoveUser(data, reply); break;
+        case DEL_USER: err = HandleRemoveUser(data, reply); break;
         case PREPARE_USER_DIRS: err = HandlePrepareUserDirs(data, reply); break;
         case DESTROY_USER_DIRS: err = HandleDestroyUserDirs(data, reply); break;
         default: {
             LOGI(" use IPCObjectStub default OnRemoteRequest");
-            errCode = IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+            err = IPCObjectStub::OnRemoteRequest(code, data, reply, option);
             break;
         }
     }
@@ -53,22 +54,22 @@ int32_t StorageDaemonStub::HandleShutdown()
 
 int32_t StorageDaemonStub::HandleMount(MessageParcel &data, MessageParcel &reply)
 {
-
+    return E_OK;
 }
 
 int32_t StorageDaemonStub::HandleUMount(MessageParcel &data, MessageParcel &reply)
 {
-
+    return E_OK;
 }
 
 int32_t StorageDaemonStub::HandleCheck(MessageParcel &data, MessageParcel &reply)
 {
-
+    return E_OK;
 }
 
 int32_t StorageDaemonStub::HandleFormat(MessageParcel &data, MessageParcel &reply)
 {
-
+    return E_OK;
 }
 
 int32_t StorageDaemonStub::HandleAddUser(MessageParcel &data, MessageParcel &reply)
