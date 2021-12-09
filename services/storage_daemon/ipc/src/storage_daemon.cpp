@@ -15,6 +15,7 @@
 
 #include "ipc/storage_daemon.h"
 #include "user/user_manager.h"
+#include "utils/errno.h"
 
 namespace OHOS {
 namespace StorageDaemon {
@@ -25,22 +26,22 @@ int32_t Shutdown()
     return E_OK;
 }
 
-int32_t Mount(string volId)
+int32_t Mount(std::string volId)
 {
     return E_OK;
 }
 
-int32_t UMount(string volId)
+int32_t UMount(std::string volId)
 {
     return E_OK;
 }
 
-int32_t Check(string volId)
+int32_t Check(std::string volId)
 {
     return E_OK;
 }
 
-int32_t Format(string voldId)
+int32_t Format(std::string voldId)
 {
     return E_OK;
 }

@@ -16,7 +16,7 @@
 #ifndef OHOS_STORAGE_DAEMON_DISK_MANAGER_H
 #define OHOS_STORAGE_DAEMON_DISK_MANAGER_H
 
-#include "nocopyable.h"
+#include "utils/nocopyable.h"
 
 namespace OHOS {
 namespace StorageDaemon {

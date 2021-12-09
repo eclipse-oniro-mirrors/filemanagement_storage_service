@@ -12,23 +12,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-#ifndef OHOS_STORAGE_DAEMON_VOLUME_MANAGER_H
-#define OHOS_STORAGE_DAEMON_VOLUME_MANAGER_H
-
-#include "utils/nocopyable.h"
+#ifndef STORAGE_DAEMON_UTILS_NO_COPYABLE_H
+#define STORAGE_DAEMON_UTILS_NO_COPYABLE_H
 
 namespace OHOS {
 namespace StorageDaemon {
-class VolumeManager final {
-public:
-    virtual ~VolumeManager();
-
-private:
-    VolumeManager();
-    DISABLE_COPY_ASSIGN_MOVE(VolumeManager);
-};
+#define DISABLE_COPY_ASSIGN_MOVE(ClassName) \
+    ClassName(const ClassName &) = delete; \
+    ClassName(ClassName &&) = delete; \
+    ClassName& operator=(const ClassName &) = delete; \
+    ClassName& operator=(ClassName &&) = delete
 } // STORAGE_DAEMON
 } // OHOS
-
-#endif // OHOS_STORAGE_DAEMON_VOLUME_MANAGER_H
+#endif // STORAGE_DAEMON_UTILS_NO_COPYABLE_H

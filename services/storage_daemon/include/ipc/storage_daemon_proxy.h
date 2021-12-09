@@ -26,10 +26,10 @@ public:
     StorageDaemonProxy(const sptr<IRemoteObject> &impl);
     virtual int32_t Shutdown() override;
 
-    virtual int32_t Mount(string volId, uint32_t flags) override;
-    virtual int32_t UMount(string volId) override;
-    virtual int32_t Check(string volId) override;
-    virtual int32_t Format(string voldId) override;
+    virtual int32_t Mount(std::string volId, uint32_t flags) override;
+    virtual int32_t UMount(std::string volId) override;
+    virtual int32_t Check(std::string volId) override;
+    virtual int32_t Format(std::string voldId) override;
 
     virtual int32_t AddUser(int32_t userId) override;
     virtual int32_t RemoveUser(int32_t userId) override;

@@ -16,13 +16,11 @@
 #ifndef OHOS_STORAGE_DAEMON_ISTORAGE_DAEMON_H
 #define OHOS_STORAGE_DAEMON_ISTORAGE_DAEMON_H
 
-#include <string>
-
 #include "iremote_broker.h"
+#include <string>
 
 namespace OHOS {
 namespace StorageDaemon {
-using namespace std;
 class IStorageDaemon : public IRemoteBroker {
 public:
     enum {
@@ -34,17 +32,17 @@ public:
         FORMAT,
 
         ADD_USER,
-        DEL_USER,
+        REMOVE_USER,
         PREPARE_USER_DIRS,
         DESTROY_USER_DIRS,
     };
 
     virtual int32_t Shutdown();
 
-    virtual int32_t Mount(string volId, uint32_t flags);
-    virtual int32_t UMount(string volId);
-    virtual int32_t Check(string volId);
-    virtual int32_t Format(string voldId);
+    virtual int32_t Mount(std::string volId, uint32_t flags);
+    virtual int32_t UMount(std::string volId);
+    virtual int32_t Check(std::string volId);
+    virtual int32_t Format(std::string voldId);
 
     virtual int32_t AddUser(int32_t userId);
     virtual int32_t RemoveUser(int32_t userId);

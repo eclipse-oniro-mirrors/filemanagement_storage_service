@@ -32,22 +32,22 @@ int32_t StorageDaemonProxy::Shutdown()
     return Remote()->SendRequest(SHUTDOWN, data, reply, option);
 }
 
-int32_t StorageDaemonProxy::Mount(string volId, uint32_t flags)
+int32_t StorageDaemonProxy::Mount(std::string volId, uint32_t flags)
 {
     return E_OK;
 }
 
-int32_t StorageDaemonProxy::UMount(string volId)
+int32_t StorageDaemonProxy::UMount(std::string volId)
 {
     return E_OK;
 }
 
-int32_t StorageDaemonProxy::Check(string volId)
+int32_t StorageDaemonProxy::Check(std::string volId)
 {
     return E_OK;
 }
 
-int32_t StorageDaemonProxy::Format(string voldId)
+int32_t StorageDaemonProxy::Format(std::string voldId)
 {
     return E_OK;
 }
@@ -81,7 +81,7 @@ int32_t StorageDaemonProxy::RemoveUser(int32_t userId)
     if (!data.WriteInt32(userId)) {
         return E_IPC_ERROR;
     }
-    int err = Remote()->SendRequest(DEL_USER, data, reply, option);
+    int err = Remote()->SendRequest(REMOVE_USER, data, reply, option);
     if (err != E_OK) {
         return E_IPC_ERROR;
     }

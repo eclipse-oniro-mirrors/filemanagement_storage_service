@@ -19,14 +19,8 @@
 #include <unordered_map> 
 
 #include "user/user_info.h"
-#include "nocopyable.h"
+#include "utils/nocopyable.h"
 
-#define DISABLE_COPY_ASSIGN_MOVE(ClassName) \
-    ClassName(const ClassName &) = delete; \
-    ClassName(ClassName &&) = delete; \
-    ClassName& operator=(const ClassName &) = delete; \
-    ClassName& operator=(ClassName &&) = delete
-    
 namespace OHOS {
 namespace StorageDaemon {
 class UserManager final {
