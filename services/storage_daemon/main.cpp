@@ -13,7 +13,27 @@
  * limitations under the License.
  */
 
+#include "ipc/storage_daemon.h"
+#include "ipc_skeleton.h"
+#include "iservice_registry.h"
+
+using namespace OHOS;
+
 int main()
 {
+    //TODO define ID in system_ability_definition.h
+    int said = 0;
+
+    do {
+        auto samgr = SystemAbilityManagerClient::GetInstance().GetSystemAbilityManager();
+        if (samgr != nullptr) {
+            sptr<StorageDaemon::StorageDaemon> sd = new StorageDaemon::StorageDaemon();
+            samgr->AddSystemAbility(said, sd);
+            break;
+        }
+    } while (true);
+
+    IPCSkeleton::JoinWorkThread();
+
     return 0;
 }

@@ -46,22 +46,46 @@ int32_t StorageDaemon::Format(std::string voldId)
 
 int32_t StorageDaemon::AddUser(int32_t userId)
 {
-    return UserManager::Instance()->AddUser(userId);
+    int32_t ret;
+
+    (void)pthread_mutex_lock(&user_lock_);
+    ret = UserManager::Instance()->AddUser(userId);
+    (void)pthread_mutex_unlock(&user_lock_);
+
+    return ret;
 }
 
 int32_t StorageDaemon::RemoveUser(int32_t userId)
 {
-    return UserManager::Instance()->RemoveUser(userId);
+    int32_t ret;
+
+    (void)pthread_mutex_lock(&user_lock_);
+    ret = UserManager::Instance()->RemoveUser(userId);
+    (void)pthread_mutex_unlock(&user_lock_);
+
+    return ret;
 }
 
 int32_t StorageDaemon::PrepareUserDirs(int32_t userId, uint32_t flags)
 {
-    return UserManager::Instance()->PrepareUserDirs(userId, flags);
+    int32_t ret;
+
+    (void)pthread_mutex_lock(&user_lock_);
+    ret = UserManager::Instance()->PrepareUserDirs(userId, flags);
+    (void)pthread_mutex_unlock(&user_lock_);
+
+    return ret;
 }
 
 int32_t StorageDaemon::DestroyUserDirs(int32_t userId, uint32_t flags)
 {
-    return UserManager::Instance()->DestroyUserDirs(userId, flags);
+    int32_t ret;
+
+    (void)pthread_mutex_lock(&user_lock_);
+    ret = UserManager::Instance()->DestroyUserDirs(userId, flags);
+    (void)pthread_mutex_unlock(&user_lock_);
+
+    return ret;
 }
 
 //TODO add mutex_lock
