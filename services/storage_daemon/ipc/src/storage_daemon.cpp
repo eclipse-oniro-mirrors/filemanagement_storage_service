@@ -64,5 +64,29 @@ int32_t StorageDaemon::DestroyUserDirs(int32_t userId, uint32_t flags)
     return UserManager::Instance()->DestroyUserDirs(userId, flags);
 }
 
-} // StorageDaemon
+//TODO add mutex_lock
+int32_t StorageDaemon::StartUser(int32_t userId)
+{
+    int32_t ret;
+
+    (void)pthread_mutex_lock(&user_lock_);
+    ret = UserManager::Instance()->StartUser(userId);
+    (void)pthread_mutex_unlock(&user_lock_);
+
+    return ret;
+}
+
+
+int32_t StorageDaemon::StopUser(int32_t userId)
+{
+    int32_t ret;
+
+    (void)pthread_mutex_lock(&user_lock_);
+    ret = UserManager::Instance()->StopUser(userId);
+    (void)pthread_mutex_unlock(&user_lock_);
+
+    return ret;
+}
+
+ // StorageDaemon
 } // OHOS

@@ -32,6 +32,8 @@ public:
     int32_t RemoveUser(int32_t userId);
     int32_t PrepareUserDirs(int32_t userId, uint32_t flags);
     int32_t DestroyUserDirs(int32_t userId, uint32_t flags);
+    int32_t StartUser(int32_t userId);
+    int32_t StopUser(int32_t userId);
 private:
     int32_t PrepareUserEl1Dirs(int32_t userId);
     int32_t PrepareUserEl2Dirs(int32_t userId);

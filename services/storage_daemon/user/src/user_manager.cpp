@@ -19,6 +19,7 @@
 #include "utils/file_utils.h"
 #include "utils/log.h"
 #include "utils/user_path.h"
+#include <sys/mount.h>
 
 namespace OHOS {
 namespace StorageDaemon {
@@ -52,6 +53,26 @@ int32_t UserManager::RemoveUser(int32_t userId)
     LOGI("remove user %{public}d", userId);
 
     users_.erase(userId);
+
+    return E_OK;
+}
+
+int32_t UserManager::StartUser(int32_t userId)
+{
+    LOGI("start user %{public}d", userId);
+
+    //TODO get_property: hmdfs
+    mount(dir1, dir2, nullptr, MS_BIND, nullptr);
+
+    return E_OK;
+}
+
+int32_t UserManager::StopUser(int32_t userId)
+{
+    LOGI("stop user %{public}d", userId);
+
+    //TODO get_property: hmdfs
+    umount(dir1);
 
     return E_OK;
 }
