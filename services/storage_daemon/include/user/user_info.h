@@ -26,19 +26,19 @@ enum UserState {
 
 class UserInfo {
 private:
-    int32_t userId;
-    UserState state;
+    int32_t userId_;
+    UserState state_;
 public:
     UserInfo(int32_t id, UserState state)
     {
-        this->userId = id;
-        this->state = state;
+        this->userId_ = id;
+        this->state_ = state;
     }
 
     UserInfo(const UserInfo& userInfo)
     {
-        this->userId = userInfo.userId;
-        this->state = userInfo.state;
+        this->userId_ = userInfo.userId_;
+        this->state_ = userInfo.state_;
     }
 };
 } // STORAGE_DAEMON

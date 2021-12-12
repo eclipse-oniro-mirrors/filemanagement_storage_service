@@ -41,8 +41,8 @@ private:
     DISABLE_COPY_ASSIGN_MOVE(UserManager);
 
 private:
-    static UserManager* instance;
-    std::unordered_map<int32_t, UserInfo> users;
+    static UserManager* instance_;
+    std::unordered_map<int32_t, UserInfo> users_;
 };
 } // STORAGE_DAEMON
 } // OHOS

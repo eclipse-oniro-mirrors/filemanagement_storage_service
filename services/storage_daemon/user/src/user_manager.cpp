@@ -26,27 +26,27 @@ using namespace std;
 
 UserManager* UserManager::Instance()
 {
-    if (instance == nullptr) {
-        instance = new UserManager();
+    if (instance_ == nullptr) {
+        instance_ = new UserManager();
     }
-    return instance;
+    return instance_;
 }
 
 int32_t UserManager::AddUser(int32_t userId)
 {
     LOGI("add user %{public}d", userId);
-    if (users.count(userId) != 0) {
+    if (users_.count(userId) != 0) {
         return E_EXIST;
     }
 
-    users.insert({ userId, UserInfo(userId, USER_CREAT) });
+    users_.insert({ userId, UserInfo(userId, USER_CREAT) });
     return E_OK;
 }
 
 int32_t UserManager::RemoveUser(int32_t userId)
 {
     LOGI("remove user %{public}d", userId);
-    users.erase(userId);
+    users_.erase(userId);
     return E_OK;
 }
 
