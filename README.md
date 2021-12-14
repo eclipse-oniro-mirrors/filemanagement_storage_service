@@ -18,12 +18,12 @@ StorageManager部件提供注入插拔卡使用、文件加解密、卷的查询
 #### 目录
 ```
 /foundation/storage/storage_manager
-│── interface               *//* *# 接口声明*
-│  ├── innerkits            *//* *# 对内接口声明*
-│  └── kits                 *//* *# 对外接口声明*
-│── services                *//* *# 服务实现*
-│  ├── storage_manager      *//* *# 非常驻manager服务实现*
-│  └── storage_daemon       *//* *# 常驻daemon服务实现*
+│── interface                   # 接口声明
+│  ├── innerkits                # 对内接口声明
+│  └── kits                     # 对外接口声明
+│── services                    # 服务实现
+│  ├── storage_manager          # 非常驻manager服务实现
+│  └── storage_daemon           # 常驻daemon服务实现
 ```
 
 #### 约束
