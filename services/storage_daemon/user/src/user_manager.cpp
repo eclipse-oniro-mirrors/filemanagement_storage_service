@@ -61,8 +61,25 @@ int32_t UserManager::StartUser(int32_t userId)
 {
     LOGI("start user %{public}d", userId);
 
-    //TODO get_property: hmdfs
+    auto iterator = users_.find(userId);
+    if (iterator == users_.end()) {
+        LOGI("the user %{public}d doesn't exist", userId);
+        return E_ERR;
+    }
+
+    UserInfo& user = iterator->second;
+    if (user.GetState() != USER_PREPARE) {
+        LOGI("the user's state %{public}d is invalid", iterator->second.GetState());
+        return E_ERR;
+    }
+
+    /*
+     * TODO get_property: hmdfs
+     * assume non-dfs here
+     */
     mount(dir1, dir2, nullptr, MS_BIND, nullptr);
+
+    user.SetState(USER_START);
 
     return E_OK;
 }
@@ -71,8 +88,22 @@ int32_t UserManager::StopUser(int32_t userId)
 {
     LOGI("stop user %{public}d", userId);
 
+    auto iterator = users_.find(userId);
+    if (iterator == users_.end()) {
+        LOGI("the user %{public}d doesn't exist", userId);
+        return E_ERR;
+    }
+
+    UserInfo& user = iterator->second;
+    if (user.GetState() != USER_START) {
+        LOGI("the user's state %{public}d is invalid", iterator->second.GetState());
+        return E_ERR;
+    }
+
     //TODO get_property: hmdfs
     umount(dir1);
+
+    user.SetState(USER_PREPARE);
 
     return E_OK;
 }
@@ -80,6 +111,18 @@ int32_t UserManager::StopUser(int32_t userId)
 int32_t UserManager::PrepareUserDirs(int32_t userId, uint32_t flags)
 {
     LOGI("prepare user dirs for %{public}d, flags %{public}u", userId, flags);
+
+    auto iterator = users_.find(userId);
+    if (iterator == users_.end()) {
+        LOGI("the user %{public}d doesn't exist", userId);
+        return E_ERR;
+    }
+
+    UserInfo& user = iterator->second;
+    if (user.GetState() != USER_CREAT) {
+        LOGI("the user's state %{public}d is invalid", iterator->second.GetState());
+        return E_ERR;
+    }
 
     int err = E_OK;
     if (flags & IStorageDaemon::CRYPTO_FLAG_EL1) {
@@ -96,12 +139,26 @@ int32_t UserManager::PrepareUserDirs(int32_t userId, uint32_t flags)
         }
     }
 
+    user.SetState(USER_PREPARE);
+
     return err;
 }
 
 int32_t UserManager::DestroyUserDirs(int32_t userId, uint32_t flags)
 {
     LOGI("destroy user dirs for %{public}d, flags %{public}u", userId, flags);
+
+    auto iterator = users_.find(userId);
+    if (iterator == users_.end()) {
+        LOGI("the user %{public}d doesn't exist", userId);
+        return E_ERR;
+    }
+
+    UserInfo& user = iterator->second;
+    if (user.GetState() != USER_PREPARE) {
+        LOGI("the user's state %{public}d is invalid", iterator->second.GetState());
+        return E_ERR;
+    }
 
     int err = E_OK;
     if (flags & IStorageDaemon::CRYPTO_FLAG_EL1) {
@@ -117,6 +174,8 @@ int32_t UserManager::DestroyUserDirs(int32_t userId, uint32_t flags)
             LOGE("failed to destroy user el2 dirs for userid %{public}d", userId);
         }
     }
+
+    user.SetState(USER_CREAT);
 
     return err;
 }

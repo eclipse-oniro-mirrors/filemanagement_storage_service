@@ -20,11 +20,15 @@ namespace OHOS {
 namespace StorageDaemon {
 enum UserState {
     USER_CREAT,
+    USER_PREPARE,
     USER_START,
-    USER_STOP,
 };
 
 class UserInfo {
+private:
+    int32_t userId_;
+    UserState state_;
+
 public:
     UserInfo(int32_t id, UserState state)
     {
@@ -38,9 +42,15 @@ public:
         this->state_ = userInfo.state_;
     }
 
-private:
-    int32_t userId_;
-    UserState state_;
+    UserState GetState()
+    {
+        return this->state_;
+    }
+
+    void SetState(UserState state)
+    {
+        this->state_ = state;
+    }
 };
 } // STORAGE_DAEMON
 } // OHOS
