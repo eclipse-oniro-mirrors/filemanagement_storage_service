@@ -19,6 +19,10 @@
 
 namespace OHOS {
 namespace StorageDaemon {
+<<<<<<< HEAD
+=======
+
+>>>>>>> pthread_mutex_lock -> lock_guard
 int32_t StorageDaemon::Shutdown()
 {
     return E_OK;
@@ -46,71 +50,41 @@ int32_t StorageDaemon::Format(std::string voldId)
 
 int32_t StorageDaemon::AddUser(int32_t userId)
 {
-    int32_t ret;
-
-    (void)pthread_mutex_lock(&user_lock_);
-    ret = UserManager::Instance()->AddUser(userId);
-    (void)pthread_mutex_unlock(&user_lock_);
-
-    return ret;
+    std::lock_guard<std::mutex> lock(mutex_);
+    return UserManager::Instance()->AddUser(userId);
 }
 
 int32_t StorageDaemon::RemoveUser(int32_t userId)
 {
-    int32_t ret;
-
-    (void)pthread_mutex_lock(&user_lock_);
-    ret = UserManager::Instance()->RemoveUser(userId);
-    (void)pthread_mutex_unlock(&user_lock_);
-
-    return ret;
+    std::lock_guard<std::mutex> lock(mutex_);
+    return UserManager::Instance()->RemoveUser(userId);
 }
 
 int32_t StorageDaemon::PrepareUserDirs(int32_t userId, uint32_t flags)
 {
-    int32_t ret;
-
-    (void)pthread_mutex_lock(&user_lock_);
-    ret = UserManager::Instance()->PrepareUserDirs(userId, flags);
-    (void)pthread_mutex_unlock(&user_lock_);
-
-    return ret;
+    std::lock_guard<std::mutex> lock(mutex_);
+    return UserManager::Instance()->PrepareUserDirs(userId, flags);
 }
 
 int32_t StorageDaemon::DestroyUserDirs(int32_t userId, uint32_t flags)
 {
-    int32_t ret;
-
-    (void)pthread_mutex_lock(&user_lock_);
-    ret = UserManager::Instance()->DestroyUserDirs(userId, flags);
-    (void)pthread_mutex_unlock(&user_lock_);
-
-    return ret;
+    std::lock_guard<std::mutex> lock(mutex_);
+    return UserManager::Instance()->DestroyUserDirs(userId, flags);
 }
 
 //TODO add mutex_lock
 int32_t StorageDaemon::StartUser(int32_t userId)
 {
-    int32_t ret;
-
-    (void)pthread_mutex_lock(&user_lock_);
-    ret = UserManager::Instance()->StartUser(userId);
-    (void)pthread_mutex_unlock(&user_lock_);
-
-    return ret;
+    std::lock_guard<std::mutex> lock(mutex_);
+    return UserManager::Instance()->StartUser(userId);
 }
 
 
 int32_t StorageDaemon::StopUser(int32_t userId)
 {
-    int32_t ret;
-
-    (void)pthread_mutex_lock(&user_lock_);
-    ret = UserManager::Instance()->StopUser(userId);
-    (void)pthread_mutex_unlock(&user_lock_);
-
-    return ret;
+    std::lock_guard<std::mutex> lock(mutex_);
+    return UserManager::Instance()->StopUser(userId);
 }
 
- // StorageDaemon
+} // StorageDaemon
 } // OHOS

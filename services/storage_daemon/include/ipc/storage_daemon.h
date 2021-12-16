@@ -17,17 +17,19 @@
 #define OHOS_STORAGE_DAEMON_STORAGE_DAEMON_H
 
 #include "ipc/storage_daemon_stub.h"
-#include "pthread.h"
+#include <mutex>
 
 namespace OHOS {
 namespace StorageDaemon {
 class StorageDaemon : public StorageDaemonStub {
 public:
     StorageDaemon() = default;
+<<<<<<< HEAD
     virtual ~StorageDaemon() = default;
+=======
+>>>>>>> pthread_mutex_lock -> lock_guard
 
     virtual int32_t Shutdown() override;
-
     virtual int32_t Mount(std::string volId, uint32_t flags) override;
     virtual int32_t UMount(std::string volId) override;
     virtual int32_t Check(std::string volId) override;
@@ -41,8 +43,7 @@ public:
     virtual int32_t DestroyUserDirs(int32_t userId, uint32_t flags) override;
 
 private:
-    pthread_mutex_t user_lock_ = PTHREAD_MUTEX_INITIALIZER;
-    pthread_mutex_t volume_lock_ = PTHREAD_MUTEX_INITIALIZER;
+    std::mutex mutex_;
 };
 } // StorageDaemon
 } // OHOS
