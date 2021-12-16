@@ -46,6 +46,11 @@ const std::string DATA_SERVICE_EL2 = DATA_SERVICE + "el2/";
 // vendor data path
 const std::string DATA_VENDOR_EL1 = DATA_VENDOR + "el1/";
 const std::string DATA_VENDOR_EL2 = DATA_VENDOR + "el2/";
+
+// mount path
+const std::string HMDFS_FILES = "/hmdfs/files/";
+const std::string STORAGE_MEDIA = "/storage/media/";
+const std::string LOCAL = "/local/";
 }
 }
 #endif // STORAGE_DAEMON_UTILS_USER_PATH_H

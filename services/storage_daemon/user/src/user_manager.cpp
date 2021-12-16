@@ -77,7 +77,10 @@ int32_t UserManager::StartUser(int32_t userId)
      * TODO get_property: hmdfs
      * assume non-dfs here
      */
-    mount(dir1, dir2, nullptr, MS_BIND, nullptr);
+    // TODO check whether or not the path exists or not
+    std::string source = DATA_SERVICE_EL2 + to_string(userId) + HMDFS_FILES;
+    std::string target = STORAGE_MEDIA + to_string(userId) + LOCAL;
+    mount(source.c_str(), target.c_str(), nullptr, MS_BIND, nullptr);
 
     user.SetState(USER_START);
 
@@ -100,8 +103,10 @@ int32_t UserManager::StopUser(int32_t userId)
         return E_ERR;
     }
 
-    //TODO get_property: hmdfs
-    umount(dir1);
+    // TODO get_property: hmdfs
+    // TODO check whether path exists or not
+    std::string target = STORAGE_MEDIA + to_string(userId) + LOCAL;
+    umount(target.c_str());
 
     user.SetState(USER_PREPARE);
 
@@ -207,6 +212,15 @@ int32_t UserManager::PrepareUserEl2Dirs(int32_t userId)
         if ((err = PrepareDir(dir + to_string(userId), info.mode, info.uid, info.gid))) {
             return err;
         }
+    }
+
+    // TODO get_property: hmdfs
+    if ((err = PrepareDir(DATA_SERVICE_EL2 + to_string(userId) + HMDFS_FILES, 0711, OID_ROOT, OID_ROOT))) {
+        return err;
+    }
+
+    if ((err = PrepareDir(STORAGE_MEDIA + to_string(userId) + LOCAL, 0711, OID_ROOT, OID_ROOT))) {
+        return err;
     }
 
     return err;
