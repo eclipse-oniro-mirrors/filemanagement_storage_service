@@ -19,10 +19,6 @@
 
 namespace OHOS {
 namespace StorageDaemon {
-<<<<<<< HEAD
-=======
-
->>>>>>> pthread_mutex_lock -> lock_guard
 int32_t StorageDaemon::Shutdown()
 {
     return E_OK;
