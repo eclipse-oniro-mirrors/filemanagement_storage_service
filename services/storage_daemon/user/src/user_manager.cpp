@@ -77,10 +77,13 @@ int32_t UserManager::StartUser(int32_t userId)
      * TODO get_property: hmdfs
      * assume non-dfs here
      */
-    // TODO check whether or not the path exists or not
     std::string source = DATA_SERVICE_EL2 + to_string(userId) + HMDFS_FILES;
     std::string target = STORAGE_MEDIA + to_string(userId) + LOCAL;
-    mount(source.c_str(), target.c_str(), nullptr, MS_BIND, nullptr);
+    int err = mount(source.c_str(), target.c_str(), nullptr, MS_BIND, nullptr);
+    if (err) {
+        LOGI("fail to mount, err %{public}d", err);
+        return err;
+    }
 
     user.SetState(USER_START);
 
@@ -104,9 +107,12 @@ int32_t UserManager::StopUser(int32_t userId)
     }
 
     // TODO get_property: hmdfs
-    // TODO check whether path exists or not
     std::string target = STORAGE_MEDIA + to_string(userId) + LOCAL;
-    umount(target.c_str());
+    int err = umount(target.c_str());
+    if (err) {
+        LOGI("fail to mount, err %{public}d", err);
+        return err;
+    }
 
     user.SetState(USER_PREPARE);
 
