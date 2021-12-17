@@ -17,13 +17,12 @@ config("storage_daemon_config") {
   include_dirs = [
     "include",
     "//utils/native/base/include",
+    "//foundation/distributedschedule/samgr/interfaces/innerkits/samgr_proxy/include"
   ]
 }
 
 ohos_executable("storage_daemon") {
   sources = [
-    "main.cpp",
-
     "ipc/src/storage_daemon.cpp",
     "ipc/src/storage_daemon_stub.cpp",
     "ipc/src/storage_daemon_proxy.cpp",
@@ -31,6 +30,8 @@ ohos_executable("storage_daemon") {
     "user/src/user_manager.cpp",
 
     "utils/file_utils.cpp",
+
+    "main.cpp",
   ]
 
   configs = [
@@ -44,6 +45,7 @@ ohos_executable("storage_daemon") {
   external_deps = [
     "hiviewdfx_hilog_native:libhilog",
     "ipc:ipc_core",
+    "samgr_standard:samgr_proxy"
   ]
 
   subsystem_name = "storage_manager"

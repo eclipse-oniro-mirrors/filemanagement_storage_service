@@ -24,10 +24,7 @@ namespace StorageDaemon {
 class StorageDaemon : public StorageDaemonStub {
 public:
     StorageDaemon() = default;
-<<<<<<< HEAD
     virtual ~StorageDaemon() = default;
-=======
->>>>>>> pthread_mutex_lock -> lock_guard
 
     virtual int32_t Shutdown() override;
     virtual int32_t Mount(std::string volId, uint32_t flags) override;
