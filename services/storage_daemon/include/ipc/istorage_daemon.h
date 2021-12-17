@@ -42,17 +42,17 @@ public:
         CRYPTO_FLAG_EL2,
     };
 
-    virtual int32_t Shutdown();
+    virtual int32_t Shutdown() = 0;
 
-    virtual int32_t Mount(std::string volId, uint32_t flags);
-    virtual int32_t UMount(std::string volId);
-    virtual int32_t Check(std::string volId);
-    virtual int32_t Format(std::string voldId);
+    virtual int32_t Mount(std::string volId, uint32_t flags) = 0;
+    virtual int32_t UMount(std::string volId) = 0;
+    virtual int32_t Check(std::string volId) = 0;
+    virtual int32_t Format(std::string voldId) = 0;
 
-    virtual int32_t AddUser(int32_t userId);
-    virtual int32_t RemoveUser(int32_t userId);
-    virtual int32_t PrepareUserDirs(int32_t userId, uint32_t flags);
-    virtual int32_t DestroyUserDirs(int32_t userId, uint32_t flags);
+    virtual int32_t AddUser(int32_t userId) = 0;
+    virtual int32_t RemoveUser(int32_t userId) = 0;
+    virtual int32_t PrepareUserDirs(int32_t userId, uint32_t flags) = 0;
+    virtual int32_t DestroyUserDirs(int32_t userId, uint32_t flags) = 0;
 
     DECLARE_INTERFACE_DESCRIPTOR(u"ohos.StorageDaemon");
 };

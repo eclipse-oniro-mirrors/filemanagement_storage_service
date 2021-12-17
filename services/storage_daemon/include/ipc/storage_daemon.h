@@ -22,6 +22,8 @@ namespace OHOS {
 namespace StorageDaemon {
 class StorageDaemon : StorageDaemonStub {
 public:
+    StorageDaemon() = default;
+    virtual ~StorageDaemon() = default;
     virtual int32_t Shutdown() override;
 
     virtual int32_t Mount(std::string volId, uint32_t flags) override;

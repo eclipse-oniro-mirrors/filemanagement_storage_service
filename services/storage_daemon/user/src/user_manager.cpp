@@ -23,7 +23,7 @@
 namespace OHOS {
 namespace StorageDaemon {
 using namespace std;
-
+UserManager* UserManager::instance_ = nullptr;
 UserManager* UserManager::Instance()
 {
     if (instance_ == nullptr) {
