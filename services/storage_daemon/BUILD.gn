@@ -13,6 +13,19 @@
 
 import("//build/ohos.gni")
 
+## Install storage_daemon.rc to /system/etc/init/storage_daemon.rc {{{
+ohos_prebuilt_etc("storage_daemon.rc") {
+  if (use_musl) {
+    source = "storage_daemon.cfg"
+  } else {
+    source = "storage_daemon.rc"
+  }
+  relative_install_dir = "init"
+  part_name = "storage_standard"
+  subsystem_name = "storage_manager"
+}
+## Install storage_daemon.rc to /system/etc/init/storage_daemon.rc }}}
+
 config("storage_daemon_config") {
   include_dirs = [
     "include",
