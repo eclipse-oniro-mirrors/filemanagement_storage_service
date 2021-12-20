@@ -104,7 +104,7 @@ int32_t UserManager::PrepareUserEl1Dirs(int32_t userId)
 {
     int err = E_OK;
 
-    for (auto& entry : g_el1DirMap ) {
+    for (auto& entry : g_el1DirMap) {
         const string &dir = entry.first;
         struct DirInfo &info = entry.second;
 
@@ -120,7 +120,7 @@ int32_t UserManager::PrepareUserEl2Dirs(int32_t userId)
 {
     int err = E_OK;
 
-    for (auto &entry : g_el2DirMap ) {
+    for (auto &entry : g_el2DirMap) {
         const string &dir = entry.first;
         struct DirInfo &info = entry.second;
 

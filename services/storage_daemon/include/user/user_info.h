@@ -25,9 +25,6 @@ enum UserState {
 };
 
 class UserInfo {
-private:
-    int32_t userId_;
-    UserState state_;
 public:
     UserInfo(int32_t id, UserState state)
     {
@@ -40,6 +37,10 @@ public:
         this->userId_ = userInfo.userId_;
         this->state_ = userInfo.state_;
     }
+
+private:
+    int32_t userId_;
+    UserState state_;
 };
 } // STORAGE_DAEMON
 } // OHOS
