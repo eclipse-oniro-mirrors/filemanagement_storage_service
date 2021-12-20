@@ -18,7 +18,6 @@
 #include <sys/stat.h>
 #include <errno.h>
 #include <unistd.h>
-
 namespace OHOS {
 namespace StorageDaemon {
 constexpr uint32_t ALL_PERMS = (S_ISUID | S_ISGID | S_ISVTX | S_IRWXU | S_IRWXG | S_IRWXO);
@@ -36,6 +35,11 @@ int32_t ChOwn(const std::string &path, uid_t uid, gid_t gid)
 int32_t MkDir(const std::string &path, mode_t mode)
 {
     return TEMP_FAILURE_RETRY(mkdir(path.c_str(), mode));
+}
+
+int32_t RmDir(const std::string &path)
+{
+    return TEMP_FAILURE_RETRY(rmdir(path.c_str()));
 }
 
 // On success, zero is returned.  On error, -1 is returned, and errno is set appropriately.
@@ -58,11 +62,14 @@ int32_t PrepareDir(const std::string &path, mode_t mode, uid_t uid, gid_t gid)
         if ((st.st_mode & ALL_PERMS) != mode) {
             err = ChMod(path, mode);
         }
+
         if ((st.st_uid != uid) || (st.st_gid != gid)) {
             err = ChOwn(path, uid, gid);
         }
+
         return err;
     }
+
     if ((err = MkDir(path, mode))) {
         return err;
     }
@@ -70,22 +77,20 @@ int32_t PrepareDir(const std::string &path, mode_t mode, uid_t uid, gid_t gid)
     if ((err = ChOwn(path, uid, gid))) {
         return err;
     }
-    return err;
-}
 
-int32_t RmDir(const std::string &path)
-{
-    return TEMP_FAILURE_RETRY(rmdir(path.c_str()));
+    return err;
 }
 
 // On success, zero is returned.  On error, -1 is returned, and errno is set appropriately.
 int32_t DestroyDir(const std::string &path)
 {
     LOGI("destroy for %{public}s", path.c_str());
+
     if(RmDir(path) == E_ERR && errno != ENOENT) {
-        LOGI("failed to rmdir %{public}s, err reason %{public}s", path.c_str(), strerror(errno));
+        LOGE("failed to rmdir %{public}s, err reason %{public}s", path.c_str(), strerror(errno));
         return E_ERR;
     }
+
     return E_OK;
 }
 

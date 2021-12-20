@@ -18,6 +18,16 @@
 
 namespace OHOS {
 namespace StorageDaemon {
+
+struct DirInfo {
+        mode_t mode;
+        uid_t uid;
+        gid_t gid;
+};
+
+extern std::unordered_map<std::string, struct DirInfo> g_el1DirMap;
+extern std::unordered_map<std::string, struct DirInfo> g_el2DirMap;
+
 // top level userdata path
 const std::string DATA = "/data/";
 // app/service/vendor path

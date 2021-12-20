@@ -37,7 +37,7 @@ public:
         DESTROY_USER_DIRS,
     };
 
-    enum { // TODO tmp for user
+    enum {
         CRYPTO_FLAG_EL1 = 1,
         CRYPTO_FLAG_EL2,
     };
