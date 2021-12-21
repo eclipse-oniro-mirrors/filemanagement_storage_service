@@ -16,12 +16,15 @@
 #define STORAGE_DAEMON_UTILS_FILE_UTILS_H
 #include <stdint.h>
 #include <sys/types.h>
+#include <sys/mount.h>
 #include <string>
 
 namespace OHOS {
 namespace StorageDaemon {
 int32_t PrepareDir(const std::string &path, mode_t mode, uid_t uid, gid_t gid);
 int32_t DestroyDir(const std::string &path);
+int32_t Mount(const std::string &source, const std::string &target, const char *type, unsigned long flags, const void *data);
+int32_t UMount(const std::string &path);
 }
 }
 

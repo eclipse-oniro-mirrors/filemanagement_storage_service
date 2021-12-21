@@ -16,7 +16,6 @@
 #define STORAGE_DAEMON_UTILS_LOG_H
 #include "hilog/log.h"
 
-
 #ifndef LOG_DOMAIN
 #define LOG_DOMAIN 0
 #endif

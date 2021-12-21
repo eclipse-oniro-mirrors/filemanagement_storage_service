@@ -27,22 +27,23 @@ class UserManager final {
 public:
     virtual ~UserManager() = default;
     static UserManager* Instance();
-
     int32_t AddUser(int32_t userId);
     int32_t RemoveUser(int32_t userId);
     int32_t PrepareUserDirs(int32_t userId, uint32_t flags);
     int32_t DestroyUserDirs(int32_t userId, uint32_t flags);
     int32_t StartUser(int32_t userId);
     int32_t StopUser(int32_t userId);
+
 private:
     int32_t PrepareUserEl1Dirs(int32_t userId);
     int32_t PrepareUserEl2Dirs(int32_t userId);
+    int32_t PrepareUserHmdfsDirs(int32_t userId);
     int32_t DestroyUserEl1Dirs(int32_t userId);
     int32_t DestroyUserEl2Dirs(int32_t userId);
+    int32_t DestroyUserHmdfsDirs(int32_t userId);
     UserManager() = default;
     DISABLE_COPY_ASSIGN_MOVE(UserManager);
 
-private:
     static UserManager* instance_;
     std::unordered_map<int32_t, UserInfo> users_;
 };

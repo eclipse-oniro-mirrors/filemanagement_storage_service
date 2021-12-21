@@ -14,43 +14,34 @@
  */
 #ifndef STORAGE_DAEMON_UTILS_USER_PATH_H
 #define STORAGE_DAEMON_UTILS_USER_PATH_H
+#include <sys/types.h>
 #include <string>
+#include <vector>
 
 namespace OHOS {
 namespace StorageDaemon {
 
 struct DirInfo {
+        const char *path;
         mode_t mode;
         uid_t uid;
         gid_t gid;
 };
 
-extern std::unordered_map<std::string, struct DirInfo> g_el1DirMap;
-extern std::unordered_map<std::string, struct DirInfo> g_el2DirMap;
+extern std::vector<DirInfo> g_el1DirVec;
+extern std::vector<DirInfo> g_el2DirVec;
+extern std::vector<DirInfo> g_hmdfsDirVec;
 
-// top level userdata path
-const std::string DATA = "/data/";
-// app/service/vendor path
-const std::string DATA_APP = DATA + "app/";
-const std::string DATA_SERVICE = DATA + "service/";
-const std::string DATA_VENDOR = DATA + "vendor/";
+const std::string BIND_MOUNT_SOURCE = "/data/service/el2/%s/hmdfs/files";
+const std::string BIND_MOUNT_TARGET = "/storage/media/%s/local";
 
-// app data path
-const std::string DATA_APP_EL1 = DATA_APP + "el1/";
-const std::string DATA_APP_EL2 = DATA_APP + "el2/";
+inline std::string StringPrintf(const char *c, ...)
+{
+        return std::string();
+}
 
-// service data path
-const std::string DATA_SERVICE_EL1 = DATA_SERVICE + "el1/";
-const std::string DATA_SERVICE_EL2 = DATA_SERVICE + "el2/";
 
-// vendor data path
-const std::string DATA_VENDOR_EL1 = DATA_VENDOR + "el1/";
-const std::string DATA_VENDOR_EL2 = DATA_VENDOR + "el2/";
 
-// mount path
-const std::string HMDFS_FILES = "/hmdfs/files/";
-const std::string STORAGE_MEDIA = "/storage/media/";
-const std::string LOCAL = "/local/";
 }
 }
 #endif // STORAGE_DAEMON_UTILS_USER_PATH_H

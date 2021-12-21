@@ -14,6 +14,9 @@
  */
 
 #include "utils/user_path.h"
+#include "utils/errno.h"
+#include "utils/file_utils.h"
+#include <sys/types.h>
 #include <unordered_map>
 
 using namespace std;
@@ -23,17 +26,39 @@ namespace StorageDaemon {
 
 constexpr uid_t OID_ROOT = 0;
 
-unordered_map<string, struct DirInfo> g_el1DirMap = {
-        {"/data/app/el1/", { 0711, OID_ROOT, OID_ROOT }},
-        {"/data/service/el1/", { 0711, OID_ROOT, OID_ROOT }},
-        {"/data/vendor/el1/", { 0711, OID_ROOT, OID_ROOT }}
+vector<DirInfo> g_el1DirVec = {
+        {"/data/app/el1/%s", 0711, OID_ROOT, OID_ROOT},
+        {"/data/service/el1/%s", 0711, OID_ROOT, OID_ROOT},
+        {"/data/vendor/el1/%s", 0711, OID_ROOT, OID_ROOT}
 };
 
-unordered_map<string, struct DirInfo> g_el2DirMap = {
-        {"/data/app/el2/", { 0711, OID_ROOT, OID_ROOT }},
-        {"/data/service/el2/", { 0711, OID_ROOT, OID_ROOT }},
-        {"/data/vendor/el2/", { 0711, OID_ROOT, OID_ROOT }}
+vector<DirInfo> g_el2DirVec = {
+        {"/data/app/el2/%s", 0711, OID_ROOT, OID_ROOT},
+        {"/data/service/el2/%s", 0711, OID_ROOT, OID_ROOT},
+        {"/data/vendor/el2/%s", 0711, OID_ROOT, OID_ROOT}
 };
+
+vector<DirInfo> g_hmdfsDirVec = {
+        {"/data/service/el2/%s/hmdfs/files", 0711, OID_ROOT, OID_ROOT},
+        {"/storage/media/%s/local", 0711, OID_ROOT, OID_ROOT}
+};
+
+// unordered_map<char *, struct DirInfo> g_el1DirMap = {
+//         {"/data/app/el1/%s", { 0711, OID_ROOT, OID_ROOT }},
+//         {"/data/service/el1/%s", { 0711, OID_ROOT, OID_ROOT }},
+//         {"/data/vendor/el1/%s", { 0711, OID_ROOT, OID_ROOT }}
+// };
+
+// unordered_map<char *, struct DirInfo> g_el2DirMap = {
+//         {"/data/app/el2/%s", { 0711, OID_ROOT, OID_ROOT }},
+//         {"/data/service/el2/%s", { 0711, OID_ROOT, OID_ROOT }},
+//         {"/data/vendor/el2/%s", { 0711, OID_ROOT, OID_ROOT }}
+// };
+
+// unordered_map<char *, struct DirInfo> g_hmdfsDirMap = {
+//         {"/data/service/el2/%s/hmdfs/files", { 0711, OID_ROOT, OID_ROOT }},
+//         {"/storage/media/%s/local", { 0711, OID_ROOT, OID_ROOT }}
+// };
 
 }
 }

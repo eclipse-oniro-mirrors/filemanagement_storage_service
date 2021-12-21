@@ -19,7 +19,6 @@
 #include "utils/file_utils.h"
 #include "utils/log.h"
 #include "utils/user_path.h"
-#include <sys/mount.h>
 
 namespace OHOS {
 namespace StorageDaemon {
@@ -69,19 +68,13 @@ int32_t UserManager::StartUser(int32_t userId)
 
     UserInfo& user = iterator->second;
     if (user.GetState() != USER_PREPARE) {
-        LOGI("the user's state %{public}d is invalid", iterator->second.GetState());
+        LOGE("the user's state %{public}d is invalid", iterator->second.GetState());
         return E_ERR;
     }
 
-    /*
-     * TODO get_property: hmdfs
-     * assume non-dfs here
-     */
-    std::string source = DATA_SERVICE_EL2 + to_string(userId) + HMDFS_FILES;
-    std::string target = STORAGE_MEDIA + to_string(userId) + LOCAL;
-    int err = mount(source.c_str(), target.c_str(), nullptr, MS_BIND, nullptr);
+    int32_t err = Mount(BIND_MOUNT_SOURCE.c_str(), BIND_MOUNT_TARGET.c_str(), nullptr, MS_BIND, nullptr);
     if (err) {
-        LOGI("fail to mount, err %{public}d", err);
+        LOGE("failed to mount, err %{public}d", err);
         return err;
     }
 
@@ -107,10 +100,9 @@ int32_t UserManager::StopUser(int32_t userId)
     }
 
     // TODO get_property: hmdfs
-    std::string target = STORAGE_MEDIA + to_string(userId) + LOCAL;
-    int err = umount(target.c_str());
+    int err = UMount(BIND_MOUNT_TARGET.c_str());
     if (err) {
-        LOGI("fail to mount, err %{public}d", err);
+        LOGE("failed to mount, err %{public}d", err);
         return err;
     }
 
@@ -150,6 +142,11 @@ int32_t UserManager::PrepareUserDirs(int32_t userId, uint32_t flags)
         }
     }
 
+    if ((err = PrepareUserHmdfsDirs(userId))) {
+        LOGE("failed to prepare user hmdfs dirs for user id %{public}d", userId);
+        return err;
+    }
+
     user.SetState(USER_PREPARE);
 
     return err;
@@ -186,76 +183,70 @@ int32_t UserManager::DestroyUserDirs(int32_t userId, uint32_t flags)
         }
     }
 
+    if ((err = DestroyUserHmdfsDirs(userId))) {
+        LOGE("failed to destroy user hmdfs dirs for user id %{public}d", userId);
+        return err;
+    }
+
     user.SetState(USER_CREAT);
+
+    return err;
+}
+
+inline int32_t PrepareUserDirsFromVec(int32_t userId, std::vector<DirInfo> dirVec)
+{
+        int32_t err = E_OK;
+
+        for (DirInfo &dir : g_el1DirVec) {
+                if ((err = PrepareDir(StringPrintf(dir.path, userId), dir.mode, dir.uid, dir.gid))) {
+                        return err;
+                }
+        }
+
+        return err;
+}
+
+// Destory dirs as much as possible, and return one of err;
+inline int32_t DestroyUserDirsFromVec(int32_t userId, std::vector<DirInfo> dirVec)
+{
+    int32_t err = E_OK;
+
+    for (auto &dir : dirVec) {
+        int32_t ret = DestroyDir(StringPrintf(dir.path, userId));
+        err = ret ? ret : err;
+    }
 
     return err;
 }
 
 int32_t UserManager::PrepareUserEl1Dirs(int32_t userId)
 {
-    int err = E_OK;
-
-    for (auto& entry : g_el1DirMap) {
-        const string &dir = entry.first;
-        struct DirInfo &info = entry.second;
-
-        if ((err = PrepareDir(dir + to_string(userId), info.mode, info.uid, info.gid))) {
-            return err;
-        }
-    }
-
-    return err;
+    return PrepareUserDirsFromVec(userId, g_el1DirVec);
 }
 
 int32_t UserManager::PrepareUserEl2Dirs(int32_t userId)
 {
-    int err = E_OK;
-
-    for (auto &entry : g_el2DirMap) {
-        const string &dir = entry.first;
-        struct DirInfo &info = entry.second;
-
-        if ((err = PrepareDir(dir + to_string(userId), info.mode, info.uid, info.gid))) {
-            return err;
-        }
-    }
-
-    // TODO get_property: hmdfs
-    if ((err = PrepareDir(DATA_SERVICE_EL2 + to_string(userId) + HMDFS_FILES, 0711, OID_ROOT, OID_ROOT))) {
-        return err;
-    }
-
-    if ((err = PrepareDir(STORAGE_MEDIA + to_string(userId) + LOCAL, 0711, OID_ROOT, OID_ROOT))) {
-        return err;
-    }
-
-    return err;
+    return PrepareUserDirsFromVec(userId, g_el2DirVec);
 }
 
-// Destory dirs as much as possible, and return one of err;
+int32_t UserManager::PrepareUserHmdfsDirs(int32_t userId)
+{
+    return PrepareUserDirsFromVec(userId, g_hmdfsDirVec);
+}
+
 int32_t UserManager::DestroyUserEl1Dirs(int32_t userId)
 {
-    int err = E_OK;
-
-    for (auto &entry : g_el1DirMap) {
-        int32_t ret = DestroyDir(entry.first + to_string(userId));
-        err = ret ? ret : err;
-    }
-
-    return err;
+    return DestroyUserDirsFromVec(userId, g_el1DirVec);
 }
 
-// Destory dirs as much as possible, and return one of err;
 int32_t UserManager::DestroyUserEl2Dirs(int32_t userId)
 {
-    int err = E_OK;
+    return DestroyUserDirsFromVec(userId, g_el2DirVec);
+}
 
-    for (auto &entry : g_el2DirMap) {
-        int32_t ret = DestroyDir(entry.first + to_string(userId));
-        err = ret ? ret : err;
-    }
-
-    return err;
+int32_t UserManager::DestroyUserHmdfsDirs(int32_t userId)
+{
+    return DestroyUserDirsFromVec(userId, g_hmdfsDirVec);
 }
 
 } // StorageDaemon

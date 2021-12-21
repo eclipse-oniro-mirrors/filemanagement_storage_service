@@ -42,6 +42,16 @@ int32_t RmDir(const std::string &path)
     return TEMP_FAILURE_RETRY(rmdir(path.c_str()));
 }
 
+int32_t Mount(const std::string &source, const std::string &target, const char *type, unsigned long flags, const void *data)
+{
+    return TEMP_FAILURE_RETRY(mount(source.c_str(), target.c_str(), type, flags, data));
+}
+
+int32_t UMount(const std::string &path)
+{
+    return TEMP_FAILURE_RETRY(umount(path.c_str()));
+}
+
 // On success, zero is returned.  On error, -1 is returned, and errno is set appropriately.
 int32_t PrepareDir(const std::string &path, mode_t mode, uid_t uid, gid_t gid)
 {
