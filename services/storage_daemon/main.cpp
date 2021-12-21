@@ -21,7 +21,7 @@ using namespace OHOS;
 
 int main()
 {
-    int said = 77777;
+    int said = 7777;
 
     do {
         auto samgr = SystemAbilityManagerClient::GetInstance().GetSystemAbilityManager();

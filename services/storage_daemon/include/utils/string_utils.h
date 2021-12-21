@@ -12,29 +12,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef STORAGE_DAEMON_UTILS_USER_PATH_H
-#define STORAGE_DAEMON_UTILS_USER_PATH_H
+#ifndef STORAGE_DAEMON_UTILS_STRING_UTILS_H
+#define STORAGE_DAEMON_UTILS_STRING_UTILS_H
 
 #include <sys/types.h>
 #include <string>
-#include <vector>
 
 namespace OHOS {
 namespace StorageDaemon {
+constexpr int32_t BUFF_SIZE = 1024;
 
-struct DirInfo {
-        const char *path;
-        mode_t mode;
-        uid_t uid;
-        gid_t gid;
-};
-
-extern std::vector<DirInfo> g_el1DirVec;
-extern std::vector<DirInfo> g_el2DirVec;
-extern std::vector<DirInfo> g_hmdfsDirVec;
-
-extern const char *HMDFS_SOURCE;
-extern const char *HMDFS_TARGET;
+extern std::string StringPrintf(const char* format, ...);
 }
 }
-#endif // STORAGE_DAEMON_UTILS_USER_PATH_H
+
+#endif // STORAGE_DAEMON_UTILS_STRING_UTILS_H

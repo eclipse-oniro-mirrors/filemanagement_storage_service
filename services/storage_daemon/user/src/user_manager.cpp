@@ -17,6 +17,7 @@
 #include "ipc/istorage_daemon.h"
 #include "utils/errno.h"
 #include "utils/file_utils.h"
+#include "utils/string_utils.h"
 #include "utils/log.h"
 #include "utils/user_path.h"
 
@@ -54,7 +55,7 @@ int32_t UserManager::CheckUserState(int32_t userId, UserState state)
 
 inline void UserManager::SetUserState(int32_t userId, UserState state)
 {
-    // because of mutex lock, user must exist withou checking
+    // because of mutex lock, user must exist without checking
     users_.at(userId).SetState(state);
 }
 
@@ -87,9 +88,9 @@ int32_t UserManager::StartUser(int32_t userId)
         return E_USER_STATE;
     }
 
-    int32_t err = Mount(StringPrintf(HMDFS_BIND_MOUNT_SOURCE, userId).c_str(),
-                                     StringPrintf(HMDFS_BIND_MOUNT_TARGET, userId).c_str(),
-                                     nullptr, MS_BIND, nullptr);
+    int32_t err = Mount(StringPrintf(HMDFS_SOURCE, userId).c_str(),
+                        StringPrintf(HMDFS_TARGET, userId).c_str(),
+                        nullptr, MS_BIND, nullptr);
     if (err) {
         LOGE("failed to mount, err %{public}d", err);
         return err;
@@ -111,14 +112,14 @@ int32_t UserManager::StopUser(int32_t userId)
     int32_t count = 0;
     int32_t err;
     while (count < UMOUNT_RETRY_TIMES) {
-        err = UMount(StringPrintf(HMDFS_BIND_MOUNT_TARGET, userId).c_str());
+        err = UMount(StringPrintf(HMDFS_TARGET, userId).c_str());
         if (err == E_OK) {
             break;
-        } else if (err = EBUSY) {
+        } else if (errno == EBUSY) {
             count++;
             continue;
         } else {
-            LOGE("failed to umount, err %{public}d", err);
+            LOGE("failed to umount, errno %{public}d", errno);
             return err;
         }
     }
@@ -151,11 +152,6 @@ int32_t UserManager::PrepareUserDirs(int32_t userId, uint32_t flags)
         }
     }
 
-    if ((err = PrepareUserHmdfsDirs(userId))) {
-        LOGE("failed to prepare user hmdfs dirs for user id %{public}d", userId);
-        return err;
-    }
-
     SetUserState(userId, USER_PREPARE);
 
     return err;
@@ -184,11 +180,6 @@ int32_t UserManager::DestroyUserDirs(int32_t userId, uint32_t flags)
         }
     }
 
-    if ((err = DestroyUserHmdfsDirs(userId))) {
-        LOGE("failed to destroy user hmdfs dirs for user id %{public}d", userId);
-        return err;
-    }
-
     SetUserState(userId, USER_CREAT);
 
     return err;
@@ -212,8 +203,8 @@ inline int32_t DestroyUserDirsFromVec(int32_t userId, std::vector<DirInfo> dirVe
 {
     int32_t err = E_OK;
 
-    for (auto &dir : dirVec) {
-        int32_t ret = DestroyDir(StringPrintf(dir.path, userId));
+    for (auto iter = dirVec.rbegin(); iter != dirVec.rend(); iter++) {
+        int32_t ret = DestroyDir(StringPrintf(iter->path, userId));
         err = ret ? ret : err;
     }
 
@@ -249,7 +240,14 @@ int32_t UserManager::DestroyUserEl1Dirs(int32_t userId)
 
 int32_t UserManager::DestroyUserEl2Dirs(int32_t userId)
 {
-    return DestroyUserDirsFromVec(userId, g_el2DirVec);
+    int err = E_OK;
+
+    err = DestroyUserDirsFromVec(userId, g_el2DirVec);
+    if (err) {
+        return err;
+    }
+
+    return DestroyUserDirsFromVec(userId, g_hmdfsDirVec);
 }
 
 int32_t UserManager::DestroyUserHmdfsDirs(int32_t userId)

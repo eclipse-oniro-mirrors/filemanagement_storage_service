@@ -49,8 +49,8 @@ public:
     }
 
 private:
-        int32_t userId_;
-        UserState state_;
+    int32_t userId_;
+    UserState state_;
 };
 } // STORAGE_DAEMON
 } // OHOS

@@ -43,5 +43,8 @@ vector<DirInfo> g_hmdfsDirVec = {
         {"/storage/media/%s", 0711, OID_ROOT, OID_ROOT},
         {"/storage/media/%s/local", 0711, OID_ROOT, OID_ROOT}
 };
+
+const char *HMDFS_SOURCE = "/data/service/el2/%s/hmdfs/files";
+const char *HMDFS_TARGET = "/storage/media/%s/local";
 }
 }

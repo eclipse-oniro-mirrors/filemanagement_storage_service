@@ -39,6 +39,7 @@ ohos_executable("storage_daemon") {
 
     "utils/file_utils.cpp",
     "utils/user_path.cpp",
+    "utils/string_utils.cpp",
 
     "main.cpp",
   ]
