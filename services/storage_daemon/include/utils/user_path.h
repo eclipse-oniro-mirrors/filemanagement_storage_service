@@ -32,16 +32,13 @@ extern std::vector<DirInfo> g_el1DirVec;
 extern std::vector<DirInfo> g_el2DirVec;
 extern std::vector<DirInfo> g_hmdfsDirVec;
 
-const std::string BIND_MOUNT_SOURCE = "/data/service/el2/%s/hmdfs/files";
-const std::string BIND_MOUNT_TARGET = "/storage/media/%s/local";
+const char *HMDFS_BIND_MOUNT_SOURCE = "/data/service/el2/%s/hmdfs/files";
+const char *HMDFS_BIND_MOUNT_TARGET = "/storage/media/%s/local";
 
 inline std::string StringPrintf(const char *c, ...)
 {
         return std::string();
 }
-
-
-
 }
 }
 #endif // STORAGE_DAEMON_UTILS_USER_PATH_H

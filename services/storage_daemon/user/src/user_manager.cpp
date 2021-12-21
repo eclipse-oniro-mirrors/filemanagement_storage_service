@@ -87,7 +87,9 @@ int32_t UserManager::StartUser(int32_t userId)
         return E_USER_STATE;
     }
 
-    int32_t err = Mount(BIND_MOUNT_SOURCE.c_str(), BIND_MOUNT_TARGET.c_str(), nullptr, MS_BIND, nullptr);
+    int32_t err = Mount(StringPrintf(HMDFS_BIND_MOUNT_SOURCE, userId).c_str(),
+                                     StringPrintf(HMDFS_BIND_MOUNT_TARGET, userId).c_str(),
+                                     nullptr, MS_BIND, nullptr);
     if (err) {
         LOGE("failed to mount, err %{public}d", err);
         return err;
@@ -106,10 +108,19 @@ int32_t UserManager::StopUser(int32_t userId)
         return E_USER_STATE;
     }
 
-    int err = UMount(BIND_MOUNT_TARGET.c_str());
-    if (err) {
-        LOGE("failed to mount, err %{public}d", err);
-        return err;
+    int32_t count = 0;
+    int32_t err;
+    while (count < UMOUNT_RETRY_TIMES) {
+        err = UMount(StringPrintf(HMDFS_BIND_MOUNT_TARGET, userId).c_str());
+        if (err == E_OK) {
+            break;
+        } else if (err = EBUSY) {
+            count++;
+            continue;
+        } else {
+            LOGE("failed to umount, err %{public}d", err);
+            return err;
+        }
     }
 
     SetUserState(userId, USER_PREPARE);
@@ -185,15 +196,15 @@ int32_t UserManager::DestroyUserDirs(int32_t userId, uint32_t flags)
 
 inline int32_t PrepareUserDirsFromVec(int32_t userId, std::vector<DirInfo> dirVec)
 {
-        int32_t err = E_OK;
+    int32_t err = E_OK;
 
-        for (DirInfo &dir : g_el1DirVec) {
-                if ((err = PrepareDir(StringPrintf(dir.path, userId), dir.mode, dir.uid, dir.gid))) {
-                        return err;
-                }
-        }
+    for (DirInfo &dir : g_el1DirVec) {
+            if ((err = PrepareDir(StringPrintf(dir.path, userId), dir.mode, dir.uid, dir.gid))) {
+                    return err;
+            }
+    }
 
-        return err;
+    return err;
 }
 
 // Destory dirs as much as possible, and return one of err;
@@ -216,7 +227,14 @@ int32_t UserManager::PrepareUserEl1Dirs(int32_t userId)
 
 int32_t UserManager::PrepareUserEl2Dirs(int32_t userId)
 {
-    return PrepareUserDirsFromVec(userId, g_el2DirVec);
+    int32_t err = E_OK;
+
+    err = PrepareUserDirsFromVec(userId, g_el2DirVec);
+    if (err) {
+        return err;
+    }
+
+    return PrepareUserHmdfsDirs(userId);
 }
 
 int32_t UserManager::PrepareUserHmdfsDirs(int32_t userId)
