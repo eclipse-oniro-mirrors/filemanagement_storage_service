@@ -21,8 +21,7 @@ using namespace OHOS;
 
 int main()
 {
-    //TODO define ID in system_ability_definition.h
-    int said = 0;
+    int said = 77777;
 
     do {
         auto samgr = SystemAbilityManagerClient::GetInstance().GetSystemAbilityManager();

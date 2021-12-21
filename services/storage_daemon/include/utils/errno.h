@@ -24,6 +24,8 @@ constexpr int32_t E_PERMISSION_DENIED = 1;  // no permission
 constexpr int32_t E_IPC_ERROR = 2;          // ipc error
 constexpr int32_t E_EXIST = 3;              // exist
 constexpr int32_t E_WRONG_TYPE = 4;         // wrong file type
+constexpr int32_t E_USER_STATE = 5;            // wrong user state
+constexpr int32_t E_NON_EXIST = 6;            // no such user
 }
 }
 

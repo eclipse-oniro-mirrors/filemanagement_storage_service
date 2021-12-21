@@ -42,6 +42,8 @@ private:
     int32_t DestroyUserEl2Dirs(int32_t userId);
     int32_t DestroyUserHmdfsDirs(int32_t userId);
     UserManager() = default;
+    int32_t CheckUserState(int32_t userId, UserState state);
+    void SetUserState(int32_t userId, UserState state);
     DISABLE_COPY_ASSIGN_MOVE(UserManager);
 
     static UserManager* instance_;

@@ -35,6 +35,29 @@ UserManager* UserManager::Instance()
     return instance_;
 }
 
+int32_t UserManager::CheckUserState(int32_t userId, UserState state)
+{
+    auto iterator = users_.find(userId);
+    if (iterator == users_.end()) {
+        LOGE("the user %{public}d doesn't exist", userId);
+        return E_NON_EXIST;
+    }
+
+    UserInfo& user = iterator->second;
+    if (user.GetState() != state) {
+        LOGE("the user's state %{public}d is invalid", user.GetState());
+        return E_USER_STATE;
+    }
+
+    return E_OK;
+}
+
+inline void UserManager::SetUserState(int32_t userId, UserState state)
+{
+    // because of mutex lock, user must exist withou checking
+    users_.at(userId).SetState(state);
+}
+
 int32_t UserManager::AddUser(int32_t userId)
 {
     LOGI("add user %{public}d", userId);
@@ -60,16 +83,8 @@ int32_t UserManager::StartUser(int32_t userId)
 {
     LOGI("start user %{public}d", userId);
 
-    auto iterator = users_.find(userId);
-    if (iterator == users_.end()) {
-        LOGI("the user %{public}d doesn't exist", userId);
-        return E_ERR;
-    }
-
-    UserInfo& user = iterator->second;
-    if (user.GetState() != USER_PREPARE) {
-        LOGE("the user's state %{public}d is invalid", iterator->second.GetState());
-        return E_ERR;
+    if (CheckUserState(userId, USER_PREPARE)) {
+        return E_USER_STATE;
     }
 
     int32_t err = Mount(BIND_MOUNT_SOURCE.c_str(), BIND_MOUNT_TARGET.c_str(), nullptr, MS_BIND, nullptr);
@@ -78,7 +93,7 @@ int32_t UserManager::StartUser(int32_t userId)
         return err;
     }
 
-    user.SetState(USER_START);
+    SetUserState(userId, USER_START);
 
     return E_OK;
 }
@@ -87,26 +102,17 @@ int32_t UserManager::StopUser(int32_t userId)
 {
     LOGI("stop user %{public}d", userId);
 
-    auto iterator = users_.find(userId);
-    if (iterator == users_.end()) {
-        LOGI("the user %{public}d doesn't exist", userId);
-        return E_ERR;
+    if (CheckUserState(userId, USER_START)) {
+        return E_USER_STATE;
     }
 
-    UserInfo& user = iterator->second;
-    if (user.GetState() != USER_START) {
-        LOGI("the user's state %{public}d is invalid", iterator->second.GetState());
-        return E_ERR;
-    }
-
-    // TODO get_property: hmdfs
     int err = UMount(BIND_MOUNT_TARGET.c_str());
     if (err) {
         LOGE("failed to mount, err %{public}d", err);
         return err;
     }
 
-    user.SetState(USER_PREPARE);
+    SetUserState(userId, USER_PREPARE);
 
     return E_OK;
 }
@@ -115,16 +121,8 @@ int32_t UserManager::PrepareUserDirs(int32_t userId, uint32_t flags)
 {
     LOGI("prepare user dirs for %{public}d, flags %{public}u", userId, flags);
 
-    auto iterator = users_.find(userId);
-    if (iterator == users_.end()) {
-        LOGI("the user %{public}d doesn't exist", userId);
-        return E_ERR;
-    }
-
-    UserInfo& user = iterator->second;
-    if (user.GetState() != USER_CREAT) {
-        LOGI("the user's state %{public}d is invalid", iterator->second.GetState());
-        return E_ERR;
+    if (CheckUserState(userId, USER_CREAT)) {
+        return E_USER_STATE;
     }
 
     int err = E_OK;
@@ -147,7 +145,7 @@ int32_t UserManager::PrepareUserDirs(int32_t userId, uint32_t flags)
         return err;
     }
 
-    user.SetState(USER_PREPARE);
+    SetUserState(userId, USER_PREPARE);
 
     return err;
 }
@@ -156,16 +154,8 @@ int32_t UserManager::DestroyUserDirs(int32_t userId, uint32_t flags)
 {
     LOGI("destroy user dirs for %{public}d, flags %{public}u", userId, flags);
 
-    auto iterator = users_.find(userId);
-    if (iterator == users_.end()) {
-        LOGI("the user %{public}d doesn't exist", userId);
-        return E_ERR;
-    }
-
-    UserInfo& user = iterator->second;
-    if (user.GetState() != USER_PREPARE) {
-        LOGI("the user's state %{public}d is invalid", iterator->second.GetState());
-        return E_ERR;
+    if (CheckUserState(userId, USER_PREPARE)) {
+        return E_USER_STATE;
     }
 
     int err = E_OK;
@@ -188,7 +178,7 @@ int32_t UserManager::DestroyUserDirs(int32_t userId, uint32_t flags)
         return err;
     }
 
-    user.SetState(USER_CREAT);
+    SetUserState(userId, USER_CREAT);
 
     return err;
 }
