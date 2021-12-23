@@ -22,25 +22,7 @@ using namespace std;
 
 namespace OHOS {
 namespace StorageDaemon{
-bool IsEndWith(const string &str, const string &end)
-{
-    size_t stringLen = str.size();
-    size_t endLen = end.size();
-
-    if (stringLen < endLen) {
-        return false;
-    }
-
-    for (uint32_t i = stringLen; i > stringLen - endLen; i--) {
-        if (str[i] != end[i]) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-
+constexpr int32_t BUFF_SIZE = 1024;
 std::string StringPrintf(const char *format, ...) {
     va_list ap;
     va_start(ap, format);

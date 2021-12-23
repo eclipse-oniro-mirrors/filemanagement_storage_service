@@ -26,7 +26,7 @@ using namespace std;
 
 namespace OHOS {
 namespace StorageDaemon {
-
+constexpr int32_t UMOUNT_RETRY_TIMES = 3;
 UserManager* UserManager::instance_ = nullptr;
 
 UserManager* UserManager::Instance()
@@ -90,11 +90,11 @@ int32_t UserManager::StartUser(int32_t userId)
         return E_USER_STATE;
     }
 
-    int32_t err = Mount(StringPrintf(HMDFS_SOURCE.c_str(), userId).c_str(),
+    int32_t err = Mount(StringPrintf(HMDFS_SOURCE.c_str(), userId),
                         StringPrintf(HMDFS_TARGET.c_str(), userId).c_str(),
                         nullptr, MS_BIND, nullptr);
     if (err) {
-        LOGE("failed to mount, err %{public}d", err);
+        LOGE("failed to mount, err %{public}d", errno);
         return err;
     }
 
@@ -114,7 +114,7 @@ int32_t UserManager::StopUser(int32_t userId)
     int32_t count = 0;
     int32_t err;
     while (count < UMOUNT_RETRY_TIMES) {
-        err = UMount(StringPrintf(HMDFS_TARGET.c_str(), userId).c_str());
+        err = UMount(StringPrintf(HMDFS_TARGET.c_str(), userId));
         if (err == E_OK) {
             break;
         } else if (errno == EBUSY) {
@@ -207,7 +207,7 @@ inline int32_t DestroyUserDirsFromVec(int32_t userId, std::vector<DirInfo> dirVe
 
     for (DirInfo &dir : dirVec) {
         if (IsEndWith(dir.path.c_str(), "%d")) {
-            int32_t ret = DestroyDir(StringPrintf(dir.path.c_str(), userId));
+            int32_t ret = RmDirRecurse(StringPrintf(dir.path.c_str(), userId));
             err = ret ? ret : err;
         }
     }
@@ -246,12 +246,12 @@ int32_t UserManager::DestroyUserEl2Dirs(int32_t userId)
 {
     int err = E_OK;
 
-    err = DestroyUserDirsFromVec(userId, g_el2DirVec);
+    err = DestroyUserDirsFromVec(userId, g_hmdfsDirVec);
     if (err) {
         return err;
     }
 
-    return DestroyUserDirsFromVec(userId, g_hmdfsDirVec);
+    return DestroyUserDirsFromVec(userId, g_el2DirVec);
 }
 
 int32_t UserManager::DestroyUserHmdfsDirs(int32_t userId)

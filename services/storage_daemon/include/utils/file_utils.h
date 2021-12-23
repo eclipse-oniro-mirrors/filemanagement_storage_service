@@ -21,10 +21,9 @@
 
 namespace OHOS {
 namespace StorageDaemon {
-constexpr int32_t UMOUNT_RETRY_TIMES = 3;
-
 int32_t PrepareDir(const std::string &path, mode_t mode, uid_t uid, gid_t gid);
 int32_t DestroyDir(const std::string &path);
+bool RmDirRecurse(const std::string &path);
 int32_t Mount(const std::string &source, const std::string &target, const char *type, unsigned long flags, const void *data);
 int32_t UMount(const std::string &path);
 }

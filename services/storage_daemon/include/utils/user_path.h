@@ -19,23 +19,22 @@
 #include <sys/types.h>
 #include <string>
 #include <vector>
+
 namespace OHOS {
 namespace StorageDaemon {
-using namespace std;
-
 struct DirInfo {
-        const string path;
+        const std::string path;
         mode_t mode;
         uid_t uid;
         gid_t gid;
 };
 
-extern vector<DirInfo> g_el1DirVec;
-extern vector<DirInfo> g_el2DirVec;
-extern vector<DirInfo> g_hmdfsDirVec;
+extern std::vector<DirInfo> g_el1DirVec;
+extern std::vector<DirInfo> g_el2DirVec;
+extern std::vector<DirInfo> g_hmdfsDirVec;
 
-extern const string HMDFS_SOURCE;
-extern const string HMDFS_TARGET;
+extern const std::string HMDFS_SOURCE;
+extern const std::string HMDFS_TARGET;
 }
 }
 #endif // STORAGE_DAEMON_UTILS_USER_PATH_H

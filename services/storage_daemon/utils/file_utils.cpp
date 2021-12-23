@@ -19,6 +19,9 @@
 #include <sys/stat.h>
 #include <errno.h>
 #include <unistd.h>
+#include <string.h>
+#include <dirent.h>
+
 namespace OHOS {
 namespace StorageDaemon {
 constexpr uint32_t ALL_PERMS = (S_ISUID | S_ISGID | S_ISVTX | S_IRWXU | S_IRWXG | S_IRWXO);
@@ -105,5 +108,36 @@ int32_t DestroyDir(const std::string &path)
     return E_OK;
 }
 
+bool RmDirRecurse(const std::string &path)
+{
+    DIR *dir = opendir(path.c_str());
+    if (!dir) {
+        LOGE("failed to open dir %{public}s, errno %{public}d", path.c_str(), errno);
+        return false;
+    }
+
+    for (struct dirent *ent = readdir(dir); ent != nullptr; ent = readdir(dir)) {
+        if (ent->d_type == DT_DIR) {
+            if (RmDirRecurse(path + "/" + ent->d_name)) {
+                closedir(dir);
+                return false;
+            }
+        } else {
+            if (unlink(ent->d_name)) {
+                LOGE("failed to unlink file %{public}s, errno %{public}d", ent->d_name, errno);
+                closedir(dir);
+                return false;
+            }
+        }
+    }
+
+    closedir(dir);
+    if (rmdir(path.c_str())) {
+        LOGE("failed to rm dir %{public}s, errno %{public}d", path.c_str(), errno);
+        return false;
+    }
+
+    return true;
+}
 } // STORAGE_DAEMON
 } // OHOS
