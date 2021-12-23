@@ -20,9 +20,11 @@
 
 namespace OHOS {
 namespace StorageDaemon {
+
 constexpr int32_t BUFF_SIZE = 1024;
 
-extern std::string StringPrintf(const char* format, ...);
+extern bool IsEndWith(const std::string &str, const std::string &end);
+extern std::string StringPrintf(const char *format, ...);
 }
 }
 

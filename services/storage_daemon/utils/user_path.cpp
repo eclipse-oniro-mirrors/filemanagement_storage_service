@@ -26,25 +26,25 @@ namespace StorageDaemon {
 constexpr uid_t OID_ROOT = 0;
 
 vector<DirInfo> g_el1DirVec = {
-        {"/data/app/el1/%s", 0711, OID_ROOT, OID_ROOT},
-        {"/data/service/el1/%s", 0711, OID_ROOT, OID_ROOT},
-        {"/data/vendor/el1/%s", 0711, OID_ROOT, OID_ROOT}
+        {"/data/app/el1/%d", 0711, OID_ROOT, OID_ROOT},
+        {"/data/service/el1/%d", 0711, OID_ROOT, OID_ROOT},
+        {"/data/vendor/el1/%d", 0711, OID_ROOT, OID_ROOT}
 };
 
 vector<DirInfo> g_el2DirVec = {
-        {"/data/app/el2/%s", 0711, OID_ROOT, OID_ROOT},
-        {"/data/service/el2/%s", 0711, OID_ROOT, OID_ROOT},
-        {"/data/vendor/el2/%s", 0711, OID_ROOT, OID_ROOT}
+        {"/data/app/el2/%d", 0711, OID_ROOT, OID_ROOT},
+        {"/data/service/el2/%d", 0711, OID_ROOT, OID_ROOT},
+        {"/data/vendor/el2/%d", 0711, OID_ROOT, OID_ROOT}
 };
 
 vector<DirInfo> g_hmdfsDirVec = {
-        {"/data/service/el2/%s/hmdfs", 0711, OID_ROOT, OID_ROOT},
-        {"/data/service/el2/%s/hmdfs/files", 0711, OID_ROOT, OID_ROOT},
-        {"/storage/media/%s", 0711, OID_ROOT, OID_ROOT},
-        {"/storage/media/%s/local", 0711, OID_ROOT, OID_ROOT}
+        {"/data/service/el2/%d/hmdfs", 0711, OID_ROOT, OID_ROOT},
+        {"/data/service/el2/%d/hmdfs/files", 0711, OID_ROOT, OID_ROOT},
+        {"/storage/media/%d", 0711, OID_ROOT, OID_ROOT},
+        {"/storage/media/%d/local", 0711, OID_ROOT, OID_ROOT}
 };
 
-const char *HMDFS_SOURCE = "/data/service/el2/%s/hmdfs/files";
-const char *HMDFS_TARGET = "/storage/media/%s/local";
+const string HMDFS_SOURCE = "/data/service/el2/%d/hmdfs/files";
+const string HMDFS_TARGET = "/storage/media/%d/local";
 }
 }

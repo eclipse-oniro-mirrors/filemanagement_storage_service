@@ -16,16 +16,37 @@
 #include "utils/string_utils.h"
 #include <stdio.h>
 #include <stdarg.h>
+#include <string.h>
+
+using namespace std;
 
 namespace OHOS {
 namespace StorageDaemon{
+bool IsEndWith(const string &str, const string &end)
+{
+    size_t stringLen = str.size();
+    size_t endLen = end.size();
 
-std::string StringPrintf(const char* format, ...) {
+    if (stringLen < endLen) {
+        return false;
+    }
+
+    for (uint32_t i = stringLen; i > stringLen - endLen; i--) {
+        if (str[i] != end[i]) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
+std::string StringPrintf(const char *format, ...) {
     va_list ap;
     va_start(ap, format);
 
-    char buf[BUFF_SIZE] = {0};
     std::string result;
+    char buf[BUFF_SIZE] = {0};
     int count = vsnprintf(buf, BUFF_SIZE, format, ap);
     if (count >= 0 && count < BUFF_SIZE) {
         result.append(buf, count);

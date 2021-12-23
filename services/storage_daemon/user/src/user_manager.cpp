@@ -20,10 +20,12 @@
 #include "utils/string_utils.h"
 #include "utils/log.h"
 #include "utils/user_path.h"
+#include <stdlib.h>
+
+using namespace std;
 
 namespace OHOS {
 namespace StorageDaemon {
-using namespace std;
 
 UserManager* UserManager::instance_ = nullptr;
 
@@ -88,8 +90,8 @@ int32_t UserManager::StartUser(int32_t userId)
         return E_USER_STATE;
     }
 
-    int32_t err = Mount(StringPrintf(HMDFS_SOURCE, userId).c_str(),
-                        StringPrintf(HMDFS_TARGET, userId).c_str(),
+    int32_t err = Mount(StringPrintf(HMDFS_SOURCE.c_str(), userId).c_str(),
+                        StringPrintf(HMDFS_TARGET.c_str(), userId).c_str(),
                         nullptr, MS_BIND, nullptr);
     if (err) {
         LOGE("failed to mount, err %{public}d", err);
@@ -112,7 +114,7 @@ int32_t UserManager::StopUser(int32_t userId)
     int32_t count = 0;
     int32_t err;
     while (count < UMOUNT_RETRY_TIMES) {
-        err = UMount(StringPrintf(HMDFS_TARGET, userId).c_str());
+        err = UMount(StringPrintf(HMDFS_TARGET.c_str(), userId).c_str());
         if (err == E_OK) {
             break;
         } else if (errno == EBUSY) {
@@ -189,10 +191,10 @@ inline int32_t PrepareUserDirsFromVec(int32_t userId, std::vector<DirInfo> dirVe
 {
     int32_t err = E_OK;
 
-    for (DirInfo &dir : g_el1DirVec) {
-            if ((err = PrepareDir(StringPrintf(dir.path, userId), dir.mode, dir.uid, dir.gid))) {
-                    return err;
-            }
+    for (DirInfo &dir : dirVec) {
+        if ((err = PrepareDir(StringPrintf(dir.path.c_str(), userId), dir.mode, dir.uid, dir.gid))) {
+                return err;
+        }
     }
 
     return err;
@@ -203,9 +205,11 @@ inline int32_t DestroyUserDirsFromVec(int32_t userId, std::vector<DirInfo> dirVe
 {
     int32_t err = E_OK;
 
-    for (auto iter = dirVec.rbegin(); iter != dirVec.rend(); iter++) {
-        int32_t ret = DestroyDir(StringPrintf(iter->path, userId));
-        err = ret ? ret : err;
+    for (DirInfo &dir : dirVec) {
+        if (IsEndWith(dir.path.c_str(), "%d")) {
+            int32_t ret = DestroyDir(StringPrintf(dir.path.c_str(), userId));
+            err = ret ? ret : err;
+        }
     }
 
     return err;
