@@ -77,6 +77,10 @@ int32_t UserManager::RemoveUser(int32_t userId)
 {
     LOGI("remove user %{public}d", userId);
 
+    if (CheckUserState(userId, USER_CREAT)) {
+        return E_USER_STATE;
+    }
+
     users_.erase(userId);
 
     return E_OK;
@@ -91,7 +95,7 @@ int32_t UserManager::StartUser(int32_t userId)
     }
 
     int32_t err = Mount(StringPrintf(HMDFS_SOURCE.c_str(), userId),
-                        StringPrintf(HMDFS_TARGET.c_str(), userId).c_str(),
+                        StringPrintf(HMDFS_TARGET.c_str(), userId),
                         nullptr, MS_BIND, nullptr);
     if (err) {
         LOGE("failed to mount, err %{public}d", errno);
@@ -139,24 +143,23 @@ int32_t UserManager::PrepareUserDirs(int32_t userId, uint32_t flags)
         return E_USER_STATE;
     }
 
-    int err = E_OK;
     if (flags & IStorageDaemon::CRYPTO_FLAG_EL1) {
-        if ((err = PrepareUserEl1Dirs(userId))) {
+        if (!PrepareUserEl1Dirs(userId)) {
             LOGE("failed to prepare user el1 dirs for userid %{public}d", userId);
-            return err;
+            return E_ERR;
         }
     }
 
     if (flags & IStorageDaemon::CRYPTO_FLAG_EL2) {
-        if ((err = PrepareUserEl2Dirs(userId))) {
+        if (!PrepareUserEl2Dirs(userId)) {
             LOGE("failed to prepare user el2 dirs for userid %{public}d", userId);
-            return err;
+            return E_ERR;
         }
     }
 
     SetUserState(userId, USER_PREPARE);
 
-    return err;
+    return E_OK;
 }
 
 int32_t UserManager::DestroyUserDirs(int32_t userId, uint32_t flags)
@@ -169,15 +172,13 @@ int32_t UserManager::DestroyUserDirs(int32_t userId, uint32_t flags)
 
     int err = E_OK;
     if (flags & IStorageDaemon::CRYPTO_FLAG_EL1) {
-        err = DestroyUserEl1Dirs(userId);
-        if (err != E_OK) {
+        if (!DestroyUserEl1Dirs(userId)) {
             LOGE("failed to destroy user el1 dirs for userid %{public}d", userId);
         }
     }
 
     if (flags & IStorageDaemon::CRYPTO_FLAG_EL2) {
-        err = DestroyUserEl2Dirs(userId);
-        if (err != E_OK) {
+        if (!DestroyUserEl2Dirs(userId)) {
             LOGE("failed to destroy user el2 dirs for userid %{public}d", userId);
         }
     }
@@ -187,74 +188,57 @@ int32_t UserManager::DestroyUserDirs(int32_t userId, uint32_t flags)
     return err;
 }
 
-inline int32_t PrepareUserDirsFromVec(int32_t userId, std::vector<DirInfo> dirVec)
+inline bool PrepareUserDirsFromVec(int32_t userId, std::vector<DirInfo> dirVec)
 {
-    int32_t err = E_OK;
-
     for (DirInfo &dir : dirVec) {
-        if ((err = PrepareDir(StringPrintf(dir.path.c_str(), userId), dir.mode, dir.uid, dir.gid))) {
-                return err;
+        if (!PrepareDir(StringPrintf(dir.path.c_str(), userId), dir.mode, dir.uid, dir.gid)) {
+                return false;
         }
     }
 
-    return err;
+    return true;
 }
 
 // Destory dirs as much as possible, and return one of err;
-inline int32_t DestroyUserDirsFromVec(int32_t userId, std::vector<DirInfo> dirVec)
+inline bool DestroyUserDirsFromVec(int32_t userId, std::vector<DirInfo> dirVec)
 {
-    int32_t err = E_OK;
+    bool ret = true;
 
     for (DirInfo &dir : dirVec) {
         if (IsEndWith(dir.path.c_str(), "%d")) {
-            int32_t ret = RmDirRecurse(StringPrintf(dir.path.c_str(), userId));
-            err = ret ? ret : err;
+            ret &= RmDirRecurse(StringPrintf(dir.path.c_str(), userId));
         }
     }
 
-    return err;
+    return ret;
 }
 
-int32_t UserManager::PrepareUserEl1Dirs(int32_t userId)
+bool UserManager::PrepareUserEl1Dirs(int32_t userId)
 {
     return PrepareUserDirsFromVec(userId, g_el1DirVec);
 }
 
-int32_t UserManager::PrepareUserEl2Dirs(int32_t userId)
+bool UserManager::PrepareUserEl2Dirs(int32_t userId)
 {
-    int32_t err = E_OK;
-
-    err = PrepareUserDirsFromVec(userId, g_el2DirVec);
-    if (err) {
-        return err;
-    }
-
-    return PrepareUserHmdfsDirs(userId);
+    return PrepareUserDirsFromVec(userId, g_el2DirVec) && PrepareUserHmdfsDirs(userId);
 }
 
-int32_t UserManager::PrepareUserHmdfsDirs(int32_t userId)
+bool UserManager::PrepareUserHmdfsDirs(int32_t userId)
 {
     return PrepareUserDirsFromVec(userId, g_hmdfsDirVec);
 }
 
-int32_t UserManager::DestroyUserEl1Dirs(int32_t userId)
+bool UserManager::DestroyUserEl1Dirs(int32_t userId)
 {
     return DestroyUserDirsFromVec(userId, g_el1DirVec);
 }
 
-int32_t UserManager::DestroyUserEl2Dirs(int32_t userId)
+bool UserManager::DestroyUserEl2Dirs(int32_t userId)
 {
-    int err = E_OK;
-
-    err = DestroyUserDirsFromVec(userId, g_hmdfsDirVec);
-    if (err) {
-        return err;
-    }
-
-    return DestroyUserDirsFromVec(userId, g_el2DirVec);
+    return DestroyUserDirsFromVec(userId, g_hmdfsDirVec) && DestroyUserDirsFromVec(userId, g_el2DirVec);
 }
 
-int32_t UserManager::DestroyUserHmdfsDirs(int32_t userId)
+bool UserManager::DestroyUserHmdfsDirs(int32_t userId)
 {
     return DestroyUserDirsFromVec(userId, g_hmdfsDirVec);
 }

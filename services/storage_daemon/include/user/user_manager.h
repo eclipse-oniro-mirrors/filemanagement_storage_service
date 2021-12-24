@@ -35,12 +35,12 @@ public:
     int32_t StopUser(int32_t userId);
 
 private:
-    int32_t PrepareUserEl1Dirs(int32_t userId);
-    int32_t PrepareUserEl2Dirs(int32_t userId);
-    int32_t PrepareUserHmdfsDirs(int32_t userId);
-    int32_t DestroyUserEl1Dirs(int32_t userId);
-    int32_t DestroyUserEl2Dirs(int32_t userId);
-    int32_t DestroyUserHmdfsDirs(int32_t userId);
+    bool PrepareUserEl1Dirs(int32_t userId);
+    bool PrepareUserEl2Dirs(int32_t userId);
+    bool PrepareUserHmdfsDirs(int32_t userId);
+    bool DestroyUserEl1Dirs(int32_t userId);
+    bool DestroyUserEl2Dirs(int32_t userId);
+    bool DestroyUserHmdfsDirs(int32_t userId);
     UserManager() = default;
     int32_t CheckUserState(int32_t userId, UserState state);
     void SetUserState(int32_t userId, UserState state);

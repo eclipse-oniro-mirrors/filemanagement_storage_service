@@ -56,60 +56,54 @@ int32_t UMount(const std::string &path)
     return TEMP_FAILURE_RETRY(umount(path.c_str()));
 }
 
-// On success, zero is returned.  On error, -1 is returned, and errno is set appropriately.
-int32_t PrepareDir(const std::string &path, mode_t mode, uid_t uid, gid_t gid)
+// On success, true is returned.  On error, false is returned, and errno is set appropriately.
+bool PrepareDir(const std::string &path, mode_t mode, uid_t uid, gid_t gid)
 {
     LOGI("prepare for %{public}s", path.c_str());
-    int err = E_OK;
 
     // check whether the path exists
     struct stat st;
     if (TEMP_FAILURE_RETRY(lstat(path.c_str(), &st)) == E_ERR) {
         if (errno != ENOENT) {
-            return E_ERR;
+            LOGE("failed to lstat, errno %{public}d", errno);
+            return false;
         }
     } else {
         if (!S_ISDIR(st.st_mode)) {
-            return E_ERR;
+            LOGE("%{public}s exists and is not a directory", path.c_str());
+            return false;
         }
 
-        if ((st.st_mode & ALL_PERMS) != mode) {
-            err = ChMod(path, mode);
+        if (((st.st_mode & ALL_PERMS) != mode) && ChMod(path, mode)) {
+            LOGE("dir exists and failed to chmod, errno %{public}d", errno);
+            return false;
         }
 
-        if ((st.st_uid != uid) || (st.st_gid != gid)) {
-            err = ChOwn(path, uid, gid);
+        if (((st.st_uid != uid) || (st.st_gid != gid)) && ChOwn(path, uid, gid)) {
+            LOGE("dir exists and failed to chown, errno %{public}d", errno);
+            return false;
         }
 
-        return err;
+        return true;
     }
 
-    if ((err = MkDir(path, mode))) {
-        return err;
+    if (MkDir(path, mode)) {
+        LOGE("failed to mkdir, errno %{public}d", errno);
+        return false;
     }
 
-    if ((err = ChOwn(path, uid, gid))) {
-        return err;
+    if (ChOwn(path, uid, gid)) {
+        LOGE("failed to chown, errno %{public}d", errno);
+        return false;
     }
 
-    return err;
-}
-
-// On success, zero is returned.  On error, -1 is returned, and errno is set appropriately.
-int32_t DestroyDir(const std::string &path)
-{
-    LOGI("destroy for %{public}s", path.c_str());
-
-    if(RmDir(path) == E_ERR && errno != ENOENT) {
-        LOGE("failed to rmdir %{public}s, err reason %{public}s", path.c_str(), strerror(errno));
-        return E_ERR;
-    }
-
-    return E_OK;
+    return true;
 }
 
 bool RmDirRecurse(const std::string &path)
 {
+    LOGI("rm dir %{public}s", path.c_str());
+
     DIR *dir = opendir(path.c_str());
     if (!dir) {
         LOGE("failed to open dir %{public}s, errno %{public}d", path.c_str(), errno);
