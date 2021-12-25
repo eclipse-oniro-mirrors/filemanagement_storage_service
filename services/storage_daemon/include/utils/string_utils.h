@@ -15,8 +15,8 @@
 #ifndef STORAGE_DAEMON_UTILS_STRING_UTILS_H
 #define STORAGE_DAEMON_UTILS_STRING_UTILS_H
 
-#include <sys/types.h>
 #include <string>
+#include <sys/types.h>
 
 namespace OHOS {
 namespace StorageDaemon {

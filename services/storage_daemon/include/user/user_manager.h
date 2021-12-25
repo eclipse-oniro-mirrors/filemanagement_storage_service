@@ -17,9 +17,8 @@
 #define OHOS_STORAGE_DAEMON_USER_MANAGER_H
 
 #include <unordered_map> 
-
-#include "user/user_info.h"
 #include <nocopyable.h>
+#include "user/user_info.h"
 
 namespace OHOS {
 namespace StorageDaemon {

@@ -14,13 +14,13 @@
  */
 
 #include "user/user_manager.h"
-#include "ipc/istorage_daemon.h"
+#include <stdlib.h>
 #include "utils/errno.h"
 #include "utils/file_utils.h"
 #include "utils/string_utils.h"
 #include "utils/log.h"
 #include "utils/user_path.h"
-#include <stdlib.h>
+#include "ipc/istorage_daemon.h"
 
 using namespace std;
 

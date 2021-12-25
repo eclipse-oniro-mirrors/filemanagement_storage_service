@@ -15,9 +15,9 @@
 #ifndef STORAGE_DAEMON_UTILS_USER_PATH_H
 #define STORAGE_DAEMON_UTILS_USER_PATH_H
 
-#include <sys/types.h>
 #include <string>
 #include <vector>
+#include <sys/types.h>
 
 namespace OHOS {
 namespace StorageDaemon {

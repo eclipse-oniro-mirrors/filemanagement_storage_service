@@ -16,8 +16,8 @@
 #ifndef OHOS_STORAGE_DAEMON_STORAGE_DAEMON_PROXY_H
 #define OHOS_STORAGE_DAEMON_STORAGE_DAEMON_PROXY_H
 
-#include "ipc/istorage_daemon.h"
 #include "iremote_proxy.h"
+#include "ipc/istorage_daemon.h"
 
 namespace OHOS {
 namespace StorageDaemon {
