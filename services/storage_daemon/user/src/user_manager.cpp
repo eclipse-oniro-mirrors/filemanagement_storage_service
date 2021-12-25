@@ -19,7 +19,6 @@
 #include "utils/file_utils.h"
 #include "utils/string_utils.h"
 #include "utils/log.h"
-#include "utils/user_path.h"
 #include "ipc/istorage_daemon.h"
 
 using namespace std;
@@ -96,8 +95,8 @@ int32_t UserManager::StartUser(int32_t userId)
         return err;
     }
 
-    err = Mount(StringPrintf(HMDFS_SOURCE.c_str(), userId),
-                        StringPrintf(HMDFS_TARGET.c_str(), userId),
+    err = Mount(StringPrintf(hmdfsSource_.c_str(), userId),
+                        StringPrintf(hmdfsTarget_.c_str(), userId),
                         nullptr, MS_BIND, nullptr);
     if (err) {
         LOGE("failed to mount, err %{public}d", errno);
@@ -120,7 +119,7 @@ int32_t UserManager::StopUser(int32_t userId)
 
     int32_t count = 0;
     while (count < UMOUNT_RETRY_TIMES) {
-        err = UMount(StringPrintf(HMDFS_TARGET.c_str(), userId));
+        err = UMount(StringPrintf(hmdfsTarget_.c_str(), userId));
         if (err == E_OK) {
             break;
         } else if (errno == EBUSY) {
@@ -218,32 +217,32 @@ inline bool DestroyUserDirsFromVec(int32_t userId, std::vector<DirInfo> dirVec)
 
 bool UserManager::PrepareUserEl1Dirs(int32_t userId)
 {
-    return PrepareUserDirsFromVec(userId, g_el1DirVec);
+    return PrepareUserDirsFromVec(userId, el1DirVec_);
 }
 
 bool UserManager::PrepareUserEl2Dirs(int32_t userId)
 {
-    return PrepareUserDirsFromVec(userId, g_el2DirVec) && PrepareUserHmdfsDirs(userId);
+    return PrepareUserDirsFromVec(userId, el2DirVec_) && PrepareUserHmdfsDirs(userId);
 }
 
 bool UserManager::PrepareUserHmdfsDirs(int32_t userId)
 {
-    return PrepareUserDirsFromVec(userId, g_hmdfsDirVec);
+    return PrepareUserDirsFromVec(userId, hmdfsDirVec_);
 }
 
 bool UserManager::DestroyUserEl1Dirs(int32_t userId)
 {
-    return DestroyUserDirsFromVec(userId, g_el1DirVec);
+    return DestroyUserDirsFromVec(userId, el1DirVec_);
 }
 
 bool UserManager::DestroyUserEl2Dirs(int32_t userId)
 {
-    return DestroyUserDirsFromVec(userId, g_hmdfsDirVec) && DestroyUserDirsFromVec(userId, g_el2DirVec);
+    return DestroyUserDirsFromVec(userId, hmdfsDirVec_) && DestroyUserDirsFromVec(userId, el2DirVec_);
 }
 
 bool UserManager::DestroyUserHmdfsDirs(int32_t userId)
 {
-    return DestroyUserDirsFromVec(userId, g_hmdfsDirVec);
+    return DestroyUserDirsFromVec(userId, hmdfsDirVec_);
 }
 
 } // StorageDaemon
