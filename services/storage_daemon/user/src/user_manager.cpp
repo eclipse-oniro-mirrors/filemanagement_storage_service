@@ -66,6 +66,7 @@ int32_t UserManager::AddUser(int32_t userId)
     LOGI("add user %{public}d", userId);
 
     if (users_.count(userId) != 0) {
+        LOGE("The user %{public}d has existed", userId);
         return E_EXIST;
     }
     users_.insert({ userId, UserInfo(userId, USER_CREAT) });
@@ -77,8 +78,8 @@ int32_t UserManager::RemoveUser(int32_t userId)
 {
     LOGI("remove user %{public}d", userId);
 
-    if (CheckUserState(userId, USER_CREAT)) {
-        return E_USER_STATE;
+    if (int32_t err = CheckUserState(userId, USER_CREAT); err != E_OK) {
+        return err;
     }
 
     users_.erase(userId);
@@ -90,16 +91,17 @@ int32_t UserManager::StartUser(int32_t userId)
 {
     LOGI("start user %{public}d", userId);
 
-    if (CheckUserState(userId, USER_PREPARE)) {
-        return E_USER_STATE;
+    int32_t err = E_OK;
+    if (err =CheckUserState(userId, USER_PREPARE); err != E_OK) {
+        return err;
     }
 
-    int32_t err = Mount(StringPrintf(HMDFS_SOURCE.c_str(), userId),
+    err = Mount(StringPrintf(HMDFS_SOURCE.c_str(), userId),
                         StringPrintf(HMDFS_TARGET.c_str(), userId),
                         nullptr, MS_BIND, nullptr);
     if (err) {
         LOGE("failed to mount, err %{public}d", errno);
-        return err;
+        return E_MOUNT;
     }
 
     SetUserState(userId, USER_START);
@@ -111,12 +113,12 @@ int32_t UserManager::StopUser(int32_t userId)
 {
     LOGI("stop user %{public}d", userId);
 
-    if (CheckUserState(userId, USER_START)) {
-        return E_USER_STATE;
+    int32_t err = E_OK;
+    if (err = CheckUserState(userId, USER_START); err != E_OK) {
+        return err;
     }
 
     int32_t count = 0;
-    int32_t err;
     while (count < UMOUNT_RETRY_TIMES) {
         err = UMount(StringPrintf(HMDFS_TARGET.c_str(), userId));
         if (err == E_OK) {
@@ -126,7 +128,7 @@ int32_t UserManager::StopUser(int32_t userId)
             continue;
         } else {
             LOGE("failed to umount, errno %{public}d", errno);
-            return err;
+            return E_UMOUNT;
         }
     }
 
@@ -139,21 +141,21 @@ int32_t UserManager::PrepareUserDirs(int32_t userId, uint32_t flags)
 {
     LOGI("prepare user dirs for %{public}d, flags %{public}u", userId, flags);
 
-    if (CheckUserState(userId, USER_CREAT)) {
-        return E_USER_STATE;
+    if (int32_t err = CheckUserState(userId, USER_CREAT); err != E_OK) {
+        return err;
     }
 
     if (flags & IStorageDaemon::CRYPTO_FLAG_EL1) {
         if (!PrepareUserEl1Dirs(userId)) {
             LOGE("failed to prepare user el1 dirs for userid %{public}d", userId);
-            return E_ERR;
+            return E_PREPARE_DIR;
         }
     }
 
     if (flags & IStorageDaemon::CRYPTO_FLAG_EL2) {
         if (!PrepareUserEl2Dirs(userId)) {
             LOGE("failed to prepare user el2 dirs for userid %{public}d", userId);
-            return E_ERR;
+            return E_PREPARE_DIR;
         }
     }
 
@@ -166,20 +168,22 @@ int32_t UserManager::DestroyUserDirs(int32_t userId, uint32_t flags)
 {
     LOGI("destroy user dirs for %{public}d, flags %{public}u", userId, flags);
 
-    if (CheckUserState(userId, USER_PREPARE)) {
-        return E_USER_STATE;
+    int32_t err = E_OK;
+    if (err = CheckUserState(userId, USER_PREPARE); err != E_OK) {
+        return err;
     }
 
-    int err = E_OK;
     if (flags & IStorageDaemon::CRYPTO_FLAG_EL1) {
         if (!DestroyUserEl1Dirs(userId)) {
             LOGE("failed to destroy user el1 dirs for userid %{public}d", userId);
+            err = E_DESTROY_DIR;
         }
     }
 
     if (flags & IStorageDaemon::CRYPTO_FLAG_EL2) {
         if (!DestroyUserEl2Dirs(userId)) {
             LOGE("failed to destroy user el2 dirs for userid %{public}d", userId);
+            err = E_DESTROY_DIR;
         }
     }
 
@@ -199,7 +203,6 @@ inline bool PrepareUserDirsFromVec(int32_t userId, std::vector<DirInfo> dirVec)
     return true;
 }
 
-// Destory dirs as much as possible, and return one of err;
 inline bool DestroyUserDirsFromVec(int32_t userId, std::vector<DirInfo> dirVec)
 {
     bool ret = true;
