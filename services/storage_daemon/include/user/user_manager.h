@@ -19,7 +19,7 @@
 #include <unordered_map> 
 
 #include "user/user_info.h"
-#include "utils/nocopyable.h"
+#include <nocopyable.h>
 
 namespace OHOS {
 namespace StorageDaemon {
@@ -44,7 +44,7 @@ private:
     UserManager() = default;
     int32_t CheckUserState(int32_t userId, UserState state);
     void SetUserState(int32_t userId, UserState state);
-    DISABLE_COPY_ASSIGN_MOVE(UserManager);
+    DISALLOW_COPY_AND_MOVE(UserManager);
 
     static UserManager* instance_;
     std::unordered_map<int32_t, UserInfo> users_;
