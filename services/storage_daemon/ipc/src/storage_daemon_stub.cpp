@@ -64,7 +64,6 @@ int32_t StorageDaemonStub::HandleShutdown()
 {
     Shutdown();
     return E_OK;
-
 }
 
 int32_t StorageDaemonStub::HandleMount(MessageParcel &data, MessageParcel &reply)

@@ -46,7 +46,8 @@ int32_t RmDir(const std::string &path)
     return TEMP_FAILURE_RETRY(rmdir(path.c_str()));
 }
 
-int32_t Mount(const std::string &source, const std::string &target, const char *type, unsigned long flags, const void *data)
+int32_t Mount(const std::string &source, const std::string &target, const char *type,
+              unsigned long flags, const void *data)
 {
     return TEMP_FAILURE_RETRY(mount(source.c_str(), target.c_str(), type, flags, data));
 }

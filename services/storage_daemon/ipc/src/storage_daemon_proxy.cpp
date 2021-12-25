@@ -168,6 +168,5 @@ int32_t StorageDaemonProxy::StopUser(int32_t userId)
     return reply.ReadUint32();
 }
 
-
 } // StorageDaemon
 } // OHOS
