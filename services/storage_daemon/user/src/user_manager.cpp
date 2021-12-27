@@ -77,7 +77,8 @@ int32_t UserManager::RemoveUser(int32_t userId)
 {
     LOGI("remove user %{public}d", userId);
 
-    if (int32_t err = CheckUserState(userId, USER_CREAT); err != E_OK) {
+    int32_t err = E_OK;
+    if ((err = CheckUserState(userId, USER_CREAT)) != E_OK) {
         return err;
     }
 
@@ -91,7 +92,7 @@ int32_t UserManager::StartUser(int32_t userId)
     LOGI("start user %{public}d", userId);
 
     int32_t err = E_OK;
-    if (err =CheckUserState(userId, USER_PREPARE); err != E_OK) {
+    if ((err =CheckUserState(userId, USER_PREPARE)) != E_OK) {
         return err;
     }
 
@@ -113,7 +114,7 @@ int32_t UserManager::StopUser(int32_t userId)
     LOGI("stop user %{public}d", userId);
 
     int32_t err = E_OK;
-    if (err = CheckUserState(userId, USER_START); err != E_OK) {
+    if ((err = CheckUserState(userId, USER_START)) != E_OK) {
         return err;
     }
 
@@ -140,7 +141,8 @@ int32_t UserManager::PrepareUserDirs(int32_t userId, uint32_t flags)
 {
     LOGI("prepare user dirs for %{public}d, flags %{public}u", userId, flags);
 
-    if (int32_t err = CheckUserState(userId, USER_CREAT); err != E_OK) {
+    int32_t err = E_OK;
+    if ((err = CheckUserState(userId, USER_CREAT)) != E_OK) {
         return err;
     }
 
@@ -160,7 +162,7 @@ int32_t UserManager::PrepareUserDirs(int32_t userId, uint32_t flags)
 
     SetUserState(userId, USER_PREPARE);
 
-    return E_OK;
+    return err;
 }
 
 int32_t UserManager::DestroyUserDirs(int32_t userId, uint32_t flags)
@@ -168,7 +170,7 @@ int32_t UserManager::DestroyUserDirs(int32_t userId, uint32_t flags)
     LOGI("destroy user dirs for %{public}d, flags %{public}u", userId, flags);
 
     int32_t err = E_OK;
-    if (err = CheckUserState(userId, USER_PREPARE); err != E_OK) {
+    if ((err = CheckUserState(userId, USER_PREPARE)) != E_OK) {
         return err;
     }
 
