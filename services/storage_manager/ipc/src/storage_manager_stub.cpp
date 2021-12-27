@@ -28,7 +28,7 @@ int32_t StorageManagerStub::OnRemoteRequest(uint32_t code, MessageParcel &data, 
         return E_PERMISSION_DENIED;
     }
     
-    int err= 0;
+    int err = 0;
     switch (code) {
         case ON_USER_CREATE: 
             HandleOnUserCreate(data, reply); 
@@ -51,6 +51,7 @@ int32_t StorageManagerStub::HandleOnUserCreate(MessageParcel &data, MessageParce
     LOGI("StorageManagerStub::HandleOnUserCreate, userId:%{public}d", userId);
     int err = OnUserCreate(userId);
     if (!reply.WriteUint32(err)) {
+        LOGE("StorageManagerStub::HandleOnUserCreate call OnUserCreate failed");
         return  E_IPC_ERROR;
     }
     return E_OK;
@@ -62,6 +63,7 @@ int32_t StorageManagerStub::HandleOnUserDelete(MessageParcel &data, MessageParce
     LOGI("StorageManagerStub::HandleOnUserDelete, userId:%{public}d", userId);
     int err = OnUserDelete(userId);
     if (!reply.WriteUint32(err)) {
+        LOGE("StorageManagerStub::HandleOnUserDelete call OnUserDelete failed");
         return E_IPC_ERROR;
     }
     return E_OK;

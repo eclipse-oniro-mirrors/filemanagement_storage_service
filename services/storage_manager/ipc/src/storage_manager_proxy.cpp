@@ -26,17 +26,18 @@ int32_t StorageManagerProxy::OnUserCreate(int32_t userId)
     MessageParcel data, reply;
     MessageOption option(MessageOption::TF_SYNC);
     if (!data.WriteInterfaceToken(StorageManagerProxy::GetDescriptor())) {
+        LOGE("StorageManagerProxy::OnUserCreate, WriteInterfaceToken failed");
         return E_IPC_ERROR;
     }
-
     if (!data.WriteInt32(userId)) {
+        LOGE("StorageManagerProxy::OnUserCreate, WriteInt32 failed");
         return E_IPC_ERROR;
     }
     int err = Remote()->SendRequest(ON_USER_CREATE, data, reply, option);
     if (err != E_OK) {
+        LOGE("StorageManagerProxy::OnUserCreate, SendRequest failed");
         return E_IPC_ERROR;
     }
-
     return reply.ReadUint32();
 }
     
@@ -46,14 +47,16 @@ int32_t StorageManagerProxy::OnUserDelete(int32_t userId)
     MessageParcel data, reply;
     MessageOption option(MessageOption::TF_SYNC);
     if (!data.WriteInterfaceToken(StorageManagerProxy::GetDescriptor())) {
+        LOGE("StorageManagerProxy::OnUserDelete, WriteInterfaceToken failed");
         return E_IPC_ERROR;
     }
-
     if (!data.WriteInt32(userId)) {
+        LOGE("StorageManagerProxy::OnUserDelete, WriteInt32 failed");
         return E_IPC_ERROR;
     }
     int err = Remote()->SendRequest(ON_USER_DELETE, data, reply, option);
     if (err != E_OK) {
+        LOGE("StorageManagerProxy::OnUserDelete, SendRequest failed");
         return E_IPC_ERROR;
     }
     return reply.ReadUint32();

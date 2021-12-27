@@ -22,18 +22,18 @@
 namespace OHOS {
 namespace StorageManager {
 
-REGISTER_SYSTEM_ABILITY_BY_ID(StorageManager, STORAGE_MANAGER_SA_ID , true);
+REGISTER_SYSTEM_ABILITY_BY_ID(StorageManager, STORAGE_MANAGER_MANAGER_ID, true);
 
 void StorageManager::OnStart()
 {
-    LOGI("Begin");
+    LOGI("StorageManager::OnStart Begin");
     bool res = SystemAbility::Publish(this);
-    LOGI("End, res = %{public}d", res);
+    LOGI("StorageManager::OnStart End, res = %{public}d", res);
 }
 
 void StorageManager::OnStop()
 {
-    LOGI("Done");
+    LOGI("StorageManager::Onstop Done");
 }
 
 int32_t StorageManager::OnUserCreate(int32_t userId)

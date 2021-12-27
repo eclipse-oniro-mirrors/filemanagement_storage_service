@@ -12,9 +12,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include "storage_daemon_communication/storage_daemon_communication.h"
 #include <system_ability_definition.h>
 #include <iservice_registry.h>
-#include "storage_daemon_communication/storage_daemon_communication.h"
 #include "utils/storage_manager_log.h"
 #include "utils/storage_manager_errno.h"
 #include "ipc/istorage_daemon.h"
@@ -45,17 +45,17 @@ int32_t StorageDaemonCommunication::Connect()
     if (storageDaemon_ == nullptr) {
         auto sam = SystemAbilityManagerClient::GetInstance().GetSystemAbilityManager();
         if (sam == nullptr) {
-            LOGE("StorageDaemonCommunication::Connect samgr == nullptr");
+            LOGE("StorageDaemonCommunication::Connect samgr nullptr");
             return E_IPC_ERROR;
         }
-        auto object = sam->GetSystemAbility(STORAGE_DAEMON_SA_ID); 
+        auto object = sam->GetSystemAbility(STORAGE_MANAGER_DAEMON_ID); 
         if (object == nullptr) {
-            LOGE("StorageDaemonCommunication::Connect object == nullptr");
+            LOGE("StorageDaemonCommunication::Connect object nullptr");
             return E_IPC_ERROR;
         }
         storageDaemon_ = iface_cast<OHOS::StorageDaemon::IStorageDaemon>(object);
         if (storageDaemon_ == nullptr) {
-            LOGE("StorageDaemonCommunication::Connect service == nullptr");
+            LOGE("StorageDaemonCommunication::Connect service nullptr");
             return E_IPC_ERROR;
         }
     }
@@ -71,7 +71,11 @@ int32_t StorageDaemonCommunication::OnUserCreate(int32_t userId)
         LOGE("StorageDaemonCommunication::OnUserCreate failed");
         return E_IPC_ERROR;
     } else {
-        return storageDaemon_->AddUser(userId);
+        int err = storageDaemon_->AddUser(userId);
+        if (err != E_OK) {
+            LOGE("StorageDaemonCommunication::OnUserCreate call StorageDaemon AddUser failed");
+        }
+        return err;
     }
 }
 
@@ -82,7 +86,11 @@ int32_t StorageDaemonCommunication::OnUserDelete(int32_t userId)
         LOGE("StorageDaemonCommunication::OnUserDelete failed");
         return E_IPC_ERROR;
     } else {
-        return storageDaemon_->RemoveUser(userId);
+        int err = storageDaemon_->RemoveUser(userId);
+        if (err != E_OK) {
+            LOGE("StorageDaemonCommunication::OnUserDelete call StorageDaemon RemoveUser failed");
+        }
+        return err;
     }
 }
 } // StorageManager

@@ -29,7 +29,6 @@ ohos_shared_library("storage_manager") {
         "ipc/src/storage_manager.cpp",
         "ipc/src/storage_manager_stub.cpp",
         
-
         "user/src/multi_user_manager_service.cpp",
         "storage_daemon_communication/src/storage_daemon_communication.cpp",
     ]
