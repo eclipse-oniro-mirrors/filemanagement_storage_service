@@ -16,8 +16,8 @@
 #ifndef OHOS_STORAGE_DAEMON_STORAGE_DAEMON_STUB_H
 #define OHOS_STORAGE_DAEMON_STORAGE_DAEMON_STUB_H
 
-#include "ipc/istorage_daemon.h"
 #include "iremote_stub.h"
+#include "ipc/istorage_daemon.h"
 
 namespace OHOS {
 namespace StorageDaemon {

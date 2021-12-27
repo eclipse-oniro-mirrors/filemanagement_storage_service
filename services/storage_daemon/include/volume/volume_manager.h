@@ -16,7 +16,7 @@
 #ifndef OHOS_STORAGE_DAEMON_VOLUME_MANAGER_H
 #define OHOS_STORAGE_DAEMON_VOLUME_MANAGER_H
 
-#include "utils/nocopyable.h"
+#include <nocopyable.h>
 
 namespace OHOS {
 namespace StorageDaemon {
@@ -26,7 +26,7 @@ public:
 
 private:
     VolumeManager();
-    DISABLE_COPY_ASSIGN_MOVE(VolumeManager);
+    DISALLOW_COPY_AND_MOVE(VolumeManager);
 };
 } // STORAGE_DAEMON
 } // OHOS

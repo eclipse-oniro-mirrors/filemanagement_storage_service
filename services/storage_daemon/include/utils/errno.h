@@ -17,15 +17,21 @@
 
 namespace OHOS {
 namespace StorageDaemon {
-constexpr int32_t E_OK = 0;
 constexpr int32_t E_ERR = -1;
 
-constexpr int32_t E_PERMISSION_DENIED = 1;  // no permission
-constexpr int32_t E_IPC_ERROR = 2;          // ipc error
-constexpr int32_t E_EXIST = 3;              // exist
-constexpr int32_t E_WRONG_TYPE = 4;         // wrong file type
-constexpr int32_t E_USER_STATE = 5;            // wrong user state
-constexpr int32_t E_NON_EXIST = 6;            // no such user
+enum ErrNo {
+    E_OK = 0,
+    E_PERMISSION_DENIED = 1,  // no permission
+    E_IPC_ERROR = 2,          // ipc error
+    E_EXIST = 3,              // exist
+    E_WRONG_TYPE = 4,         // wrong file type
+    E_USER_STATE = 5,            // wrong user state
+    E_NON_EXIST = 6,            // no such user
+    E_PREPARE_DIR = 7,         // failed to prepare dir
+    E_DESTROY_DIR = 8,         // failed to destroy dir
+    E_MOUNT,        // mount error
+    E_UMOUNT,       // umount error
+};
 }
 }
 

@@ -16,7 +16,7 @@
 #ifndef OHOS_STORAGE_DAEMON_DISK_MANAGER_H
 #define OHOS_STORAGE_DAEMON_DISK_MANAGER_H
 
-#include "utils/nocopyable.h"
+#include <nocopyable.h>
 
 namespace OHOS {
 namespace StorageDaemon {
@@ -26,7 +26,7 @@ public:
 
 private:
     DiskManager();
-    DISABLE_COPY_ASSIGN_MOVE(DiskManager);
+    DISALLOW_COPY_AND_MOVE(DiskManager);
 };
 } // STORAGE_DAEMON
 } // OHOS

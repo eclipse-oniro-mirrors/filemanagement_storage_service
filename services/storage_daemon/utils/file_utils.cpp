@@ -14,13 +14,13 @@
  */
 
 #include "utils/file_utils.h"
-#include "utils/errno.h"
-#include "utils/log.h"
-#include <sys/stat.h>
 #include <errno.h>
 #include <unistd.h>
 #include <string.h>
 #include <dirent.h>
+#include <sys/stat.h>
+#include "utils/errno.h"
+#include "utils/log.h"
 
 namespace OHOS {
 namespace StorageDaemon {
