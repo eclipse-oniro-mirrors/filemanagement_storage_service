@@ -13,24 +13,34 @@
 
 import("//build/ohos.gni")
 
+## Install storage_daemon.cfg to /system/etc/init/storage_daemon.cfg {{{
+ohos_prebuilt_etc("storage_daemon_cfg") {
+  source = "storage_daemon.cfg"
+  relative_install_dir = "init"
+  part_name = "storage_standard"
+  subsystem_name = "storage_manager"
+}
+## Install storage_daemon.cfg to /system/etc/init/storage_daemon.cfg }}}
+
 config("storage_daemon_config") {
   include_dirs = [
     "include",
     "//utils/native/base/include",
+    "//foundation/distributedschedule/samgr/interfaces/innerkits/samgr_proxy/include"
   ]
 }
 
 ohos_executable("storage_daemon") {
   sources = [
-    "main.cpp",
-
     "ipc/src/storage_daemon.cpp",
     "ipc/src/storage_daemon_stub.cpp",
-    "ipc/src/storage_daemon_proxy.cpp",
 
     "user/src/user_manager.cpp",
 
     "utils/file_utils.cpp",
+    "utils/string_utils.cpp",
+
+    "main.cpp",
   ]
 
   configs = [
@@ -44,6 +54,7 @@ ohos_executable("storage_daemon") {
   external_deps = [
     "hiviewdfx_hilog_native:libhilog",
     "ipc:ipc_core",
+    "samgr_standard:samgr_proxy"
   ]
 
   subsystem_name = "storage_manager"

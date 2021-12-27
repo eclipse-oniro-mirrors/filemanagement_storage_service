@@ -12,23 +12,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#ifndef STORAGE_DAEMON_UTILS_STRING_UTILS_H
+#define STORAGE_DAEMON_UTILS_STRING_UTILS_H
 
-#ifndef OHOS_STORAGE_DAEMON_DISK_MANAGER_H
-#define OHOS_STORAGE_DAEMON_DISK_MANAGER_H
-
-#include <nocopyable.h>
+#include <string>
+#include <sys/types.h>
 
 namespace OHOS {
 namespace StorageDaemon {
-class DiskManager final {
-public:
-    virtual ~DiskManager();
+std::string StringPrintf(const char *format, ...);
 
-private:
-    DiskManager();
-    DISALLOW_COPY_AND_MOVE(DiskManager);
-};
-} // STORAGE_DAEMON
-} // OHOS
+inline bool IsEndWith(const std::string &str, const std::string &end)
+{
+    return str.size() >= end.size() && str.substr(str.size() - end.size()) == end;
+}
+}
+}
 
-#endif // OHOS_STORAGE_DAEMON_DISK_MANAGER_H
+#endif // STORAGE_DAEMON_UTILS_STRING_UTILS_H

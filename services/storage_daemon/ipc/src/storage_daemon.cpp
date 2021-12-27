@@ -46,22 +46,38 @@ int32_t StorageDaemon::Format(std::string voldId)
 
 int32_t StorageDaemon::AddUser(int32_t userId)
 {
+    std::lock_guard<std::mutex> lock(mutex_);
     return UserManager::Instance()->AddUser(userId);
 }
 
 int32_t StorageDaemon::RemoveUser(int32_t userId)
 {
+    std::lock_guard<std::mutex> lock(mutex_);
     return UserManager::Instance()->RemoveUser(userId);
 }
 
 int32_t StorageDaemon::PrepareUserDirs(int32_t userId, uint32_t flags)
 {
+    std::lock_guard<std::mutex> lock(mutex_);
     return UserManager::Instance()->PrepareUserDirs(userId, flags);
 }
 
 int32_t StorageDaemon::DestroyUserDirs(int32_t userId, uint32_t flags)
 {
+    std::lock_guard<std::mutex> lock(mutex_);
     return UserManager::Instance()->DestroyUserDirs(userId, flags);
+}
+
+int32_t StorageDaemon::StartUser(int32_t userId)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    return UserManager::Instance()->StartUser(userId);
+}
+
+int32_t StorageDaemon::StopUser(int32_t userId)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    return UserManager::Instance()->StopUser(userId);
 }
 
 } // StorageDaemon

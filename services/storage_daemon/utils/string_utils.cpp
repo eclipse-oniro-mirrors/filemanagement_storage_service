@@ -13,27 +13,30 @@
  * limitations under the License.
  */
 
-#include "utils/user_path.h"
-#include <unordered_map>
+#include "utils/string_utils.h"
+#include <stdio.h>
+#include <stdarg.h>
+#include <string.h>
 
 using namespace std;
 
 namespace OHOS {
-namespace StorageDaemon {
+namespace StorageDaemon{
+constexpr int32_t BUFF_SIZE = 1024;
+std::string StringPrintf(const char *format, ...) {
+    va_list ap;
+    va_start(ap, format);
 
-constexpr uid_t OID_ROOT = 0;
+    std::string result;
+    char buf[BUFF_SIZE] = {0};
+    int count = vsnprintf(buf, BUFF_SIZE, format, ap);
+    if (count >= 0 && count < BUFF_SIZE) {
+        result.append(buf, count);
+    }
 
-unordered_map<string, struct DirInfo> g_el1DirMap = {
-        {"/data/app/el1/", { 0711, OID_ROOT, OID_ROOT }},
-        {"/data/service/el1/", { 0711, OID_ROOT, OID_ROOT }},
-        {"/data/vendor/el1/", { 0711, OID_ROOT, OID_ROOT }}
-};
+    va_end(ap);
 
-unordered_map<string, struct DirInfo> g_el2DirMap = {
-        {"/data/app/el2/", { 0711, OID_ROOT, OID_ROOT }},
-        {"/data/service/el2/", { 0711, OID_ROOT, OID_ROOT }},
-        {"/data/vendor/el2/", { 0711, OID_ROOT, OID_ROOT }}
-};
-
+    return result;
 }
-}
+} // namespace StorageDaemon
+} // namespace OHOS

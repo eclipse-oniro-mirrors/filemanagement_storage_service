@@ -29,12 +29,27 @@ int32_t StorageDaemonStub::OnRemoteRequest(uint32_t code, MessageParcel &data,
 
     int err = E_OK;
     switch (code) {
-        case SHUTDOWN: err = HandleShutdown(); break;
-
-        case ADD_USER: err = HandleAddUser(data, reply); break;
-        case REMOVE_USER: err = HandleRemoveUser(data, reply); break;
-        case PREPARE_USER_DIRS: err = HandlePrepareUserDirs(data, reply); break;
-        case DESTROY_USER_DIRS: err = HandleDestroyUserDirs(data, reply); break;
+        case SHUTDOWN:
+            err = HandleShutdown();
+            break;
+        case ADD_USER:
+            err = HandleAddUser(data, reply);
+            break;
+        case REMOVE_USER:
+            err = HandleRemoveUser(data, reply);
+            break;
+        case PREPARE_USER_DIRS:
+            err = HandlePrepareUserDirs(data, reply);
+            break;
+        case DESTROY_USER_DIRS:
+            err = HandleDestroyUserDirs(data, reply);
+            break;
+        case START_USER:
+            err = HandleStartUser(data,  reply);
+            break;
+        case STOP_USER:
+            err = HandleStopUser(data, reply);
+            break;
         default: {
             LOGI(" use IPCObjectStub default OnRemoteRequest");
             err = IPCObjectStub::OnRemoteRequest(code, data, reply, option);
@@ -49,7 +64,6 @@ int32_t StorageDaemonStub::HandleShutdown()
 {
     Shutdown();
     return E_OK;
-
 }
 
 int32_t StorageDaemonStub::HandleMount(MessageParcel &data, MessageParcel &reply)
@@ -115,6 +129,30 @@ int32_t StorageDaemonStub::HandleDestroyUserDirs(MessageParcel &data, MessagePar
     if (!reply.WriteUint32(err)) {
         return  E_IPC_ERROR;
     }
+    return E_OK;
+}
+
+int32_t StorageDaemonStub::HandleStartUser(MessageParcel &data, MessageParcel &reply)
+{
+    int32_t userId = data.ReadInt32();
+
+    int32_t err = StartUser(userId);
+    if (!reply.WriteInt32(err)) {
+        return E_IPC_ERROR;
+    }
+
+    return E_OK;
+}
+
+int32_t StorageDaemonStub::HandleStopUser(MessageParcel &data, MessageParcel &reply)
+{
+    int32_t userId = data.ReadInt32();
+
+    int32_t err = StopUser(userId);
+    if (!reply.WriteInt32(err)) {
+        return E_IPC_ERROR;
+    }
+
     return E_OK;
 }
 

@@ -16,8 +16,8 @@
 #ifndef OHOS_STORAGE_DAEMON_ISTORAGE_DAEMON_H
 #define OHOS_STORAGE_DAEMON_ISTORAGE_DAEMON_H
 
-#include "iremote_broker.h"
 #include <string>
+#include "iremote_broker.h"
 
 namespace OHOS {
 namespace StorageDaemon {
@@ -35,6 +35,8 @@ public:
         REMOVE_USER,
         PREPARE_USER_DIRS,
         DESTROY_USER_DIRS,
+        START_USER,
+        STOP_USER
     };
 
     enum {
@@ -51,6 +53,8 @@ public:
 
     virtual int32_t AddUser(int32_t userId) = 0;
     virtual int32_t RemoveUser(int32_t userId) = 0;
+    virtual int32_t StartUser(int32_t userId) = 0;
+    virtual int32_t StopUser(int32_t userId) = 0;
     virtual int32_t PrepareUserDirs(int32_t userId, uint32_t flags) = 0;
     virtual int32_t DestroyUserDirs(int32_t userId, uint32_t flags) = 0;
 
