@@ -18,8 +18,8 @@
 
 #include <singleton.h>
 #include <nocopyable.h>
-#include "ipc/istorage_daemon.h"
 #include "system_ability.h"
+#include "ipc/istorage_daemon.h"
 
 namespace OHOS {
 namespace StorageManager {

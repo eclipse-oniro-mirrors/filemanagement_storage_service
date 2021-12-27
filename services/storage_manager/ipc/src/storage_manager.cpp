@@ -14,8 +14,8 @@
  */
 
 #include "ipc/storage_manager.h"
-#include "utils/storage_manager_log.h"
 #include "system_ability_definition.h"
+#include "utils/storage_manager_log.h"
 #include "utils/storage_manager_errno.h"
 #include "user/multi_user_manager_service.h"
 

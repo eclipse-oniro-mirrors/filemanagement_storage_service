@@ -18,10 +18,8 @@
 #include "utils/storage_manager_log.h"
 #include "utils/storage_manager_errno.h"
 
-
 namespace OHOS {
 namespace StorageManager {
-using namespace std;
 
 MultiUserManagerService::MultiUserManagerService()
 {

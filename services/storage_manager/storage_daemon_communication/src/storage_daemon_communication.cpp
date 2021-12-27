@@ -17,10 +17,9 @@
 #include "storage_daemon_communication/storage_daemon_communication.h"
 #include "utils/storage_manager_log.h"
 #include "utils/storage_manager_errno.h"
-#include "../../../storage_daemon/include/ipc/istorage_daemon.h"
-#include "../../../storage_daemon/include/ipc/storage_daemon.h"
-#include "../../../storage_daemon/include/ipc/storage_daemon_proxy.h"
-
+#include "ipc/istorage_daemon.h"
+#include "ipc/storage_daemon.h"
+#include "ipc/storage_daemon_proxy.h"
 
 namespace OHOS {
 namespace StorageManager {
