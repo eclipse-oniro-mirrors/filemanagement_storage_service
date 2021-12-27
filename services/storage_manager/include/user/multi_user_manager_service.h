@@ -21,7 +21,6 @@
 
 namespace OHOS {
 namespace StorageManager {
-using namespace std;
 
 class MultiUserManagerService final : public NoCopyable {
     DECLARE_DELAYED_SINGLETON(MultiUserManagerService);
