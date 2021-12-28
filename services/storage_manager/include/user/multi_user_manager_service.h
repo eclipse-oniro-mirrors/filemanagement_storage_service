@@ -13,26 +13,22 @@
  * limitations under the License.
  */
 
-#include "ipc/storage_daemon.h"
-#include "ipc_skeleton.h"
-#include "iservice_registry.h"
+#ifndef OHOS_STORAGE_MANAGER_MULTI_USER_MANAGER_SERVICE_H
+#define OHOS_STORAGE_MANAGER_MULTI_USER_MANAGER_SERVICE_H
 
-using namespace OHOS;
+#include <singleton.h>
+#include <nocopyable.h>
 
-int main()
-{
-    int said = 5002;
+namespace OHOS {
+namespace StorageManager {
 
-    do {
-        auto samgr = SystemAbilityManagerClient::GetInstance().GetSystemAbilityManager();
-        if (samgr != nullptr) {
-            sptr<StorageDaemon::StorageDaemon> sd = new StorageDaemon::StorageDaemon();
-            samgr->AddSystemAbility(said, sd);
-            break;
-        }
-    } while (true);
+class MultiUserManagerService final : public NoCopyable {
+    DECLARE_DELAYED_SINGLETON(MultiUserManagerService);
+public:
+    int32_t OnUserCreate(int32_t userId) const;
+    int32_t OnUserDelete(int32_t userId) const;
+};  
+} // StorageManager
+} // OHOS
 
-    IPCSkeleton::JoinWorkThread();
-
-    return 0;
-}
+#endif // OHOS_STORAGE_MANAGER_MULTI_USER_MANAGER_SERVICE_H
