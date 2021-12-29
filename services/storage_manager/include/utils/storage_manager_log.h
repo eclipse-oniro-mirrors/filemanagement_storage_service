@@ -16,7 +16,6 @@
 #define STORAGE_MANAGER_UTILS_LOG_H
 #include "hilog/log.h"
 
-
 #ifndef LOG_DOMAIN
 #define LOG_DOMAIN 0    // TODO tmp value 0, need request unique LOG_DOMAIN
 #endif

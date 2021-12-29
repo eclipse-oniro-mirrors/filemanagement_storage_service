@@ -18,7 +18,7 @@ ohos_sa_profile("storage_manager_sa_profile") {
   part_name = "storage_standard"
 }
 
-ohos_prebuilt_etc("storage_manager.cfg") {
+ohos_prebuilt_etc("storage_manager_cfg") {
   source = "../storage_manager.cfg"
   relative_install_dir = "init"
   part_name = "storage_standard"
