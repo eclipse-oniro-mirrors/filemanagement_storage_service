@@ -34,7 +34,8 @@ MultiUserManagerService::~MultiUserManagerService()
 int32_t MultiUserManagerService::OnUserCreate(int32_t userId) const
 {
     LOGI("MultiUserManagerService_create, userId:%{public}d", userId);
-    std::shared_ptr<StorageDaemonCommunication> sdCommunication = DelayedSingleton<StorageDaemonCommunication>::GetInstance();
+    std::shared_ptr<StorageDaemonCommunication> sdCommunication;
+    sdCommunication = DelayedSingleton<StorageDaemonCommunication>::GetInstance();
     int32_t err = sdCommunication->OnUserCreate(userId);
     return err;
 }
@@ -42,7 +43,8 @@ int32_t MultiUserManagerService::OnUserCreate(int32_t userId) const
 int32_t MultiUserManagerService::OnUserDelete(int32_t userId) const
 {
     LOGI("MultiUserManagerService_Delete, userId:%{public}d", userId);
-    std::shared_ptr<StorageDaemonCommunication> sdCommunication = DelayedSingleton<StorageDaemonCommunication>::GetInstance();
+    std::shared_ptr<StorageDaemonCommunication> sdCommunication;
+    sdCommunication = DelayedSingleton<StorageDaemonCommunication>::GetInstance();
     int32_t err = sdCommunication->OnUserDelete(userId);
     return err;
 }
