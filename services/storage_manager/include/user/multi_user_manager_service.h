@@ -25,8 +25,8 @@ namespace StorageManager {
 class MultiUserManagerService final : public NoCopyable {
     DECLARE_DELAYED_SINGLETON(MultiUserManagerService);
 public:
-    int32_t OnUserCreate(int32_t userId) const;
-    int32_t OnUserDelete(int32_t userId) const;
+    int32_t OnUserCreate(int32_t userId, uint32_t flags) const;
+    int32_t OnUserDelete(int32_t userId, uint32_t flags) const;
 };  
 } // StorageManager
 } // OHOS

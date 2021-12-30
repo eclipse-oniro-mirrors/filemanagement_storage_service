@@ -23,8 +23,8 @@ namespace StorageManager {
 
 class IStorageManager : public IRemoteBroker {
 public:
-    virtual int32_t OnUserCreate(int32_t UserId) = 0;
-    virtual int32_t OnUserDelete(int32_t UserId) = 0;
+    virtual int32_t OnUserCreate(int32_t UserId, uint32_t flags) = 0;
+    virtual int32_t OnUserDelete(int32_t UserId, uint32_t flags) = 0;
 
     enum {
         ON_USER_CREATE = 1,

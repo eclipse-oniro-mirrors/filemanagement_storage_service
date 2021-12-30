@@ -28,8 +28,8 @@ public:
         : IRemoteProxy<IStorageManager>(impl) {}
     ~StorageManagerProxy() override{}
 
-    int32_t OnUserCreate(int32_t UserId) override;
-    int32_t OnUserDelete(int32_t UserId) override;
+    int32_t OnUserCreate(int32_t UserId, uint32_t flags) override;
+    int32_t OnUserDelete(int32_t UserId, uint32_t flags) override;
 
 private:
     static inline BrokerDelegator<StorageManagerProxy> delegator_;

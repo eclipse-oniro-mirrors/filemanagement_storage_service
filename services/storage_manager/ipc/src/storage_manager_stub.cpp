@@ -48,8 +48,9 @@ int32_t StorageManagerStub::OnRemoteRequest(uint32_t code,
 int32_t StorageManagerStub::HandleOnUserCreate(MessageParcel &data, MessageParcel &reply)
 {
     int32_t userId = data.ReadInt32();
+    uint32_t flags = data.ReadUint32();
     LOGI("StorageManagerStub::HandleOnUserCreate, userId:%{public}d", userId);
-    int err = OnUserCreate(userId);
+    int err = OnUserCreate(userId, flags);
     if (!reply.WriteUint32(err)) {
         LOGE("StorageManagerStub::HandleOnUserCreate call OnUserCreate failed");
         return  E_IPC_ERROR;
@@ -60,8 +61,9 @@ int32_t StorageManagerStub::HandleOnUserCreate(MessageParcel &data, MessageParce
 int32_t StorageManagerStub::HandleOnUserDelete(MessageParcel &data, MessageParcel &reply)
 {
     int32_t userId = data.ReadInt32();
+    uint32_t flags = data.ReadUint32();
     LOGI("StorageManagerStub::HandleOnUserDelete, userId:%{public}d", userId);
-    int err = OnUserDelete(userId);
+    int err = OnUserDelete(userId, flags);
     if (!reply.WriteUint32(err)) {
         LOGE("StorageManagerStub::HandleOnUserDelete call OnUserDelete failed");
         return E_IPC_ERROR;

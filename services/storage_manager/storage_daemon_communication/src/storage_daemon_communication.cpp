@@ -63,7 +63,7 @@ int32_t StorageDaemonCommunication::Connect()
     return err;
 }
 
-int32_t StorageDaemonCommunication::OnUserCreate(int32_t userId) 
+int32_t StorageDaemonCommunication::OnUserCreate(int32_t userId, uint32_t flags) 
 {
     LOGI("StorageDaemonCommunication::OnUserCreate start");
     
@@ -71,24 +71,24 @@ int32_t StorageDaemonCommunication::OnUserCreate(int32_t userId)
         LOGE("StorageDaemonCommunication::OnUserCreate failed");
         return E_IPC_ERROR;
     } else {
-        int err = storageDaemon_->AddUser(userId);
+        int err = storageDaemon_->PrepareUserDirs(userId, flags);
         if (err != E_OK) {
-            LOGE("StorageDaemonCommunication::OnUserCreate call StorageDaemon AddUser failed");
+            LOGE("StorageDaemonCommunication::OnUserCreate call StorageDaemon PrepareUserDirs failed");
         }
         return err;
     }
 }
 
-int32_t StorageDaemonCommunication::OnUserDelete(int32_t userId) 
+int32_t StorageDaemonCommunication::OnUserDelete(int32_t userId, uint32_t flags) 
 {
     LOGI("StorageDaemonCommunication::OnUserDelete start");
     if (Connect() != E_OK) {
         LOGE("StorageDaemonCommunication::OnUserDelete failed");
         return E_IPC_ERROR;
     } else {
-        int err = storageDaemon_->RemoveUser(userId);
+        int err = storageDaemon_->DestroyUserDirs(userId, flags);
         if (err != E_OK) {
-            LOGE("StorageDaemonCommunication::OnUserDelete call StorageDaemon RemoveUser failed");
+            LOGE("StorageDaemonCommunication::OnUserDelete call StorageDaemon DestroyUserDirs failed");
         }
         return err;
     }
