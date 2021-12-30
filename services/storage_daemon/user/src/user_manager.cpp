@@ -28,6 +28,34 @@ namespace StorageDaemon {
 constexpr int32_t UMOUNT_RETRY_TIMES = 3;
 UserManager* UserManager::instance_ = nullptr;
 
+UserManager::UserManager()
+    : el1RootDirVec_{
+          {"/data/app/el1/%d", 0711, OID_ROOT, OID_ROOT},
+          {"/data/service/el1/%d", 0711, OID_ROOT, OID_ROOT},
+          {"/data/chipset/el1/%d", 0711, OID_ROOT, OID_ROOT}
+      },
+      el1SubDirVec_{
+          {"/data/app/el1/%d/base", 0711, OID_ROOT, OID_ROOT},
+          {"/data/app/el1/%d/database", 0711, OID_ROOT, OID_ROOT}
+      },
+      el2RootDirVec_{
+          {"/data/app/el2/%d", 0711, OID_ROOT, OID_ROOT},
+          {"/data/service/el2/%d", 0711, OID_ROOT, OID_ROOT},
+          {"/data/chipset/el2/%d", 0711, OID_ROOT, OID_ROOT}
+      },
+      el2SubDirVec_{
+          {"/data/service/el2/%d/hmdfs", 0711, OID_SYSTEM, OID_SYSTEM},
+          {"/data/service/el2/%d/hmdfs/files", 0711, OID_SYSTEM, OID_SYSTEM},
+          {"/data/service/el2/%d/hmdfs/data", 0711, OID_SYSTEM, OID_SYSTEM},
+      },
+      hmdfsDirVec_ {
+          {"/storage/media/%d", 0711, OID_ROOT, OID_ROOT},
+          {"/storage/media/%d/local", 0711, OID_ROOT, OID_ROOT}
+      },
+      hmdfsSource_("/data/service/el2/%d/hmdfs/files"),
+      hmdfsTarget_("/storage/media/%d/local")
+{}
+
 UserManager* UserManager::Instance()
 {
     if (instance_ == nullptr) {
@@ -77,15 +105,29 @@ int32_t UserManager::PrepareUserDirs(int32_t userId, uint32_t flags)
     LOGI("prepare user dirs for %{public}d, flags %{public}u", userId, flags);
 
     if (flags & IStorageDaemon::CRYPTO_FLAG_EL1) {
-        if (!PrepareUserEl1Dirs(userId)) {
-            LOGE("failed to prepare user el1 dirs for userid %{public}d", userId);
+        if (!PrepareEl1RootDirs(userId)) {
+            LOGE("failed to prepare el1 root dirs for userid %{public}d", userId);
+            return E_PREPARE_DIR;
+        }
+
+        // set policy
+
+        if (!PrepareEl1SubDirs(userId)) {
+            LOGE("failed to prepare el1 sub dirs for userid %{public}d", userId);
             return E_PREPARE_DIR;
         }
     }
 
     if (flags & IStorageDaemon::CRYPTO_FLAG_EL2) {
-        if (!PrepareUserEl2Dirs(userId)) {
-            LOGE("failed to prepare user el2 dirs for userid %{public}d", userId);
+        if (!PrepareEl2RootDirs(userId)) {
+            LOGE("failed to prepare el2 root dirs for userid %{public}d", userId);
+            return E_PREPARE_DIR;
+        }
+
+        // set policy
+
+        if (!PrepareEl2SubDirs(userId)) {
+            LOGE("failed to prepare el2 sub dirs for userid %{public}d", userId);
             return E_PREPARE_DIR;
         }
     }
@@ -140,14 +182,24 @@ inline bool DestroyUserDirsFromVec(int32_t userId, std::vector<DirInfo> dirVec)
     return ret;
 }
 
-bool UserManager::PrepareUserEl1Dirs(int32_t userId)
+bool UserManager::PrepareEl1RootDirs(int32_t userId)
 {
-    return PrepareUserDirsFromVec(userId, el1DirVec_);
+    return PrepareUserDirsFromVec(userId, el1RootDirVec_);
 }
 
-bool UserManager::PrepareUserEl2Dirs(int32_t userId)
+bool UserManager::PrepareEl1SubDirs(int32_t userId)
 {
-    return PrepareUserDirsFromVec(userId, el2DirVec_) && PrepareUserHmdfsDirs(userId);
+    return PrepareUserDirsFromVec(userId, el1SubDirVec_);
+}
+
+bool UserManager::PrepareEl2RootDirs(int32_t userId)
+{
+    return PrepareUserDirsFromVec(userId, el2RootDirVec_) && PrepareUserHmdfsDirs(userId);
+}
+
+bool UserManager::PrepareEl2SubDirs(int32_t userId)
+{
+    return PrepareUserDirsFromVec(userId, el2SubDirVec_);
 }
 
 bool UserManager::PrepareUserHmdfsDirs(int32_t userId)
@@ -157,12 +209,12 @@ bool UserManager::PrepareUserHmdfsDirs(int32_t userId)
 
 bool UserManager::DestroyUserEl1Dirs(int32_t userId)
 {
-    return DestroyUserDirsFromVec(userId, el1DirVec_);
+    return DestroyUserDirsFromVec(userId, el1RootDirVec_);
 }
 
 bool UserManager::DestroyUserEl2Dirs(int32_t userId)
 {
-    return DestroyUserDirsFromVec(userId, hmdfsDirVec_) && DestroyUserDirsFromVec(userId, el2DirVec_);
+    return DestroyUserDirsFromVec(userId, hmdfsDirVec_) && DestroyUserDirsFromVec(userId, el2RootDirVec_);
 }
 
 bool UserManager::DestroyUserHmdfsDirs(int32_t userId)
