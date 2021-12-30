@@ -21,7 +21,7 @@ namespace StorageDaemon {
 enum UserState {
     USER_CREAT,
     USER_PREPARE,
-    USER_START,
+    USER_START
 };
 
 class UserInfo {
@@ -36,6 +36,14 @@ public:
     {
         this->userId_ = userInfo.userId_;
         this->state_ = userInfo.state_;
+    }
+
+    UserInfo& operator=(const UserInfo& userInfo)
+    {
+        this->userId_ = userInfo.userId_;
+        this->state_ = userInfo.state_;
+
+        return *this;
     }
 
     UserState GetState()

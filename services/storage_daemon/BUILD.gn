@@ -38,7 +38,6 @@ ohos_executable("storage_daemon") {
     "user/src/user_manager.cpp",
 
     "utils/file_utils.cpp",
-    "utils/user_path.cpp",
     "utils/string_utils.cpp",
 
     "main.cpp",

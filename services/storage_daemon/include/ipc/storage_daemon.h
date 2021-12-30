@@ -16,8 +16,8 @@
 #ifndef OHOS_STORAGE_DAEMON_STORAGE_DAEMON_H
 #define OHOS_STORAGE_DAEMON_STORAGE_DAEMON_H
 
-#include "ipc/storage_daemon_stub.h"
 #include <mutex>
+#include "ipc/storage_daemon_stub.h"
 
 namespace OHOS {
 namespace StorageDaemon {

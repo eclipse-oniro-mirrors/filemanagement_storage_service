@@ -14,13 +14,13 @@
  */
 
 #include "utils/file_utils.h"
-#include "utils/errno.h"
-#include "utils/log.h"
-#include <sys/stat.h>
 #include <errno.h>
 #include <unistd.h>
 #include <string.h>
 #include <dirent.h>
+#include <sys/stat.h>
+#include "utils/errno.h"
+#include "utils/log.h"
 
 namespace OHOS {
 namespace StorageDaemon {
@@ -113,12 +113,16 @@ bool RmDirRecurse(const std::string &path)
 
     for (struct dirent *ent = readdir(dir); ent != nullptr; ent = readdir(dir)) {
         if (ent->d_type == DT_DIR) {
-            if (RmDirRecurse(path + "/" + ent->d_name)) {
+            if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) {
+                continue;
+            }
+
+            if (!RmDirRecurse(path + "/" + ent->d_name)) {
                 closedir(dir);
                 return false;
             }
         } else {
-            if (unlink(ent->d_name)) {
+            if (unlink((path + "/" + ent->d_name).c_str())) {
                 LOGE("failed to unlink file %{public}s, errno %{public}d", ent->d_name, errno);
                 closedir(dir);
                 return false;
