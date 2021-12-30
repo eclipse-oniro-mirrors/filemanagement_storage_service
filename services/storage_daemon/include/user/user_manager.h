@@ -18,10 +18,8 @@
 
 #include <string>
 #include <vector>
-#include <unordered_map> 
 #include <sys/types.h>
 #include <nocopyable.h>
-#include "user/user_info.h"
 
 namespace OHOS {
 namespace StorageDaemon {
@@ -39,8 +37,6 @@ class UserManager final {
 public:
     virtual ~UserManager() = default;
     static UserManager* Instance();
-    int32_t AddUser(int32_t userId);
-    int32_t RemoveUser(int32_t userId);
     int32_t PrepareUserDirs(int32_t userId, uint32_t flags);
     int32_t DestroyUserDirs(int32_t userId, uint32_t flags);
     int32_t StartUser(int32_t userId);
@@ -54,12 +50,9 @@ private:
     bool DestroyUserEl1Dirs(int32_t userId);
     bool DestroyUserEl2Dirs(int32_t userId);
     bool DestroyUserHmdfsDirs(int32_t userId);
-    int32_t CheckUserState(int32_t userId, UserState state);
-    void SetUserState(int32_t userId, UserState state);
     DISALLOW_COPY_AND_MOVE(UserManager);
 
     static UserManager* instance_;
-    std::unordered_map<int32_t, UserInfo> users_;
 
     const std::vector<DirInfo> el1DirVec_ = {
         {"/data/app/el1/%d", 0711, OID_ROOT, OID_ROOT},

@@ -37,74 +37,16 @@ UserManager* UserManager::Instance()
     return instance_;
 }
 
-int32_t UserManager::CheckUserState(int32_t userId, UserState state)
-{
-    auto iterator = users_.find(userId);
-    if (iterator == users_.end()) {
-        LOGE("the user %{public}d doesn't exist", userId);
-        return E_NON_EXIST;
-    }
-
-    UserInfo& user = iterator->second;
-    if (user.GetState() != state) {
-        LOGE("the user's state %{public}d is invalid", user.GetState());
-        return E_USER_STATE;
-    }
-
-    return E_OK;
-}
-
-inline void UserManager::SetUserState(int32_t userId, UserState state)
-{
-    // because of mutex lock, user must exist without checking
-    users_.at(userId).SetState(state);
-}
-
-int32_t UserManager::AddUser(int32_t userId)
-{
-    LOGI("add user %{public}d", userId);
-
-    if (users_.count(userId) != 0) {
-        LOGE("The user %{public}d has existed", userId);
-        return E_EXIST;
-    }
-    users_.insert({ userId, UserInfo(userId, USER_CREAT) });
-
-    return E_OK;
-}
-
-int32_t UserManager::RemoveUser(int32_t userId)
-{
-    LOGI("remove user %{public}d", userId);
-
-    int32_t err = E_OK;
-    if ((err = CheckUserState(userId, USER_CREAT)) != E_OK) {
-        return err;
-    }
-
-    users_.erase(userId);
-
-    return E_OK;
-}
-
 int32_t UserManager::StartUser(int32_t userId)
 {
     LOGI("start user %{public}d", userId);
 
-    int32_t err = E_OK;
-    if ((err = CheckUserState(userId, USER_PREPARE)) != E_OK) {
-        return err;
-    }
-
-    err = Mount(StringPrintf(hmdfsSource_.c_str(), userId),
-                        StringPrintf(hmdfsTarget_.c_str(), userId),
-                        nullptr, MS_BIND, nullptr);
-    if (err) {
+    if ((Mount(StringPrintf(hmdfsSource_.c_str(), userId),
+               StringPrintf(hmdfsTarget_.c_str(), userId),
+               nullptr, MS_BIND, nullptr))) {
         LOGE("failed to mount, err %{public}d", errno);
         return E_MOUNT;
     }
-
-    SetUserState(userId, USER_START);
 
     return E_OK;
 }
@@ -113,14 +55,9 @@ int32_t UserManager::StopUser(int32_t userId)
 {
     LOGI("stop user %{public}d", userId);
 
-    int32_t err = E_OK;
-    if ((err = CheckUserState(userId, USER_START)) != E_OK) {
-        return err;
-    }
-
     int32_t count = 0;
     while (count < UMOUNT_RETRY_TIMES) {
-        err = UMount(StringPrintf(hmdfsTarget_.c_str(), userId));
+        int32_t err = UMount(StringPrintf(hmdfsTarget_.c_str(), userId));
         if (err == E_OK) {
             break;
         } else if (errno == EBUSY) {
@@ -132,19 +69,12 @@ int32_t UserManager::StopUser(int32_t userId)
         }
     }
 
-    SetUserState(userId, USER_PREPARE);
-
     return E_OK;
 }
 
 int32_t UserManager::PrepareUserDirs(int32_t userId, uint32_t flags)
 {
     LOGI("prepare user dirs for %{public}d, flags %{public}u", userId, flags);
-
-    int32_t err = E_OK;
-    if ((err = CheckUserState(userId, USER_CREAT)) != E_OK) {
-        return err;
-    }
 
     if (flags & IStorageDaemon::CRYPTO_FLAG_EL1) {
         if (!PrepareUserEl1Dirs(userId)) {
@@ -160,9 +90,7 @@ int32_t UserManager::PrepareUserDirs(int32_t userId, uint32_t flags)
         }
     }
 
-    SetUserState(userId, USER_PREPARE);
-
-    return err;
+    return E_OK;
 }
 
 int32_t UserManager::DestroyUserDirs(int32_t userId, uint32_t flags)
@@ -170,9 +98,6 @@ int32_t UserManager::DestroyUserDirs(int32_t userId, uint32_t flags)
     LOGI("destroy user dirs for %{public}d, flags %{public}u", userId, flags);
 
     int32_t err = E_OK;
-    if ((err = CheckUserState(userId, USER_PREPARE)) != E_OK) {
-        return err;
-    }
 
     if (flags & IStorageDaemon::CRYPTO_FLAG_EL1) {
         if (!DestroyUserEl1Dirs(userId)) {
@@ -187,8 +112,6 @@ int32_t UserManager::DestroyUserDirs(int32_t userId, uint32_t flags)
             err = E_DESTROY_DIR;
         }
     }
-
-    SetUserState(userId, USER_CREAT);
 
     return err;
 }
