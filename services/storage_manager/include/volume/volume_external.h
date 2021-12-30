@@ -13,26 +13,18 @@
  * limitations under the License.
  */
 
-#include "ipc/storage_daemon.h"
-#include "ipc_skeleton.h"
-#include "iservice_registry.h"
+#ifndef OHOS_STORAGE_MANAGER_VOLUME_EXTERNAL_H
+#define OHOS_STORAGE_MANAGER_VLOUME_EXTERNAL_H
 
-using namespace OHOS;
+#include "volume_core.h"
 
-int main()
-{
-    int said = 5002;
+namespace OHOS {
+namespace StorageManager {
 
-    do {
-        auto samgr = SystemAbilityManagerClient::GetInstance().GetSystemAbilityManager();
-        if (samgr != nullptr) {
-            sptr<StorageDaemon::StorageDaemon> sd = new StorageDaemon::StorageDaemon();
-            samgr->AddSystemAbility(said, sd);
-            break;
-        }
-    } while (true);
+class VolumeExternal : public VolumeCore {
 
-    IPCSkeleton::JoinWorkThread();
+};
+} // OHOS
+} // StorageManager
 
-    return 0;
-}
+#endif // OHOS_STORAGE_MANAGER_VOLUME_EXTERNAL_H

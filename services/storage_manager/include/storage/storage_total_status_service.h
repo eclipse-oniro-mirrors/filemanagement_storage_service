@@ -13,26 +13,16 @@
  * limitations under the License.
  */
 
-#include "ipc/storage_daemon.h"
-#include "ipc_skeleton.h"
-#include "iservice_registry.h"
+#ifndef OHOS_STORAGE_MANAGER_STORAGE_TOTAL_STATUS_SERVICE_H
+#define OHOS_STORAGE_MANAGER_STORAGE_TOTAL_STATUS_SERVICE_H
 
-using namespace OHOS;
+namespace OHOS {
+namespace StorageManager {
 
-int main()
-{
-    int said = 5002;
+class StorageTotalStatusService {
 
-    do {
-        auto samgr = SystemAbilityManagerClient::GetInstance().GetSystemAbilityManager();
-        if (samgr != nullptr) {
-            sptr<StorageDaemon::StorageDaemon> sd = new StorageDaemon::StorageDaemon();
-            samgr->AddSystemAbility(said, sd);
-            break;
-        }
-    } while (true);
+}; 
+} // StorageManager
+} // OHOS
 
-    IPCSkeleton::JoinWorkThread();
-
-    return 0;
-}
+#endif // OHOS_STORAGE_MANAGER_STORAGE_TOTAL_STATUS_SERVICE_H
