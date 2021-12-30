@@ -92,7 +92,7 @@ int32_t UserManager::StartUser(int32_t userId)
     LOGI("start user %{public}d", userId);
 
     int32_t err = E_OK;
-    if ((err =CheckUserState(userId, USER_PREPARE)) != E_OK) {
+    if ((err = CheckUserState(userId, USER_PREPARE)) != E_OK) {
         return err;
     }
 

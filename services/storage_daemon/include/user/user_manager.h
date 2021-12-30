@@ -63,17 +63,20 @@ private:
 
     const std::vector<DirInfo> el1DirVec_ = {
         {"/data/app/el1/%d", 0711, OID_ROOT, OID_ROOT},
+        {"/data/app/el1/%d/base", 0711, OID_ROOT, OID_ROOT},
+        {"/data/app/el1/%d/database", 0711, OID_ROOT, OID_ROOT},
         {"/data/service/el1/%d", 0711, OID_ROOT, OID_ROOT},
-        {"/data/vendor/el1/%d", 0711, OID_ROOT, OID_ROOT}
+        {"/data/chipset/el1/%d", 0711, OID_ROOT, OID_ROOT}
     };
     const std::vector<DirInfo> el2DirVec_ = {
         {"/data/app/el2/%d", 0711, OID_ROOT, OID_ROOT},
         {"/data/service/el2/%d", 0711, OID_ROOT, OID_ROOT},
-        {"/data/vendor/el2/%d", 0711, OID_ROOT, OID_ROOT}
+        {"/data/chipset/el2/%d", 0711, OID_ROOT, OID_ROOT}
     };
     const std::vector<DirInfo> hmdfsDirVec_ = {
         {"/data/service/el2/%d/hmdfs", 0711, OID_SYSTEM, OID_SYSTEM},
         {"/data/service/el2/%d/hmdfs/files", 0711, OID_SYSTEM, OID_SYSTEM},
+        {"/data/service/el2/%d/hmdfs/data", 0711, OID_SYSTEM, OID_SYSTEM},
         {"/storage/media/%d", 0711, OID_ROOT, OID_ROOT},
         {"/storage/media/%d/local", 0711, OID_ROOT, OID_ROOT}
     };
