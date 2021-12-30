@@ -29,6 +29,8 @@ public:
 private: 
     int32_t HandleOnUserCreate(MessageParcel &data, MessageParcel &reply);
     int32_t HandleOnUserDelete(MessageParcel &data, MessageParcel &reply);
+    int32_t HandlePrepareUserStart(MessageParcel &data, MessageParcel &reply);
+    int32_t HandlePrepareUserStop(MessageParcel &data, MessageParcel &reply);
 };
 } // StorageManager
 } // OHOS

@@ -36,6 +36,12 @@ int32_t StorageManagerStub::OnRemoteRequest(uint32_t code,
         case ON_USER_DELETE: 
             HandleOnUserDelete(data, reply); 
             break;
+        case PREPARE_USER_START: 
+            HandlePrepareUserStart(data, reply); 
+            break;
+        case PREPARE_USER_STOP: 
+            HandlePrepareUserStop(data, reply); 
+            break;
         default: {
             LOGI(" use IPCObjectStub default OnRemoteRequest");
             err = IPCObjectStub::OnRemoteRequest(code, data, reply, option);
@@ -66,6 +72,30 @@ int32_t StorageManagerStub::HandleOnUserDelete(MessageParcel &data, MessageParce
     int err = OnUserDelete(userId, flags);
     if (!reply.WriteUint32(err)) {
         LOGE("StorageManagerStub::HandleOnUserDelete call OnUserDelete failed");
+        return E_IPC_ERROR;
+    }
+    return E_OK;
+}
+
+int32_t StorageManagerStub::HandlePrepareUserStart(MessageParcel &data, MessageParcel &reply)
+{
+    int32_t userId = data.ReadInt32();
+    LOGI("StorageManagerStub::HandlePrepareUserStart, userId:%{public}d", userId);
+    int err = PrepareUserStart(userId);
+    if (!reply.WriteUint32(err)) {
+        LOGE("StorageManagerStub::HandlePrepareUserStart call PrepareUserStart failed");
+        return E_IPC_ERROR;
+    }
+    return E_OK;
+}
+
+int32_t StorageManagerStub::HandlePrepareUserStop(MessageParcel &data, MessageParcel &reply)
+{
+    int32_t userId = data.ReadInt32();
+    LOGI("StorageManagerStub::HandlePrepareUserStop, userId:%{public}d", userId);
+    int err = PrepareUserStop(userId);
+    if (!reply.WriteUint32(err)) {
+        LOGE("StorageManagerStub::HandlePrepareUserStop call PrepareUserStop failed");
         return E_IPC_ERROR;
     }
     return E_OK;

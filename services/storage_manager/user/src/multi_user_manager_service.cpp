@@ -49,5 +49,22 @@ int32_t MultiUserManagerService::OnUserDelete(int32_t userId, uint32_t flags) co
     return err;
 }
 
+int32_t MultiUserManagerService::PrepareUserStart(int32_t userId) const
+{
+    LOGI("MultiUserManagerService::PrepareUserStart, userId:%{public}d", userId);
+    std::shared_ptr<StorageDaemonCommunication> sdCommunication;
+    sdCommunication = DelayedSingleton<StorageDaemonCommunication>::GetInstance();
+    int32_t err = sdCommunication->PrepareUserStart(userId);
+    return err;
+}
+
+int32_t MultiUserManagerService::PrepareUserStop(int32_t userId) const
+{
+    LOGI("MultiUserManagerService::PrepareUserStop, userId:%{public}d", userId);
+    std::shared_ptr<StorageDaemonCommunication> sdCommunication;
+    sdCommunication = DelayedSingleton<StorageDaemonCommunication>::GetInstance();
+    int32_t err = sdCommunication->PrepareUserStop(userId);
+    return err;
+}
 } // StorageManager
 } // OHOS

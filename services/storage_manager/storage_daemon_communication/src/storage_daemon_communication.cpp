@@ -93,5 +93,35 @@ int32_t StorageDaemonCommunication::OnUserDelete(int32_t userId, uint32_t flags)
         return err;
     }
 }
+
+int32_t StorageDaemonCommunication::PrepareUserStart(int32_t userId) 
+{
+    LOGI("StorageDaemonCommunication::PrepareUserStart start");
+    if (Connect() != E_OK) {
+        LOGE("StorageDaemonCommunication::PrepareUserStart connect failed");
+        return E_IPC_ERROR;
+    } else {
+        int err = storageDaemon_->StartUser(userId);
+        if (err != E_OK) {
+            LOGE("StorageDaemonCommunication::PrepareUserStart call StorageDaemon StartUser failed");
+        }
+        return err;
+    }
+}
+
+int32_t StorageDaemonCommunication::PrepareUserStop(int32_t userId) 
+{
+    LOGI("StorageDaemonCommunication::PrepareUserStop start");
+    if (Connect() != E_OK) {
+        LOGE("StorageDaemonCommunication::PrepareUserStop connect failed");
+        return E_IPC_ERROR;
+    } else {
+        int err = storageDaemon_->StopUser(userId);
+        if (err != E_OK) {
+            LOGE("StorageDaemonCommunication::PrepareUserStop call StorageDaemon StopUser failed");
+        }
+        return err;
+    }
+}
 } // StorageManager
 } // OHOS

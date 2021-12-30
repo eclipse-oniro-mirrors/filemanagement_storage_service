@@ -27,6 +27,8 @@ class MultiUserManagerService final : public NoCopyable {
 public:
     int32_t OnUserCreate(int32_t userId, uint32_t flags) const;
     int32_t OnUserDelete(int32_t userId, uint32_t flags) const;
+    int32_t PrepareUserStart(int32_t userId) const;
+    int32_t PrepareUserStop(int32_t userId) const;
 };  
 } // StorageManager
 } // OHOS

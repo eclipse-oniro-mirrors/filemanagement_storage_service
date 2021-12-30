@@ -69,6 +69,48 @@ int32_t StorageManagerProxy::OnUserDelete(int32_t userId, uint32_t flags)
     }
     return reply.ReadUint32();
 }
+
+int32_t StorageManagerProxy::PrepareUserStart(int32_t userId)
+{
+    LOGI("StorageManagerProxy::PrepareUserStart, userId:%{public}d", userId);
+    MessageParcel data, reply;
+    MessageOption option(MessageOption::TF_SYNC);
+    if (!data.WriteInterfaceToken(StorageManagerProxy::GetDescriptor())) {
+        LOGE("StorageManagerProxy::PrepareUserStart, WriteInterfaceToken failed");
+        return E_IPC_ERROR;
+    }
+    if (!data.WriteInt32(userId)) {
+        LOGE("StorageManagerProxy::PrepareUserStart, WriteInt32 failed");
+        return E_IPC_ERROR;
+    }
+    int err = Remote()->SendRequest(PREPARE_USER_START, data, reply, option);
+    if (err != E_OK) {
+        LOGE("StorageManagerProxy::PrepareUserStart, SendRequest failed");
+        return E_IPC_ERROR;
+    }
+    return reply.ReadUint32();
+}
+
+int32_t StorageManagerProxy::PrepareUserStop(int32_t userId)
+{
+    LOGI("StorageManagerProxy::PrepareUserStop, userId:%{public}d", userId);
+    MessageParcel data, reply;
+    MessageOption option(MessageOption::TF_SYNC);
+    if (!data.WriteInterfaceToken(StorageManagerProxy::GetDescriptor())) {
+        LOGE("StorageManagerProxy::PrepareUserStop, WriteInterfaceToken failed");
+        return E_IPC_ERROR;
+    }
+    if (!data.WriteInt32(userId)) {
+        LOGE("StorageManagerProxy::PrepareUserStop, WriteInt32 failed");
+        return E_IPC_ERROR;
+    }
+    int err = Remote()->SendRequest(PREPARE_USER_STOP, data, reply, option);
+    if (err != E_OK) {
+        LOGE("StorageManagerProxy::PrepareUserStop, SendRequest failed");
+        return E_IPC_ERROR;
+    }
+    return reply.ReadUint32();
+}
 } // StorageManager
 } // OHOS
 
