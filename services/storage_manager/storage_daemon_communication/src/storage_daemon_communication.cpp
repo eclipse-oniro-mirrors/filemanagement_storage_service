@@ -37,9 +37,6 @@ StorageDaemonCommunication::~StorageDaemonCommunication()
 
 int32_t StorageDaemonCommunication::Connect() 
 {
-    if (storageDaemon_ != nullptr) {
-        return E_OK;
-    }
     int32_t err = 0;
     LOGI("StorageDaemonCommunication::Connect start");
     if (storageDaemon_ == nullptr) {
@@ -63,65 +60,45 @@ int32_t StorageDaemonCommunication::Connect()
     return err;
 }
 
-int32_t StorageDaemonCommunication::OnUserCreate(int32_t userId, uint32_t flags) 
+int32_t StorageDaemonCommunication::PrepareAddUser(int32_t userId) 
 {
-    LOGI("StorageDaemonCommunication::OnUserCreate start");
+    LOGI("StorageDaemonCommunication::PrepareAddUser start");
     
     if (Connect() != E_OK) {
-        LOGE("StorageDaemonCommunication::OnUserCreate failed");
+        LOGE("StorageDaemonCommunication::PrepareAddUser connect failed");
         return E_IPC_ERROR;
-    } else {
-        int err = storageDaemon_->PrepareUserDirs(userId, flags);
-        if (err != E_OK) {
-            LOGE("StorageDaemonCommunication::OnUserCreate call StorageDaemon PrepareUserDirs failed");
-        }
-        return err;
     }
+    return storageDaemon_->PrepareUserDirs(userId, 3);
 }
 
-int32_t StorageDaemonCommunication::OnUserDelete(int32_t userId, uint32_t flags) 
+int32_t StorageDaemonCommunication::RemoveUser(int32_t userId) 
 {
-    LOGI("StorageDaemonCommunication::OnUserDelete start");
+    LOGI("StorageDaemonCommunication::RemoveUser start");
     if (Connect() != E_OK) {
-        LOGE("StorageDaemonCommunication::OnUserDelete failed");
+        LOGE("StorageDaemonCommunication::RemoveUser connect failed");
         return E_IPC_ERROR;
-    } else {
-        int err = storageDaemon_->DestroyUserDirs(userId, flags);
-        if (err != E_OK) {
-            LOGE("StorageDaemonCommunication::OnUserDelete call StorageDaemon DestroyUserDirs failed");
-        }
-        return err;
-    }
+    } 
+    return storageDaemon_->DestroyUserDirs(userId, 3);
 }
 
-int32_t StorageDaemonCommunication::PrepareUserStart(int32_t userId) 
+int32_t StorageDaemonCommunication::PrepareStartUser(int32_t userId) 
 {
-    LOGI("StorageDaemonCommunication::PrepareUserStart start");
+    LOGI("StorageDaemonCommunication::PrepareStartUser start");
     if (Connect() != E_OK) {
-        LOGE("StorageDaemonCommunication::PrepareUserStart connect failed");
+        LOGE("StorageDaemonCommunication::PrepareStartUser connect failed");
         return E_IPC_ERROR;
-    } else {
-        int err = storageDaemon_->StartUser(userId);
-        if (err != E_OK) {
-            LOGE("StorageDaemonCommunication::PrepareUserStart call StorageDaemon StartUser failed");
-        }
-        return err;
-    }
+    } 
+    return storageDaemon_->StartUser(userId);
 }
 
-int32_t StorageDaemonCommunication::PrepareUserStop(int32_t userId) 
+int32_t StorageDaemonCommunication::StopUser(int32_t userId) 
 {
-    LOGI("StorageDaemonCommunication::PrepareUserStop start");
+    LOGI("StorageDaemonCommunication::StopUser start");
     if (Connect() != E_OK) {
-        LOGE("StorageDaemonCommunication::PrepareUserStop connect failed");
+        LOGE("StorageDaemonCommunication::StopUser connect failed");
         return E_IPC_ERROR;
-    } else {
-        int err = storageDaemon_->StopUser(userId);
-        if (err != E_OK) {
-            LOGE("StorageDaemonCommunication::PrepareUserStop call StorageDaemon StopUser failed");
-        }
-        return err;
     }
+    return storageDaemon_->StopUser(userId);
 }
 } // StorageManager
 } // OHOS

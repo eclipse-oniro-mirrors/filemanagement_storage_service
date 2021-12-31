@@ -32,10 +32,10 @@ public:
     void OnStart() override;
     void OnStop() override;
 
-    int32_t OnUserCreate(int32_t userId, uint32_t flags) override;
-    int32_t OnUserDelete(int32_t userId, uint32_t flags) override;
-    int32_t PrepareUserStart(int32_t userId) override;
-    int32_t PrepareUserStop(int32_t userId) override;
+    int32_t PrepareAddUser(int32_t userId) override;
+    int32_t RemoveUser(int32_t userId) override;
+    int32_t PrepareStartUser(int32_t userId) override;
+    int32_t StopUser(int32_t userId) override;
 private:
     StorageManager();
     static sptr<StorageManager> instance_;

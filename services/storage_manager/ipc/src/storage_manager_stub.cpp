@@ -30,20 +30,20 @@ int32_t StorageManagerStub::OnRemoteRequest(uint32_t code,
     
     int err = 0;
     switch (code) {
-        case ON_USER_CREATE: 
-            HandleOnUserCreate(data, reply); 
+        case PREPARE_ADD_USER: 
+            HandlePrepareAddUser(data, reply); 
             break;
-        case ON_USER_DELETE: 
-            HandleOnUserDelete(data, reply); 
+        case REMOVE_USER: 
+            HandleRemoveUser(data, reply); 
             break;
-        case PREPARE_USER_START: 
-            HandlePrepareUserStart(data, reply); 
+        case PREPARE_START_USER: 
+            HandlePrepareStartUser(data, reply); 
             break;
-        case PREPARE_USER_STOP: 
-            HandlePrepareUserStop(data, reply); 
+        case STOP_USER: 
+            HandleStopUser(data, reply); 
             break;
         default: {
-            LOGI(" use IPCObjectStub default OnRemoteRequest");
+            LOGI("use IPCObjectStub default OnRemoteRequest");
             err = IPCObjectStub::OnRemoteRequest(code, data, reply, option);
             break;
         } 
@@ -51,51 +51,49 @@ int32_t StorageManagerStub::OnRemoteRequest(uint32_t code,
     return err;
 }
 
-int32_t StorageManagerStub::HandleOnUserCreate(MessageParcel &data, MessageParcel &reply)
+int32_t StorageManagerStub::HandlePrepareAddUser(MessageParcel &data, MessageParcel &reply)
 {
     int32_t userId = data.ReadInt32();
-    uint32_t flags = data.ReadUint32();
-    LOGI("StorageManagerStub::HandleOnUserCreate, userId:%{public}d", userId);
-    int err = OnUserCreate(userId, flags);
+    LOGI("StorageManagerStub::HandlePrepareAddUser, userId:%{public}d", userId);
+    int err = PrepareAddUser(userId);
     if (!reply.WriteUint32(err)) {
-        LOGE("StorageManagerStub::HandleOnUserCreate call OnUserCreate failed");
+        LOGE("StorageManagerStub::HandlePrepareAddUser call PrepareAddUser failed");
         return  E_IPC_ERROR;
     }
     return E_OK;
 }
 
-int32_t StorageManagerStub::HandleOnUserDelete(MessageParcel &data, MessageParcel &reply)
+int32_t StorageManagerStub::HandleRemoveUser(MessageParcel &data, MessageParcel &reply)
 {
     int32_t userId = data.ReadInt32();
-    uint32_t flags = data.ReadUint32();
-    LOGI("StorageManagerStub::HandleOnUserDelete, userId:%{public}d", userId);
-    int err = OnUserDelete(userId, flags);
+    LOGI("StorageManagerStub::HandleRemoveUser, userId:%{public}d", userId);
+    int err = RemoveUser(userId);
     if (!reply.WriteUint32(err)) {
-        LOGE("StorageManagerStub::HandleOnUserDelete call OnUserDelete failed");
+        LOGE("StorageManagerStub::HandleRemoveUser call RemoveUser failed");
         return E_IPC_ERROR;
     }
     return E_OK;
 }
 
-int32_t StorageManagerStub::HandlePrepareUserStart(MessageParcel &data, MessageParcel &reply)
+int32_t StorageManagerStub::HandlePrepareStartUser(MessageParcel &data, MessageParcel &reply)
 {
     int32_t userId = data.ReadInt32();
-    LOGI("StorageManagerStub::HandlePrepareUserStart, userId:%{public}d", userId);
-    int err = PrepareUserStart(userId);
+    LOGI("StorageManagerStub::HandlePrepareStartUser, userId:%{public}d", userId);
+    int err = PrepareStartUser(userId);
     if (!reply.WriteUint32(err)) {
-        LOGE("StorageManagerStub::HandlePrepareUserStart call PrepareUserStart failed");
+        LOGE("StorageManagerStub::HandlePrepareStartUser call PrepareStartUser failed");
         return E_IPC_ERROR;
     }
     return E_OK;
 }
 
-int32_t StorageManagerStub::HandlePrepareUserStop(MessageParcel &data, MessageParcel &reply)
+int32_t StorageManagerStub::HandleStopUser(MessageParcel &data, MessageParcel &reply)
 {
     int32_t userId = data.ReadInt32();
-    LOGI("StorageManagerStub::HandlePrepareUserStop, userId:%{public}d", userId);
-    int err = PrepareUserStop(userId);
+    LOGI("StorageManagerStub::HandleStopUser, userId:%{public}d", userId);
+    int err = StopUser(userId);
     if (!reply.WriteUint32(err)) {
-        LOGE("StorageManagerStub::HandlePrepareUserStop call PrepareUserStop failed");
+        LOGE("StorageManagerStub::HandleStopUser call StopUser failed");
         return E_IPC_ERROR;
     }
     return E_OK;

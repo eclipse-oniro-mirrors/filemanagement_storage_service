@@ -27,10 +27,10 @@ public:
     int32_t OnRemoteRequest(uint32_t code, MessageParcel &data, MessageParcel &reply, MessageOption &option) override;
 
 private: 
-    int32_t HandleOnUserCreate(MessageParcel &data, MessageParcel &reply);
-    int32_t HandleOnUserDelete(MessageParcel &data, MessageParcel &reply);
-    int32_t HandlePrepareUserStart(MessageParcel &data, MessageParcel &reply);
-    int32_t HandlePrepareUserStop(MessageParcel &data, MessageParcel &reply);
+    int32_t HandlePrepareAddUser(MessageParcel &data, MessageParcel &reply);
+    int32_t HandleRemoveUser(MessageParcel &data, MessageParcel &reply);
+    int32_t HandlePrepareStartUser(MessageParcel &data, MessageParcel &reply);
+    int32_t HandleStopUser(MessageParcel &data, MessageParcel &reply);
 };
 } // StorageManager
 } // OHOS
