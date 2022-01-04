@@ -30,30 +30,30 @@ UserManager* UserManager::instance_ = nullptr;
 
 UserManager::UserManager()
     : el1RootDirVec_{
-          {"/data/app/el1/%d", 0711, OID_ROOT, OID_ROOT},
-          {"/data/service/el1/%d", 0711, OID_ROOT, OID_ROOT},
-          {"/data/chipset/el1/%d", 0711, OID_ROOT, OID_ROOT}
-      },
-      el1SubDirVec_{
-          {"/data/app/el1/%d/base", 0711, OID_ROOT, OID_ROOT},
-          {"/data/app/el1/%d/database", 0711, OID_ROOT, OID_ROOT}
-      },
-      el2RootDirVec_{
-          {"/data/app/el2/%d", 0711, OID_ROOT, OID_ROOT},
-          {"/data/service/el2/%d", 0711, OID_ROOT, OID_ROOT},
-          {"/data/chipset/el2/%d", 0711, OID_ROOT, OID_ROOT}
-      },
-      el2SubDirVec_{
-          {"/data/service/el2/%d/hmdfs", 0711, OID_SYSTEM, OID_SYSTEM},
-          {"/data/service/el2/%d/hmdfs/files", 0711, OID_SYSTEM, OID_SYSTEM},
-          {"/data/service/el2/%d/hmdfs/data", 0711, OID_SYSTEM, OID_SYSTEM},
-      },
-      hmdfsDirVec_ {
-          {"/storage/media/%d", 0711, OID_ROOT, OID_ROOT},
-          {"/storage/media/%d/local", 0711, OID_ROOT, OID_ROOT}
-      },
-      hmdfsSource_("/data/service/el2/%d/hmdfs/files"),
-      hmdfsTarget_("/storage/media/%d/local")
+        {"/data/app/el1/%d", 0711, OID_ROOT, OID_ROOT},
+        {"/data/service/el1/%d", 0711, OID_ROOT, OID_ROOT},
+        {"/data/chipset/el1/%d", 0711, OID_ROOT, OID_ROOT}
+    },
+    el1SubDirVec_{
+        {"/data/app/el1/%d/base", 0711, OID_ROOT, OID_ROOT},
+        {"/data/app/el1/%d/database", 0711, OID_ROOT, OID_ROOT}
+    },
+    el2RootDirVec_{
+        {"/data/app/el2/%d", 0711, OID_ROOT, OID_ROOT},
+        {"/data/service/el2/%d", 0711, OID_ROOT, OID_ROOT},
+        {"/data/chipset/el2/%d", 0711, OID_ROOT, OID_ROOT}
+    },
+    el2SubDirVec_{
+        {"/data/service/el2/%d/hmdfs", 0711, OID_SYSTEM, OID_SYSTEM},
+        {"/data/service/el2/%d/hmdfs/files", 0711, OID_SYSTEM, OID_SYSTEM},
+        {"/data/service/el2/%d/hmdfs/data", 0711, OID_SYSTEM, OID_SYSTEM},
+    },
+    hmdfsDirVec_ {
+        {"/storage/media/%d", 0711, OID_ROOT, OID_ROOT},
+        {"/storage/media/%d/local", 0711, OID_ROOT, OID_ROOT}
+    },
+    hmdfsSource_("/data/service/el2/%d/hmdfs/files"),
+    hmdfsTarget_("/storage/media/%d/local")
 {}
 
 UserManager* UserManager::Instance()
