@@ -29,31 +29,22 @@ constexpr int32_t UMOUNT_RETRY_TIMES = 3;
 UserManager* UserManager::instance_ = nullptr;
 
 UserManager::UserManager()
-    : el1RootDirVec_{
-        {"/data/app/el1/%d", 0711, OID_ROOT, OID_ROOT},
-        {"/data/service/el1/%d", 0711, OID_ROOT, OID_ROOT},
-        {"/data/chipset/el1/%d", 0711, OID_ROOT, OID_ROOT}
+    : rootDirVec_{
+        {"/data/app/%s/%d", 0711, OID_ROOT, OID_ROOT},
+        {"/data/service/%s/%d", 0711, OID_ROOT, OID_ROOT},
+        {"/data/chipset/%s/%d", 0711, OID_ROOT, OID_ROOT}
     },
-    el1SubDirVec_{
-        {"/data/app/el1/%d/base", 0711, OID_ROOT, OID_ROOT},
-        {"/data/app/el1/%d/database", 0711, OID_ROOT, OID_ROOT}
+    subDirVec_{
+        {"/data/app/%s/%d/base", 0711, OID_ROOT, OID_ROOT},
+        {"/data/app/%s/%d/database", 0711, OID_ROOT, OID_ROOT}
     },
-    el2RootDirVec_{
-        {"/data/app/el2/%d", 0711, OID_ROOT, OID_ROOT},
-        {"/data/service/el2/%d", 0711, OID_ROOT, OID_ROOT},
-        {"/data/chipset/el2/%d", 0711, OID_ROOT, OID_ROOT}
-    },
-    el2SubDirVec_{
+    hmdfsDirVec_{
         {"/data/service/el2/%d/hmdfs", 0711, OID_SYSTEM, OID_SYSTEM},
         {"/data/service/el2/%d/hmdfs/files", 0711, OID_SYSTEM, OID_SYSTEM},
         {"/data/service/el2/%d/hmdfs/data", 0711, OID_SYSTEM, OID_SYSTEM},
-    },
-    hmdfsDirVec_ {
         {"/storage/media/%d", 0711, OID_ROOT, OID_ROOT},
         {"/storage/media/%d/local", 0711, OID_ROOT, OID_ROOT}
-    },
-    hmdfsSource_("/data/service/el2/%d/hmdfs/files"),
-    hmdfsTarget_("/storage/media/%d/local")
+    }
 {}
 
 UserManager* UserManager::Instance()
@@ -69,6 +60,8 @@ int32_t UserManager::StartUser(int32_t userId)
 {
     LOGI("start user %{public}d", userId);
 
+    // get syspara: hmdfs
+
     if ((Mount(StringPrintf(hmdfsSource_.c_str(), userId),
                StringPrintf(hmdfsTarget_.c_str(), userId),
                nullptr, MS_BIND, nullptr))) {
@@ -82,6 +75,8 @@ int32_t UserManager::StartUser(int32_t userId)
 int32_t UserManager::StopUser(int32_t userId)
 {
     LOGI("stop user %{public}d", userId);
+
+    // get syspara: hmdfs
 
     int32_t count = 0;
     while (count < UMOUNT_RETRY_TIMES) {
@@ -104,32 +99,26 @@ int32_t UserManager::PrepareUserDirs(int32_t userId, uint32_t flags)
 {
     LOGI("prepare user dirs for %{public}d, flags %{public}u", userId, flags);
 
+    int32_t err = E_OK;
+
     if (flags & IStorageDaemon::CRYPTO_FLAG_EL1) {
-        if (!PrepareEl1RootDirs(userId)) {
-            LOGE("failed to prepare el1 root dirs for userid %{public}d", userId);
-            return E_PREPARE_DIR;
-        }
-
-        // set policy
-
-        if (!PrepareEl1SubDirs(userId)) {
-            LOGE("failed to prepare el1 sub dirs for userid %{public}d", userId);
-            return E_PREPARE_DIR;
+        err = PrepareDirsFromIdAndLevel(userId, el1_);
+        if (err != E_OK) {
+            return err;
         }
     }
 
     if (flags & IStorageDaemon::CRYPTO_FLAG_EL2) {
-        if (!PrepareEl2RootDirs(userId)) {
-            LOGE("failed to prepare el2 root dirs for userid %{public}d", userId);
-            return E_PREPARE_DIR;
+        err = PrepareDirsFromIdAndLevel(userId, el2_);
+        if (err != E_OK) {
+            return err;
         }
+    }
 
-        // set policy
-
-        if (!PrepareEl2SubDirs(userId)) {
-            LOGE("failed to prepare el2 sub dirs for userid %{public}d", userId);
-            return E_PREPARE_DIR;
-        }
+    // get syspara: hmdfs
+    err = PrepareHmdfsDirs(userId);
+    if (err != E_OK) {
+        return err;
     }
 
     return E_OK;
@@ -142,85 +131,92 @@ int32_t UserManager::DestroyUserDirs(int32_t userId, uint32_t flags)
     int32_t err = E_OK;
 
     if (flags & IStorageDaemon::CRYPTO_FLAG_EL1) {
-        if (!DestroyUserEl1Dirs(userId)) {
-            LOGE("failed to destroy user el1 dirs for userid %{public}d", userId);
-            err = E_DESTROY_DIR;
-        }
+        err = DestroyDirsFromIdAndLevel(userId, el1_);
     }
 
     if (flags & IStorageDaemon::CRYPTO_FLAG_EL2) {
-        if (!DestroyUserEl2Dirs(userId)) {
-            LOGE("failed to destroy user el2 dirs for userid %{public}d", userId);
-            err = E_DESTROY_DIR;
-        }
+        err = DestroyDirsFromIdAndLevel(userId, el2_);
     }
+
+    // get syspara: hmdfs
+    err = DestroyHmdfsDirs(userId);
 
     return err;
 }
 
-inline bool PrepareUserDirsFromVec(int32_t userId, std::vector<DirInfo> dirVec)
+inline bool PrepareDirsFromVec(int32_t userId, const std::string &level, const std::vector<DirInfo> &vec)
 {
-    for (DirInfo &dir : dirVec) {
-        if (!PrepareDir(StringPrintf(dir.path.c_str(), userId), dir.mode, dir.uid, dir.gid)) {
-                return false;
+    for (const DirInfo &dir : vec) {
+        if (!PrepareDir(StringPrintf(dir.path.c_str(), level.c_str(), userId), dir.mode, dir.uid, dir.gid)) {
+            return false;
         }
     }
 
     return true;
 }
 
-inline bool DestroyUserDirsFromVec(int32_t userId, std::vector<DirInfo> dirVec)
+inline bool DestroyDirsFromVec(int32_t userId, const std::string &level, const std::vector<DirInfo> &vec)
 {
-    bool ret = true;
+    bool err = true;
 
-    for (DirInfo &dir : dirVec) {
+    for (const DirInfo &dir : vec) {
         if (IsEndWith(dir.path.c_str(), "%d")) {
-            ret &= RmDirRecurse(StringPrintf(dir.path.c_str(), userId));
+            err &= RmDirRecurse(StringPrintf(dir.path.c_str(), level.c_str(), userId));
         }
     }
 
-    return ret;
+    return err;
 }
 
-bool UserManager::PrepareEl1RootDirs(int32_t userId)
+int32_t UserManager::PrepareDirsFromIdAndLevel(int32_t userId, const std::string &level)
 {
-    return PrepareUserDirsFromVec(userId, el1RootDirVec_);
+    if (!PrepareDirsFromVec(userId, level, rootDirVec_)) {
+        LOGE("failed to prepare %{public}s root dirs for userid %{public}d", level.c_str(), userId);
+        return E_PREPARE_DIR;
+    }
+
+    // set policy here
+
+    if (!PrepareDirsFromVec(userId, level, subDirVec_)) {
+        LOGE("failed to prepare %{public}s sub dirs for userid %{public}d", level.c_str(), userId);
+        return E_PREPARE_DIR;
+    }
+
+    return E_OK;
 }
 
-bool UserManager::PrepareEl1SubDirs(int32_t userId)
+int32_t UserManager::DestroyDirsFromIdAndLevel(int32_t userId, const std::string &level)
 {
-    return PrepareUserDirsFromVec(userId, el1SubDirVec_);
+    if (!DestroyDirsFromVec(userId, level, rootDirVec_)) {
+        LOGE("failed to destroy %{public}s dirs for userid %{public}d", level.c_str(), userId);
+        return E_DESTROY_DIR;
+    }
+
+    return E_OK;
 }
 
-bool UserManager::PrepareEl2RootDirs(int32_t userId)
+int32_t UserManager::PrepareHmdfsDirs(int32_t userId)
 {
-    return PrepareUserDirsFromVec(userId, el2RootDirVec_) && PrepareUserHmdfsDirs(userId);
+    for (const DirInfo &dir : hmdfsDirVec_) {
+        if (!PrepareDir(StringPrintf(dir.path.c_str(), userId), dir.mode, dir.uid, dir.gid)) {
+            return E_PREPARE_DIR;
+        }
+    }
+
+    return E_OK;
 }
 
-bool UserManager::PrepareEl2SubDirs(int32_t userId)
+int32_t UserManager::DestroyHmdfsDirs(int32_t userId)
 {
-    return PrepareUserDirsFromVec(userId, el2SubDirVec_);
-}
+    bool err = true;
 
-bool UserManager::PrepareUserHmdfsDirs(int32_t userId)
-{
-    return PrepareUserDirsFromVec(userId, hmdfsDirVec_);
-}
+    for (const DirInfo &dir : hmdfsDirVec_) {
+        if (IsEndWith(dir.path.c_str(), "%d")) {
+            err &= RmDirRecurse(StringPrintf(dir.path.c_str(), userId));
+        }
+    }
 
-bool UserManager::DestroyUserEl1Dirs(int32_t userId)
-{
-    return DestroyUserDirsFromVec(userId, el1RootDirVec_);
+    return err ? E_OK : E_DESTROY_DIR;
 }
-
-bool UserManager::DestroyUserEl2Dirs(int32_t userId)
-{
-    return DestroyUserDirsFromVec(userId, hmdfsDirVec_) && DestroyUserDirsFromVec(userId, el2RootDirVec_);
-}
-
-bool UserManager::DestroyUserHmdfsDirs(int32_t userId)
-{
-    return DestroyUserDirsFromVec(userId, hmdfsDirVec_);
-}
-
 } // StorageDaemon
 } // OHOS

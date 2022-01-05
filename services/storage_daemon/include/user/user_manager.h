@@ -44,24 +44,21 @@ public:
 
 private:
     UserManager();
-    bool PrepareEl1RootDirs(int32_t userId);
-    bool PrepareEl1SubDirs(int32_t userId);
-    bool PrepareEl2RootDirs(int32_t userId);
-    bool PrepareEl2SubDirs(int32_t userId);
-    bool PrepareUserHmdfsDirs(int32_t userId);
-    bool DestroyUserEl1Dirs(int32_t userId);
-    bool DestroyUserEl2Dirs(int32_t userId);
-    bool DestroyUserHmdfsDirs(int32_t userId);
+    int32_t PrepareDirsFromIdAndLevel(int32_t userId, const std::string &level);
+    int32_t DestroyDirsFromIdAndLevel(int32_t userId, const std::string &level);
+    int32_t PrepareHmdfsDirs(int32_t userId);
+    int32_t DestroyHmdfsDirs(int32_t userId);
+
     DISALLOW_COPY_AND_MOVE(UserManager);
 
     static UserManager* instance_;
-    const std::vector<DirInfo> el1RootDirVec_;
-    const std::vector<DirInfo> el1SubDirVec_;
-    const std::vector<DirInfo> el2RootDirVec_;
-    const std::vector<DirInfo> el2SubDirVec_;
+    const std::vector<DirInfo> rootDirVec_;
+    const std::vector<DirInfo> subDirVec_;
     const std::vector<DirInfo> hmdfsDirVec_;
-    const std::string hmdfsSource_;
-    const std::string hmdfsTarget_;
+    const std::string hmdfsSource_ = "/data/service/el2/%d/hmdfs/files";
+    const std::string hmdfsTarget_ = "/storage/media/%d/local";
+    const std::string el1_ = "el1";
+    const std::string el2_ = "el2";
 };
 } // STORAGE_DAEMON
 } // OHOS
