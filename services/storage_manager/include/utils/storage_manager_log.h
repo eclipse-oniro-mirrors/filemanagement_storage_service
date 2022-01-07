@@ -22,7 +22,6 @@
 
 namespace OHOS {
 namespace StorageManager {
-
 static constexpr OHOS::HiviewDFX::HiLogLabel LOG_LABEL = { LOG_CORE, LOG_DOMAIN, "StorageManager" };
 
 #define PRINT_LOG(Level, fmt, ...) \

@@ -20,7 +20,6 @@
 
 namespace OHOS {
 namespace StorageManager {
-
 MultiUserManagerService::MultiUserManagerService()
 {
     LOGI("DEBUG MultiUserManagerService constructer");    
