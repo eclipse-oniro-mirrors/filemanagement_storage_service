@@ -17,7 +17,7 @@
 #include "hilog/log.h"
 
 #ifndef LOG_DOMAIN
-#define LOG_DOMAIN 0    // TODO tmp value 0, need request unique LOG_DOMAIN
+#define LOG_DOMAIN 0
 #endif
 
 namespace OHOS {
