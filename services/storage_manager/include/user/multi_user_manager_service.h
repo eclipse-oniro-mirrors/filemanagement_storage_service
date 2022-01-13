@@ -23,7 +23,6 @@
 
 namespace OHOS {
 namespace StorageManager {
-constexpr int32_t NO_USER_STARTED = -1;
 class MultiUserManagerService final : public NoCopyable {
     DECLARE_DELAYED_SINGLETON(MultiUserManagerService);
 public:
@@ -33,8 +32,8 @@ public:
     int32_t StopUser(int32_t userId);
 private:
     std::unordered_map<int32_t, UserInfo> users_;
-    int32_t startedUser_ = NO_USER_STARTED;
 
+    int32_t CheckUserIdRange(int32_t userId);
     int32_t CheckUserState(int32_t userId, UserState state);
     void SetUserState(int32_t userId, UserState state);
 };  
