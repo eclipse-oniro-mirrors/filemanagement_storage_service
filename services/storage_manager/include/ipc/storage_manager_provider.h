@@ -145,6 +145,8 @@ public:
     int32_t QueryActiveOsAccountIds(std::vector<int32_t> &ids) override;
     int32_t IsOsAccountExists(unsigned int userId, bool &isOsAccountExists) override;
     int32_t GetSystemDataSize(int64_t &systemDataSize) override;
+    int32_t SetDirEncryptionPolicyWithKeyDesc(const std::string &dirPath, uint32_t level,
+                                              const std::string &keyDesc) override;
 
 private:
     StorageManagerProvider();

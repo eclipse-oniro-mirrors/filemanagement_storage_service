@@ -2877,8 +2877,58 @@ bool KeyManager::GetSecureUid(uint32_t userId, uint64_t &secureUid)
         LOGI("PIN protect exist.");
         return true;
     }
-    LOGE("userId: %{public}u check failed", userId);
-    return false;
+LOGE("userId: %{public}u check failed", userId);
+return false;
+}
+
+static unsigned char HexCharToValue(char c)
+{
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    return 255;
+}
+
+int32_t KeyManager::SetDirEncryptionPolicyWithKeyDesc(const std::string &dirPath,
+    uint32_t level, const std::string &keyDesc)
+{
+    LOGI("[L3:KeyManager] SetDirEncryptionPolicyWithKeyDesc: >>> ENTER <<< [level=%{public}u]", level);
+
+    if (!KeyCtrlHasFscryptSyspara() || !IsEncryption()) {
+        LOGW("[L3:KeyManager] SetDirEncryptionPolicyWithKeyDesc: fscrypt not enabled");
+        return E_NOT_SUPPORT;
+    }
+
+    if (level != EL2_USER_KEY) {
+        LOGE("[L3:KeyManager] SetDirEncryptionPolicyWithKeyDesc: only EL2 supported");
+        return E_PARAMS_INVALID;
+    }
+
+    if (keyDesc.length() != FSCRYPT_KEY_DESCRIPTOR_SIZE * 2) {
+        LOGE("[L3:KeyManager] SetDirEncryptionPolicyWithKeyDesc: keyDesc length invalid");
+        return E_PARAMS_INVALID;
+    }
+
+    unsigned char keyId[FSCRYPT_KEY_DESCRIPTOR_SIZE];
+    for (size_t i = 0; i < FSCRYPT_KEY_DESCRIPTOR_SIZE; i++) {
+        keyId[i] = (HexCharToValue(keyDesc[i*2]) << 4) | HexCharToValue(keyDesc[i*2+1]);
+    }
+
+    union FscryptPolicy policy;
+    memset_s(&policy, sizeof(policy), 0, sizeof(policy));
+    policy.v2.version = FSCRYPT_POLICY_V2;
+    policy.v2.contents_encryption_mode = FSCRYPT_MODE_AES_256_XTS;
+    policy.v2.filenames_encryption_mode = FSCRYPT_MODE_AES_256_CTS;
+    policy.v2.flags = FSCRYPT_POLICY_FLAGS_PAD_32;
+    memcpy_s(policy.v2.master_key_identifier, sizeof(policy.v2.master_key_identifier), keyId, FSCRYPT_KEY_DESCRIPTOR_SIZE);
+
+    if (KeyCtrlSetPolicy(dirPath.c_str(), &policy) != 0) {
+        LOGE("[L3:KeyManager] SetDirEncryptionPolicyWithKeyDesc: KeyCtrlSetPolicy failed");
+        return E_ELX_KEY_ACTIVE_ERROR;
+    }
+
+    LOGI("[L3:KeyManager] SetDirEncryptionPolicyWithKeyDesc: <<< EXIT SUCCESS <<<");
+    return E_OK;
 }
 } // namespace StorageDaemon
 } // namespace OHOS

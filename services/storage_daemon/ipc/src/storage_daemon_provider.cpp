@@ -2430,5 +2430,23 @@ int32_t StorageDaemonProvider::GetCapacity(const std::string &devPath, int64_t &
     return E_NOT_SUPPORT;
 #endif
 }
+
+int32_t StorageDaemonProvider::SetDirEncryptionPolicyWithKeyDesc(const std::string &dirPath,
+    uint32_t level, const std::string &keyDesc)
+{
+    LOGI("SetDirEncryptionPolicyWithKeyDesc begin.");
+    std::string message = "dirPath: " + GetAnonyString(dirPath) + " level: " + std::to_string(level);
+    HiAudit::GetInstance().WriteStart("SetDirEncryptionPolicyWithKeyDesc", message);
+    if (IsFilePathInvalid(dirPath)) {
+        LOGE("[L1:StorageDaemonProvider] SetDirEncryptionPolicyWithKeyDesc: dirPath is invalid");
+        return E_PARAMS_INVALID;
+    }
+    int timerId = StorageXCollie::SetTimer("storage:SetDirEncryptionPolicyWithKeyDesc", LOCAL_TIME_OUT_SECONDS);
+    int32_t ret = StorageDaemon::GetInstance().SetDirEncryptionPolicyWithKeyDesc(dirPath, level, keyDesc);
+    StorageXCollie::CancelTimer(timerId);
+    HiAudit::GetInstance().WriteEnd("SetDirEncryptionPolicyWithKeyDesc", ret);
+    return ret;
+}
+
 } // namespace StorageDaemon
 } // namespace OHOS

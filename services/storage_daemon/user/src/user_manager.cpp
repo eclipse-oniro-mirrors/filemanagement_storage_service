@@ -41,6 +41,11 @@ using namespace OHOS::StorageService;
 namespace OHOS {
 namespace StorageDaemon {
 
+const vector<string> UserManager::ALLOWED_USER_DIR_PREFIXES = {
+    "/data/virt_service/rgm_hmos/anco_hmos_data/",
+    "/mnt/data/vol",
+};
+
 UserManager &UserManager::GetInstance()
 {
     static UserManager instance_;
@@ -272,8 +277,14 @@ int32_t UserManager::CreateUserDir(const std::string &path, mode_t mode, uid_t u
 {
     LOGI("[L2:UserManager] CreateUserDir: >>> ENTER <<< path=%{public}s, mode=%{public}d, uid=%{public}d,"
         "gid=%{public}d", path.c_str(), mode, uid, gid);
-    std::string prefix = "/data/virt_service/rgm_hmos/anco_hmos_data/";
-    if (path.compare(0, prefix.size(), prefix) != 0) {
+    bool valid = false;
+    for (const auto &prefix : ALLOWED_USER_DIR_PREFIXES) {
+        if (path.compare(0, prefix.size(), prefix) == 0) {
+            valid = true;
+            break;
+        }
+    }
+    if (!valid) {
         LOGE("[L2:UserManager] CreateUserDir: <<< EXIT FAILED <<< The path is invalid, path=%{public}s", path.c_str());
         return E_PARAMS_INVALID;
     }

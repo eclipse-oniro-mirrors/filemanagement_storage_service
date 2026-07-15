@@ -112,6 +112,8 @@ public:
     int32_t RegisterUeceActivationCallback(const sptr<IUeceActivationCallback> &ueceCallback);
     int32_t UnregisterUeceActivationCallback();
     int32_t SetDirEncryptionPolicy(uint32_t userId, const std::string &dirPath, uint32_t level);
+    int32_t SetDirEncryptionPolicyWithKeyDesc(const std::string &dirPath, uint32_t level,
+                                              const std::string &keyDesc);
 
     int32_t CreateUserDir(const std::string &path, mode_t mode, uid_t uid, gid_t gid);
 
