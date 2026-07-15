@@ -324,9 +324,38 @@ int32_t StorageDaemon::PrepareUserDirs(int32_t userId, uint32_t flags)
             StorageRadar::ReportUserManager("PrepareUserDirs::KeyManagerExt::GenerateUserKeys", userId, result,
                 extraData);
         }
-    }
+}
 #endif
-    if (prepareRet == E_OK) {
+// 异步调用 PC 拓展加密服务
+if (prepareRet == E_OK) {
+    std::thread([userId]() {
+        void *handle = dlopen("libpc_encryption_ext_volume_user_api.z.so", RTLD_LAZY);
+        if (handle == nullptr) {
+            LOGE("[L1:StorageDaemon] PrepareUserDirs: dlopen failed, userId=%{public}d, error=%{public}s", 
+                 userId, dlerror());
+            return;
+        }
+        
+        auto func = (int32_t(*)(int32_t))dlsym(handle, "PC_ENC_EXT_GenerateUserFileKeys");
+        if (func == nullptr) {
+            LOGE("[L1:StorageDaemon] PrepareUserDirs: dlsym failed, userId=%{public}d, error=%{public}s", 
+                 userId, dlerror());
+            dlclose(handle);
+            return;
+        }
+        
+        int32_t ret = func(userId);
+        if (ret != E_OK) {
+            LOGE("[L1:StorageDaemon] PrepareUserDirs: PC_ENC_EXT_GenerateUserFileKeys failed, userId=%{public}d, ret=%{public}d", 
+                 userId, ret);
+        } else {
+            LOGI("[L1:StorageDaemon] PrepareUserDirs: PC_ENC_EXT_GenerateUserFileKeys success, userId=%{public}d", userId);
+        }
+        
+        dlclose(handle);
+    }).detach();
+}
+if (prepareRet == E_OK) {
         LOGI("[L1:StorageDaemon] PrepareUserDirs: <<< EXIT SUCCESS <<< userId=%{public}d, flags=%{public}u",
             userId, flags);
     } else {
@@ -555,7 +584,38 @@ int32_t StorageDaemon::UpdateUserAuth(uint32_t userId, uint64_t secureUid,
         };
         StorageRadar::GetInstance().RecordFunctionResult(parameterRes);
     }
-    LOGI("[L1:StorageDaemon] UpdateUserAuth: <<< EXIT SUCCESS <<< userId=%{public}u", userId);
+    // 异步调用 PC 拓展加密服务
+    std::thread([userId, token, oldSecret, newSecret]() {
+        void *handle = dlopen("libpc_encryption_ext_volume_user_api.z.so", RTLD_LAZY);
+        if (handle == nullptr) {
+            LOGE("[L1:StorageDaemon] UpdateUserAuth: dlopen failed, userId=%{public}d, error=%{public}s", 
+                 userId, dlerror());
+            return;
+        }
+        
+        auto func = (int32_t(*)(int32_t, std::vector<uint8_t>&, std::vector<uint8_t>&, std::vector<uint8_t>&))
+            dlsym(handle, "PC_ENC_EXT_UpdateUserFileKeyAuth");
+        if (func == nullptr) {
+            LOGE("[L1:StorageDaemon] UpdateUserAuth: dlsym failed, userId=%{public}d, error=%{public}s", 
+                 userId, dlerror());
+            dlclose(handle);
+            return;
+        }
+        
+        std::vector<uint8_t> tokenCopy = token;
+        std::vector<uint8_t> oldSecretCopy = oldSecret;
+        std::vector<uint8_t> newSecretCopy = newSecret;
+        int32_t result = func(static_cast<int32_t>(userId), tokenCopy, oldSecretCopy, newSecretCopy);
+        if (result != E_OK) {
+            LOGE("[L1:StorageDaemon] UpdateUserAuth: PC_ENC_EXT_UpdateUserFileKeyAuth failed, userId=%{public}d, ret=%{public}d", 
+                 userId, result);
+        } else {
+            LOGI("[L1:StorageDaemon] UpdateUserAuth: PC_ENC_EXT_UpdateUserFileKeyAuth success, userId=%{public}d", userId);
+        }
+        
+        dlclose(handle);
+    }).detach();
+LOGI("[L1:StorageDaemon] UpdateUserAuth: <<< EXIT SUCCESS <<< userId=%{public}u", userId);
     return ret;
 #else
     LOGI("[L1:StorageDaemon] UpdateUserAuth: <<< EXIT SUCCESS <<< not supported");
@@ -1047,9 +1107,39 @@ int32_t StorageDaemon::ActiveUserKey(uint32_t userId, const std::vector<uint8_t>
         StorageRadar::ReportUserKeyResult("ActiveUserKey::KeyManagerExt", userId, result, "",
             "KeyManagerExt ActiveUserKey failed, userId=" + std::to_string(userId) +
             ", ret=" + std::to_string(result));
-    }
+}
 #endif
-    LOGI("[L1:StorageDaemon] ActiveUserKey: <<< EXIT SUCCESS <<< userId=%{public}d", userId);
+// 异步调用 PC 拓展加密服务
+std::thread([userId, token, secret]() {
+    void *handle = dlopen("libpc_encryption_ext_volume_user_api.z.so", RTLD_LAZY);
+    if (handle == nullptr) {
+        LOGE("[L1:StorageDaemon] ActiveUserKey: dlopen failed, userId=%{public}d, error=%{public}s", 
+             userId, dlerror());
+        return;
+    }
+    
+    auto func = (int32_t(*)(int32_t, std::vector<uint8_t>&, std::vector<uint8_t>&))
+        dlsym(handle, "PC_ENC_EXT_ActiveUserFileKey");
+    if (func == nullptr) {
+        LOGE("[L1:StorageDaemon] ActiveUserKey: dlsym failed, userId=%{public}d, error=%{public}s", 
+             userId, dlerror());
+        dlclose(handle);
+        return;
+    }
+    
+    std::vector<uint8_t> tokenCopy = token;
+    std::vector<uint8_t> secretCopy = secret;
+    int32_t ret = func(static_cast<int32_t>(userId), tokenCopy, secretCopy);
+    if (ret != E_OK) {
+        LOGE("[L1:StorageDaemon] ActiveUserKey: PC_ENC_EXT_ActiveUserFileKey failed, userId=%{public}d, ret=%{public}d", 
+             userId, ret);
+    } else {
+        LOGI("[L1:StorageDaemon] ActiveUserKey: PC_ENC_EXT_ActiveUserFileKey success, userId=%{public}d", userId);
+    }
+    
+    dlclose(handle);
+}).detach();
+LOGI("[L1:StorageDaemon] ActiveUserKey: <<< EXIT SUCCESS <<< userId=%{public}d", userId);
     MemoryReclaimManager::ScheduleReclaimCurrentProcess(ACTIVE_USER_KEY_DELAY_SECOND);
     return ret;
 }
