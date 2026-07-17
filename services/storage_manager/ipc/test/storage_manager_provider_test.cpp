@@ -2218,5 +2218,24 @@ HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_SetDirEncryption
     EXPECT_EQ(ret, E_PERMISSION_DENIED);
     GTEST_LOG_(INFO) << "StorageManagerProviderTest_SetDirEncryptionPolicyWithKeyDesc_001 end";
 }
+
+/**
+ * @tc.name: StorageManagerProviderTest_SetDirEncryptionPolicyWithKeyDesc_002
+ * @tc.desc: Verify the SetDirEncryptionPolicyWithKeyDesc function with invalid path.
+ * @tc.type: FUNC
+ * @tc.require:
+ */
+HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_SetDirEncryptionPolicyWithKeyDesc_002, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageManagerProviderTest_SetDirEncryptionPolicyWithKeyDesc_002 start";
+    ASSERT_TRUE(storageManagerProviderTest_ != nullptr);
+    std::string dirPath = "../../../etc/passwd";
+    uint32_t level = 2;
+    std::string keyDesc = "0123456789abcdef0123456789abcdef";
+
+    auto ret = storageManagerProviderTest_->SetDirEncryptionPolicyWithKeyDesc(dirPath, level, keyDesc);
+    EXPECT_EQ(ret, E_PERMISSION_DENIED);
+    GTEST_LOG_(INFO) << "StorageManagerProviderTest_SetDirEncryptionPolicyWithKeyDesc_002 end";
+}
 } // namespace StorageManager
 } // namespace OHOS
