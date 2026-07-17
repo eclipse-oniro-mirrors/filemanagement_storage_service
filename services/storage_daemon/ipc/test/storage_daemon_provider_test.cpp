@@ -3034,5 +3034,18 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_EjectCD_002, TestS
     EXPECT_NE(ret, E_OK);
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_EjectCD_002 end";
 }
+
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_SetDirEncryptionPolicyWithKeyDesc_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_SetDirEncryptionPolicyWithKeyDesc_001 start";
+    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
+    std::string dirPath = "/data/service/test";
+    uint32_t level = 2;
+    std::string keyDesc = "0123456789abcdef0123456789abcdef";
+
+    auto ret = storageDaemonProviderTest_->SetDirEncryptionPolicyWithKeyDesc(dirPath, level, keyDesc);
+    EXPECT_NE(ret, E_OK);
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_SetDirEncryptionPolicyWithKeyDesc_001 end";
+}
 } // namespace StorageDaemon
 } // namespace OHOS
