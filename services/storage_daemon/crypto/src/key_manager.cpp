@@ -2877,8 +2877,8 @@ bool KeyManager::GetSecureUid(uint32_t userId, uint64_t &secureUid)
         LOGI("PIN protect exist.");
         return true;
     }
-LOGE("userId: %{public}u check failed", userId);
-return false;
+    LOGE("userId: %{public}u check failed", userId);
+    return false;
 }
 
 static unsigned char HexCharToValue(char c)
