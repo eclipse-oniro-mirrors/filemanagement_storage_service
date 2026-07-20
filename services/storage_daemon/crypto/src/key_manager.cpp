@@ -2881,12 +2881,17 @@ bool KeyManager::GetSecureUid(uint32_t userId, uint64_t &secureUid)
     return false;
 }
 
+constexpr uint8_t HEX_CHARS_PER_BYTE = 2;
+constexpr uint8_t HEX_BASE_VALUE = 10;
+constexpr uint8_t HEX_CHAR_TO_BYTE_SHIFT = 4;
+constexpr uint8_t HEX_INVALID_CHAR_VALUE = 255;
+
 static unsigned char HexCharToValue(char c)
 {
     if (c >= '0' && c <= '9') return c - '0';
-    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
-    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
-    return 255;
+    if (c >= 'a' && c <= 'f') return c - 'a' + HEX_BASE_VALUE;
+    if (c >= 'A' && c <= 'F') return c - 'A' + HEX_BASE_VALUE;
+    return HEX_INVALID_CHAR_VALUE;
 }
 
 int32_t KeyManager::SetDirEncryptionPolicyWithKeyDesc(const std::string &dirPath,
@@ -2904,14 +2909,15 @@ int32_t KeyManager::SetDirEncryptionPolicyWithKeyDesc(const std::string &dirPath
         return E_PARAMS_INVALID;
     }
 
-    if (keyDesc.length() != FSCRYPT_KEY_DESCRIPTOR_SIZE * 2) {
+    if (keyDesc.length() != FSCRYPT_KEY_DESCRIPTOR_SIZE * HEX_CHARS_PER_BYTE) {
         LOGE("[L3:KeyManager] SetDirEncryptionPolicyWithKeyDesc: keyDesc length invalid");
         return E_PARAMS_INVALID;
     }
 
     unsigned char keyId[FSCRYPT_KEY_DESCRIPTOR_SIZE];
     for (size_t i = 0; i < FSCRYPT_KEY_DESCRIPTOR_SIZE; i++) {
-        keyId[i] = (HexCharToValue(keyDesc[i*2]) << 4) | HexCharToValue(keyDesc[i*2+1]);
+        keyId[i] = (HexCharToValue(keyDesc[i * HEX_CHARS_PER_BYTE]) << HEX_CHAR_TO_BYTE_SHIFT) |
+                    HexCharToValue(keyDesc[i * HEX_CHARS_PER_BYTE + 1]);
     }
 
     union FscryptPolicy policy;
