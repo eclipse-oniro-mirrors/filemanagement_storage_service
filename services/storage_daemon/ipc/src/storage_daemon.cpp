@@ -1991,7 +1991,8 @@ int32_t StorageDaemon::IsDirPathSupport(const std::string &dirPath)
         LOGE("[L1:StorageDaemon] IsDirPathSupport: <<< EXIT FAILED <<< dirPath is not dir");
         return E_NOT_DIR_PATH;
     }
-    if (strncmp(dirPath.c_str(), ANCO_DIR, strlen(ANCO_DIR)) != 0) {
+    if (strncmp(dirPath.c_str(), ANCO_DIR, strlen(ANCO_DIR)) != 0 &&
+        strncmp(dirPath.c_str(), MNT_DATA_VOL_DIR, strlen(MNT_DATA_VOL_DIR)) != 0) {
         LOGE("[L1:StorageDaemon] IsDirPathSupport: <<< EXIT FAILED <<< dir is not permission");
         return E_PARAMS_INVALID;
     }

@@ -624,6 +624,24 @@ HWTEST_F(StorageDaemonTest, StorageDaemonTest_IsDirPathSupport_001, TestSize.Lev
     }
 }
 
+/**
+ * @tc.name: StorageDaemonTest_IsDirPathSupport_002
+ * @tc.desc: Verify the IsDirPathSupport for MNT_DATA_VOL_DIR.
+ * @tc.type: FUNC
+ */
+HWTEST_F(StorageDaemonTest, StorageDaemonTest_IsDirPathSupport_002, TestSize.Level1)
+{
+    ASSERT_TRUE(storageDaemon_ != nullptr);
+    std::string mntPath = std::string(MNT_DATA_VOL_DIR) + "/test";
+    std::error_code errCode;
+
+    // create test directory under MNT_DATA_VOL_DIR
+    std::filesystem::create_directories(mntPath, errCode);
+    EXPECT_EQ(storageDaemon_->IsDirPathSupport(mntPath), E_OK);
+
+    std::filesystem::remove_all(MNT_DATA_VOL_DIR, errCode);
+}
+
 #ifdef USER_CRYPTO_MANAGER
 /**
  * @tc.name: StorageDaemonTest_CheckAndUpgradeUserAuthType_001
