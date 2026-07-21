@@ -70,15 +70,15 @@ void CallPcEncExtGenerateUserFileKeys(int32_t userId)
     std::thread([userId]() {
         void *handle = dlopen("libpc_encryption_ext_volume_user_api.z.so", RTLD_LAZY);
         if (handle == nullptr) {
-            LOGE("[L1:StorageDaemon] CallPcEncExtGenerateUserFileKeys: dlopen failed, userId=%{public}d, error=%{public}s", 
-                 userId, dlerror());
+            LOGE("[L1:StorageDaemon] CallPcEncExtGenerateUserFileKeys: dlopen failed, "
+                 "userId=%{public}d, error=%{public}s", userId, dlerror());
             return;
         }
         
         auto func = (int32_t(*)(int32_t))dlsym(handle, "PC_ENC_EXT_GenerateUserFileKeys");
         if (func == nullptr) {
-            LOGE("[L1:StorageDaemon] CallPcEncExtGenerateUserFileKeys: dlsym failed, userId=%{public}d, error=%{public}s", 
-                 userId, dlerror());
+            LOGE("[L1:StorageDaemon] CallPcEncExtGenerateUserFileKeys: dlsym failed, "
+                 "userId=%{public}d, error=%{public}s", userId, dlerror());
             dlclose(handle);
             return;
         }
@@ -101,16 +101,16 @@ void CallPcEncExtActiveUserFileKey(int32_t userId, const std::vector<uint8_t> &t
     std::thread([userId, token, secret]() {
         void *handle = dlopen("libpc_encryption_ext_volume_user_api.z.so", RTLD_LAZY);
         if (handle == nullptr) {
-            LOGE("[L1:StorageDaemon] CallPcEncExtActiveUserFileKey: dlopen failed, userId=%{public}d, error=%{public}s", 
-                 userId, dlerror());
+            LOGE("[L1:StorageDaemon] CallPcEncExtActiveUserFileKey: dlopen failed, "
+                 "userId=%{public}d, error=%{public}s", userId, dlerror());
             return;
         }
         
         auto func = (int32_t(*)(int32_t, std::vector<uint8_t>&, std::vector<uint8_t>&))
             dlsym(handle, "PC_ENC_EXT_ActiveUserFileKey");
         if (func == nullptr) {
-            LOGE("[L1:StorageDaemon] CallPcEncExtActiveUserFileKey: dlsym failed, userId=%{public}d, error=%{public}s", 
-                 userId, dlerror());
+            LOGE("[L1:StorageDaemon] CallPcEncExtActiveUserFileKey: dlsym failed, "
+                 "userId=%{public}d, error=%{public}s", userId, dlerror());
             dlclose(handle);
             return;
         }
@@ -136,16 +136,16 @@ void CallPcEncExtUpdateUserFileKeyAuth(int32_t userId, const std::vector<uint8_t
     std::thread([userId, token, oldSecret, newSecret]() {
         void *handle = dlopen("libpc_encryption_ext_volume_user_api.z.so", RTLD_LAZY);
         if (handle == nullptr) {
-            LOGE("[L1:StorageDaemon] CallPcEncExtUpdateUserFileKeyAuth: dlopen failed, userId=%{public}d, error=%{public}s", 
-                 userId, dlerror());
+            LOGE("[L1:StorageDaemon] CallPcEncExtUpdateUserFileKeyAuth: dlopen failed, "
+                 "userId=%{public}d, error=%{public}s", userId, dlerror());
             return;
         }
         
         auto func = (int32_t(*)(int32_t, std::vector<uint8_t>&, std::vector<uint8_t>&, std::vector<uint8_t>&))
             dlsym(handle, "PC_ENC_EXT_UpdateUserFileKeyAuth");
         if (func == nullptr) {
-            LOGE("[L1:StorageDaemon] CallPcEncExtUpdateUserFileKeyAuth: dlsym failed, userId=%{public}d, error=%{public}s", 
-                 userId, dlerror());
+            LOGE("[L1:StorageDaemon] CallPcEncExtUpdateUserFileKeyAuth: dlsym failed, "
+                 "userId=%{public}d, error=%{public}s", userId, dlerror());
             dlclose(handle);
             return;
         }

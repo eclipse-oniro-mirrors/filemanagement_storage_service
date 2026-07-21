@@ -2926,7 +2926,8 @@ int32_t KeyManager::SetDirEncryptionPolicyWithKeyDesc(const std::string &dirPath
     policy.v2.contents_encryption_mode = FSCRYPT_MODE_AES_256_XTS;
     policy.v2.filenames_encryption_mode = FSCRYPT_MODE_AES_256_CTS;
     policy.v2.flags = FSCRYPT_POLICY_FLAGS_PAD_32;
-    memcpy_s(policy.v2.master_key_identifier, sizeof(policy.v2.master_key_identifier), keyId, FSCRYPT_KEY_DESCRIPTOR_SIZE);
+    memcpy_s(policy.v2.master_key_identifier, sizeof(policy.v2.master_key_identifier),
+        keyId, FSCRYPT_KEY_DESCRIPTOR_SIZE);
 
     if (KeyCtrlSetPolicy(dirPath.c_str(), &policy) != 0) {
         LOGE("[L3:KeyManager] SetDirEncryptionPolicyWithKeyDesc: KeyCtrlSetPolicy failed");
