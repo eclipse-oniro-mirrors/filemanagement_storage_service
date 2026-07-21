@@ -2888,9 +2888,15 @@ constexpr uint8_t HEX_INVALID_CHAR_VALUE = 255;
 
 static unsigned char HexCharToValue(char c)
 {
-    if (c >= '0' && c <= '9') return c - '0';
-    if (c >= 'a' && c <= 'f') return c - 'a' + HEX_BASE_VALUE;
-    if (c >= 'A' && c <= 'F') return c - 'A' + HEX_BASE_VALUE;
+    if (c >= '0' && c <= '9') {
+        return c - '0';
+    }
+    if (c >= 'a' && c <= 'f') {
+        return c - 'a' + HEX_BASE_VALUE;
+    }
+    if (c >= 'A' && c <= 'F') {
+        return c - 'A' + HEX_BASE_VALUE;
+    }
     return HEX_INVALID_CHAR_VALUE;
 }
 
