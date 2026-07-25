@@ -65,6 +65,7 @@ using namespace OHOS::FileManagement::CloudFile;
 #endif
 
 namespace {
+#ifdef DISK_MANAGER
 void CallPcEncExtGenerateUserFileKeys(int32_t userId)
 {
     std::thread([userId]() {
@@ -164,7 +165,8 @@ void CallPcEncExtUpdateUserFileKeyAuth(int32_t userId, const std::vector<uint8_t
         dlclose(handle);
     }).detach();
 }
-}
+#endif
+} // namespace
 
 StorageDaemon &StorageDaemon::GetInstance(void)
 {
