@@ -2881,6 +2881,7 @@ bool KeyManager::GetSecureUid(uint32_t userId, uint64_t &secureUid)
     return false;
 }
 
+#ifdef USER_CRYPTO_MANAGER
 constexpr uint8_t HEX_CHARS_PER_BYTE = 2;
 constexpr uint8_t HEX_BASE_VALUE = 10;
 constexpr uint8_t HEX_CHAR_TO_BYTE_SHIFT = 4;
@@ -2943,5 +2944,7 @@ int32_t KeyManager::SetDirEncryptionPolicyWithKeyDesc(const std::string &dirPath
     LOGI("[L3:KeyManager] SetDirEncryptionPolicyWithKeyDesc: <<< EXIT SUCCESS <<<");
     return E_OK;
 }
+#endif
+
 } // namespace StorageDaemon
 } // namespace OHOS

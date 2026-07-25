@@ -2106,6 +2106,7 @@ void StorageDaemon::UpgradeEl5AuthType(uint32_t userId, const std::vector<uint8_
     LOGI("[L1:StorageDaemon] UpgradeEl5AuthType: <<< EXIT <<<");
 }
 
+#ifdef USER_CRYPTO_MANAGER
 int32_t StorageDaemon::SetDirEncryptionPolicyWithKeyDesc(const std::string &dirPath,
     uint32_t level, const std::string &keyDesc)
 {
@@ -2123,6 +2124,7 @@ int32_t StorageDaemon::SetDirEncryptionPolicyWithKeyDesc(const std::string &dirP
     LOGI("[L1:StorageDaemon] SetDirEncryptionPolicyWithKeyDesc: <<< EXIT SUCCESS <<<");
     return ret;
 }
+#endif
 
 } // namespace StorageDaemon
 } // namespace OHOS
