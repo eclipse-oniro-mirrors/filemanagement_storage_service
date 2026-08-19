@@ -223,7 +223,7 @@ int32_t StorageDaemon::RestoreOneUserKey(int32_t userId, KeyType type)
     if (type == EL2_KEY) {
         PrepareUeceDir(userId);
     }
-    if ((ret = DoStoreAndUpdate(userId, {}, {}, type)) != E_OK) {
+    if (type != EL1_KEY && (ret = DoStoreAndUpdate(userId, {}, {}, type)) != E_OK) {
         LOGE("DoStoreAndUpdate failed, userId:%{public}u, ret:%{public}d, type:%{public}u", userId, ret, type);
         return ret;
     }
