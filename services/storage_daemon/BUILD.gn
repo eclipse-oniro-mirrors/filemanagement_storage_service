@@ -186,6 +186,10 @@ ohos_executable("storage_daemon") {
     ]
   }
 
+  if (enable_pc_encryption_extension) {
+    defines += [ "PC_ENCRYPTION_EXTENSION" ]
+  }
+
   if (enable_disk_manager) {
     defines += [ "DISK_MANAGER" ]
     sources += [

@@ -147,6 +147,10 @@ ohos_static_library("libfscryptutils_static") {
     "init:libbegetutil",
   ]
 
+  if (enable_pc_encryption_extension) {
+    defines += [ "PC_ENCRYPTION_EXTENSION" ]
+  }
+
   subsystem_name = "filemanagement"
   part_name = "storage_service"
 }

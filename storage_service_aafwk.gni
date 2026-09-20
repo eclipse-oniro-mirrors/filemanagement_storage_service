@@ -68,6 +68,12 @@ if ("${target_platform}" == "pc" || "${target_platform}" == "2in1" || "${target_
   pc_device_enable = false
 }
 
+if ("${target_platform}" == "pc" || "${target_platform}" == "2in1") {
+  enable_pc_encryption_extension = true
+} else {
+  enable_pc_encryption_extension = false
+}
+
 if ("${target_platform}" == "pc") {
   pc_ext4_enable = true
 } else {
