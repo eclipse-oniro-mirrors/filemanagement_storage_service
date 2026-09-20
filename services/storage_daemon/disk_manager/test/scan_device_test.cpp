@@ -42,6 +42,9 @@ public:
     void CreateFileWithContent(const std::string &filePath, const std::string &content);
     void CreateDeviceDir(const std::string &deviceName);
     void DeleteDeviceDir(const std::string &deviceName);
+    void LinkDeviceAsInternalSata(const std::string &deviceName);
+    void LinkDeviceAsInternalNvme(const std::string &deviceName);
+    void LinkDeviceAsInternalNvmeWithAbsoluteSysPath(const std::string &deviceName);
 
     std::string mockSysPath;
 };
@@ -103,6 +106,39 @@ void ScanDeviceTest::DeleteDeviceDir(const std::string &deviceName)
 {
     std::string devicePath = mockSysPath + "/" + deviceName;
     system(("rm -rf " + devicePath).c_str());
+}
+
+void ScanDeviceTest::LinkDeviceAsInternalSata(const std::string &deviceName)
+{
+    std::string src = mockSysPath + "/" + deviceName;
+    std::string nested = mockSysPath + "/devices/platform/bfa00000.sata/ata1/host0/target0:0:0/0:0:0:0/block/" +
+                         deviceName;
+    system(("mkdir -p " + nested).c_str());
+    system(("cp -a " + src + "/. " + nested + "/").c_str());
+    system(("rm -rf " + src).c_str());
+    symlink(("../devices/platform/bfa00000.sata/ata1/host0/target0:0:0/0:0:0:0/block/" + deviceName).c_str(),
+            src.c_str());
+}
+
+void ScanDeviceTest::LinkDeviceAsInternalNvme(const std::string &deviceName)
+{
+    std::string src = mockSysPath + "/" + deviceName;
+    std::string nested = mockSysPath +
+                         "/devices/platform/a0000000.hi_pcie/pci0000:00/0000:00:00.0/nvme/nvme1/block/" + deviceName;
+    system(("mkdir -p " + nested).c_str());
+    system(("cp -a " + src + "/. " + nested + "/").c_str());
+    system(("rm -rf " + src).c_str());
+    symlink(("../devices/platform/a0000000.hi_pcie/pci0000:00/0000:00:00.0/nvme/nvme1/block/" + deviceName).c_str(),
+            src.c_str());
+}
+
+void ScanDeviceTest::LinkDeviceAsInternalNvmeWithAbsoluteSysPath(const std::string &deviceName)
+{
+    std::string devicePath = mockSysPath + "/" + deviceName;
+    std::string absLinkTarget =
+        "/sys/devices/platform/a0000000.hi_pcie/pci0001:00/0001:00:00.0/0001:01:00.0/nvme/nvme1/" + deviceName;
+    system(("rm -rf " + devicePath).c_str());
+    symlink(absLinkTarget.c_str(), devicePath.c_str());
 }
 
 /**
@@ -175,6 +211,7 @@ HWTEST_F(ScanDeviceTest, Storage_Service_ScanDeviceTest_GetDataDisks_006, TestSi
     GTEST_LOG_(INFO) << "Storage_Service_ScanDeviceTest_GetDataDisks_006 start";
 
     CreateDeviceDir("sdmock_a");
+    LinkDeviceAsInternalSata("sdmock_a");
 
     ScanDevice scanner(mockSysPath);
     std::vector<BlockInfo> result = scanner.GetDataDisks();
@@ -193,6 +230,7 @@ HWTEST_F(ScanDeviceTest, Storage_Service_ScanDeviceTest_GetDataDisks_007, TestSi
 {
     GTEST_LOG_(INFO) << "Storage_Service_ScanDeviceTest_GetDataDisks_007 start";
     CreateDeviceDir("nvme1n1");
+    LinkDeviceAsInternalNvme("nvme1n1");
 
     ScanDevice scanner(mockSysPath);
     std::vector<BlockInfo> result = scanner.GetDataDisks();
@@ -211,6 +249,7 @@ HWTEST_F(ScanDeviceTest, Storage_Service_ScanDeviceTest_GetDataDisks_008, TestSi
 {
     GTEST_LOG_(INFO) << "Storage_Service_ScanDeviceTest_GetDataDisks_008 start";
     CreateDeviceDir("sdmock_b");
+    LinkDeviceAsInternalSata("sdmock_b");
     CreateFileWithContent(mockSysPath + "/sdmock_b/size", "invalid_number\n");
 
     ScanDevice scanner(mockSysPath);
@@ -219,6 +258,25 @@ HWTEST_F(ScanDeviceTest, Storage_Service_ScanDeviceTest_GetDataDisks_008, TestSi
 
     DeleteDeviceDir("sdmock_b");
     GTEST_LOG_(INFO) << "Storage_Service_ScanDeviceTest_GetDataDisks_008 end";
+}
+
+/**
+ * @tc.name: Storage_Service_ScanDeviceTest_GetDataDisks_009
+ * @tc.desc: Test NVMe with absolute /sys/devices symlink is recognized as internal data disk
+ * @tc.type: FUNC
+ */
+HWTEST_F(ScanDeviceTest, Storage_Service_ScanDeviceTest_GetDataDisks_009, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "Storage_Service_ScanDeviceTest_GetDataDisks_009 start";
+    CreateDeviceDir("nvme1n1");
+    LinkDeviceAsInternalNvmeWithAbsoluteSysPath("nvme1n1");
+
+    ScanDevice scanner(mockSysPath);
+    std::vector<BlockInfo> result = scanner.GetDataDisks();
+    EXPECT_EQ(result.size(), 1);
+
+    DeleteDeviceDir("nvme1n1");
+    GTEST_LOG_(INFO) << "Storage_Service_ScanDeviceTest_GetDataDisks_009 end";
 }
 
 /**
@@ -749,6 +807,76 @@ HWTEST_F(ScanDeviceTest, Storage_Service_ScanDeviceTest_ReadSysfsNode_NoWhitespa
 }
 
 /**
+ * @tc.name: Storage_Service_ScanDeviceTest_GetRotational_001
+ * @tc.desc: Test GetRotational with valid rotational=0 (SSD)
+ * @tc.type: FUNC
+ */
+HWTEST_F(ScanDeviceTest, Storage_Service_ScanDeviceTest_GetRotational_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "Storage_Service_ScanDeviceTest_GetRotational_001 start";
+    CreateDeviceDir("sdmock_a");
+
+    ScanDevice scanner(mockSysPath);
+    int32_t rotational = scanner.GetRotational("sdmock_a");
+    EXPECT_EQ(rotational, 0);
+
+    DeleteDeviceDir("sdmock_a");
+    GTEST_LOG_(INFO) << "Storage_Service_ScanDeviceTest_GetRotational_001 end";
+}
+
+/**
+ * @tc.name: Storage_Service_ScanDeviceTest_GetRotational_002
+ * @tc.desc: Test GetRotational with valid rotational=1 (HDD)
+ * @tc.type: FUNC
+ */
+HWTEST_F(ScanDeviceTest, Storage_Service_ScanDeviceTest_GetRotational_002, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "Storage_Service_ScanDeviceTest_GetRotational_002 start";
+    CreateDeviceDir("sdmock_a");
+    CreateFileWithContent(mockSysPath + "/sdmock_a/queue/rotational", "1\n");
+
+    ScanDevice scanner(mockSysPath);
+    int32_t rotational = scanner.GetRotational("sdmock_a");
+    EXPECT_EQ(rotational, 1);
+
+    DeleteDeviceDir("sdmock_a");
+    GTEST_LOG_(INFO) << "Storage_Service_ScanDeviceTest_GetRotational_002 end";
+}
+
+/**
+ * @tc.name: Storage_Service_ScanDeviceTest_GetRotational_003
+ * @tc.desc: Test GetRotational with invalid content returns -1
+ * @tc.type: FUNC
+ */
+HWTEST_F(ScanDeviceTest, Storage_Service_ScanDeviceTest_GetRotational_003, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "Storage_Service_ScanDeviceTest_GetRotational_003 start";
+    CreateDeviceDir("sdmock_a");
+    CreateFileWithContent(mockSysPath + "/sdmock_a/queue/rotational", "invalid\n");
+
+    ScanDevice scanner(mockSysPath);
+    int32_t rotational = scanner.GetRotational("sdmock_a");
+    EXPECT_EQ(rotational, -1);
+
+    DeleteDeviceDir("sdmock_a");
+    GTEST_LOG_(INFO) << "Storage_Service_ScanDeviceTest_GetRotational_003 end";
+}
+
+/**
+ * @tc.name: Storage_Service_ScanDeviceTest_GetRotational_004
+ * @tc.desc: Test GetRotational with nonexistent device returns -1
+ * @tc.type: FUNC
+ */
+HWTEST_F(ScanDeviceTest, Storage_Service_ScanDeviceTest_GetRotational_004, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "Storage_Service_ScanDeviceTest_GetRotational_004 start";
+    ScanDevice scanner(mockSysPath);
+    int32_t rotational = scanner.GetRotational("nonexistent");
+    EXPECT_EQ(rotational, -1);
+    GTEST_LOG_(INFO) << "Storage_Service_ScanDeviceTest_GetRotational_004 end";
+}
+
+/**
  * @tc.name: Storage_Service_ScanDeviceTest_GetDiskRpm_001
  * @tc.desc: Test getting disk RPM with nonexistent device
  * @tc.type: FUNC
@@ -878,7 +1006,9 @@ HWTEST_F(ScanDeviceTest, Storage_Service_ScanDeviceTest_MultipleDevices_001, Tes
     CreateDeviceDir("sdmock_b");
     CreateFileWithContent(mockSysPath + "/sdmock_b/removable", "1\n");
     CreateDeviceDir("sdmock_c");
+    LinkDeviceAsInternalSata("sdmock_c");
     CreateDeviceDir("nvme1n1");
+    LinkDeviceAsInternalNvme("nvme1n1");
 
     ScanDevice scanner(mockSysPath);
     std::vector<BlockInfo> result = scanner.GetDataDisks();
@@ -1614,6 +1744,353 @@ HWTEST_F(ScanDeviceTest, Storage_Service_ScanDeviceTest_GetPort_005, TestSize.Le
     EXPECT_EQ(port, "");
 
     GTEST_LOG_(INFO) << "Storage_Service_ScanDeviceTest_GetPort_005 end";
+}
+
+// ==================== GetScsiGenericDevPath & GetOpticalDriveTypeByScsiGeneric Tests ====================
+// GetScsiGenericDevPath branches (8 edges):
+//   B1: !dir == true  (opendir failed) → return ""
+//   B2: !dir == false (opendir succeeded) → enter readdir loop
+//   B3: name == "." || name == ".." == true → continue
+//   B4: name == "." || name == ".." == false → check sg prefix
+//   B5: name.find("sg") == 0 == true → set sgName and break
+//   B6: name.find("sg") == 0 == false → continue loop
+//   B7: sgName.empty() == true → return ""
+//   B8: sgName.empty() == false → return "/dev/<sgName>"
+//
+// GetOpticalDriveTypeByScsiGeneric branches (2 edges):
+//   B9:  devPath.empty() == true → return ""
+//   B10: devPath.empty() == false → call GetOpticalDriveType(devPath)
+//
+// GetOpticalDriveType (called internally) branches testable without ioctl mock:
+//   B11: ReadConfiguration fails → return ""
+//   B12-B14: require ioctl mock, not available in this target → board-level verification
+
+/**
+ * @tc.name: Storage_Service_ScanDeviceTest_GetScsiGenericDevPath_001
+ * @tc.desc: Test GetScsiGenericDevPath when scsi_generic directory does not exist (opendir fails),
+ *           and with nonexistent device. Also verifies GetOpticalDriveTypeByScsiGeneric returns
+ *           empty when GetScsiGenericDevPath returns empty.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ScanDeviceTest, Storage_Service_ScanDeviceTest_GetScsiGenericDevPath_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetScsiGenericDevPath_001 start";
+    CreateDirectory(mockSysPath);
+
+    ScanDevice scanner(mockSysPath);
+
+    // Case 1: nonexistent device → opendir fails
+    // Covers: B1 (!dir == true)
+    EXPECT_TRUE(scanner.GetScsiGenericDevPath("nonexistent").empty());
+
+    // Case 2: device exists but no scsi_generic subdirectory → opendir fails
+    // Covers: B1 (!dir == true)
+    CreateDirectory(mockSysPath + "/sr0");
+    CreateDirectory(mockSysPath + "/sr0/device");
+    EXPECT_TRUE(scanner.GetScsiGenericDevPath("sr0").empty());
+
+    // Case 3: GetOpticalDriveTypeByScsiGeneric returns empty when no scsi_generic
+    // Covers: B9 (devPath.empty() == true)
+    EXPECT_TRUE(scanner.GetOpticalDriveTypeByScsiGeneric("sr0").empty());
+
+    system(("rm -rf " + mockSysPath + "/sr0").c_str());
+    GTEST_LOG_(INFO) << "GetScsiGenericDevPath_001 end";
+}
+
+/**
+ * @tc.name: Storage_Service_ScanDeviceTest_GetScsiGenericDevPath_002
+ * @tc.desc: Test GetScsiGenericDevPath when scsi_generic dir exists but has no sg entries
+ *           (empty dir and non-sg entries), and with valid sg entry found.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ScanDeviceTest, Storage_Service_ScanDeviceTest_GetScsiGenericDevPath_002, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetScsiGenericDevPath_002 start";
+    CreateDirectory(mockSysPath);
+    std::string devDir = mockSysPath + "/sr0/device";
+    CreateDirectory(mockSysPath + "/sr0");
+    CreateDirectory(devDir);
+    std::string sgDir = devDir + "/scsi_generic";
+
+    ScanDevice scanner(mockSysPath);
+
+    // Case 1: scsi_generic exists but empty → only "." and ".." entries, sgName remains empty
+    // Covers: B2 (opendir ok), B3 (dot entries skipped), B7 (sgName empty)
+    CreateDirectory(sgDir);
+    EXPECT_TRUE(scanner.GetScsiGenericDevPath("sr0").empty());
+
+    // Case 2: scsi_generic contains non-sg entries → B6 (name.find("sg") != 0), then B7
+    CreateFileWithContent(sgDir + "/other", "");
+    CreateFileWithContent(sgDir + "/notsg1", "");
+    EXPECT_TRUE(scanner.GetScsiGenericDevPath("sr0").empty());
+
+    // Case 3: scsi_generic contains a valid sg entry → B5, B8
+    CreateFileWithContent(sgDir + "/sg1", "");
+    std::string result = scanner.GetScsiGenericDevPath("sr0");
+    EXPECT_EQ(result, "/dev/sg1");
+
+    // Case 4: GetOpticalDriveTypeByScsiGeneric with sg path → B10 (devPath not empty)
+    // GetOpticalDriveType("/dev/sg1") calls ReadConfiguration → fails without real device → returns ""
+    // Covers: B10, B11 (ReadConfiguration fails)
+    std::string driveType = scanner.GetOpticalDriveTypeByScsiGeneric("sr0");
+    EXPECT_TRUE(driveType.empty());
+
+    system(("rm -rf " + mockSysPath + "/sr0").c_str());
+    GTEST_LOG_(INFO) << "GetScsiGenericDevPath_002 end";
+}
+
+/**
+ * @tc.name: Storage_Service_ScanDeviceTest_GetScsiGenericDevPath_003
+ * @tc.desc: Test GetScsiGenericDevPath with mixed entries (dot, non-sg, sg) verifying all branch paths.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ScanDeviceTest, Storage_Service_ScanDeviceTest_GetScsiGenericDevPath_003, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetScsiGenericDevPath_003 start";
+    CreateDirectory(mockSysPath);
+    std::string devDir = mockSysPath + "/sr0/device";
+    CreateDirectory(mockSysPath + "/sr0");
+    CreateDirectory(devDir);
+    std::string sgDir = devDir + "/scsi_generic";
+    CreateDirectory(sgDir);
+
+    ScanDevice scanner(mockSysPath);
+
+    // Mix of non-sg and sg entries → covers B3 (dots), B4+B6 (non-sg skipped), B4+B5 (sg found), B8
+    CreateFileWithContent(sgDir + "/misc_file", "");
+    CreateFileWithContent(sgDir + "/sg2", "");
+    std::string result = scanner.GetScsiGenericDevPath("sr0");
+    // Either sg2 is found or misc_file is encountered first; sg2 must be found eventually
+    EXPECT_TRUE(result.find("/dev/sg") == 0);
+
+    system(("rm -rf " + mockSysPath + "/sr0").c_str());
+    GTEST_LOG_(INFO) << "GetScsiGenericDevPath_003 end";
+}
+
+/**
+ * @tc.name: Storage_Service_ScanDeviceTest_ParseWodimPrcapOutput_Empty
+ * @tc.desc: Test ParseWodimPrcapOutput with empty output vector; expect empty JSON array.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ScanDeviceTest, Storage_Service_ScanDeviceTest_ParseWodimPrcapOutput_Empty, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "ParseWodimPrcapOutput_Empty start";
+    ScanDevice scanner(mockSysPath);
+    std::vector<std::string> output;
+    json result = scanner.ParseWodimPrcapOutput(output);
+    EXPECT_TRUE(result.empty());
+    EXPECT_TRUE(result.is_array());
+    EXPECT_EQ(result.size(), 0);
+    GTEST_LOG_(INFO) << "ParseWodimPrcapOutput_Empty end";
+}
+
+/**
+ * @tc.name: Storage_Service_ScanDeviceTest_ParseWodimPrcapOutput_NonMatchingLines
+ * @tc.desc: Test ParseWodimPrcapOutput with lines that do not contain "Write speed #"; Branch 1 skip.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ScanDeviceTest, Storage_Service_ScanDeviceTest_ParseWodimPrcapOutput_NonMatchingLines, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "ParseWodimPrcapOutput_NonMatchingLines start";
+    ScanDevice scanner(mockSysPath);
+    // Lines containing "(CD Nx)" but NOT "Write speed #" must be skipped entirely.
+    // This verifies the bug fix: read-speed lines like "Maximum read speed: 4234kB/s(CD 24x, DVD 3x)"
+    // must NOT have their speed (24) extracted.
+    std::vector<std::string> output;
+    output.push_back(std::string("Device type    : Removable CD-ROM\n") +
+                     "Vendor_info    : 'Optiarc'\n" +
+                     "Maximum read speed: 4234kB/s(CD 24x, DVD 3x)\n" +
+                     "Current read speed: 4234 kB/s (CD 24x, DVD 3x)\n" +
+                     "Maximum write speed: 1764kB/s(CD 10x, DVD 1x)\n" +
+                     "Current write speed:1764 kB/s (CD 10x, DVD 1x)");
+    json result = scanner.ParseWodimPrcapOutput(output);
+    EXPECT_TRUE(result.is_array());
+    EXPECT_EQ(result.size(), 0);
+    GTEST_LOG_(INFO) << "ParseWodimPrcapOutput_NonMatchingLines end";
+}
+
+/**
+ * @tc.name: Storage_Service_ScanDeviceTest_ParseWodimPrcapOutput_WriteSpeedWithoutCd
+ * @tc.desc: Test ParseWodimPrcapOutput with "Write speed #" line but no "(CD"; Branch 2 skip.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ScanDeviceTest, Storage_Service_ScanDeviceTest_ParseWodimPrcapOutput_WriteSpeedWithoutCd, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "ParseWodimPrcapOutput_WriteSpeedWithoutCd start";
+    ScanDevice scanner(mockSysPath);
+    // Line has "Write speed #" but no "(CD" substring -> must be skipped.
+    std::vector<std::string> output;
+    output.push_back("Write speed #0: 1764 kB/s CLV/PCAV (DVD 1x)");
+    json result = scanner.ParseWodimPrcapOutput(output);
+    EXPECT_TRUE(result.is_array());
+    EXPECT_EQ(result.size(), 0);
+    GTEST_LOG_(INFO) << "ParseWodimPrcapOutput_WriteSpeedWithoutCd end";
+}
+
+/**
+ * @tc.name: Storage_Service_ScanDeviceTest_ParseWodimPrcapOutput_WriteSpeedCdWithoutX
+ * @tc.desc: Test ParseWodimPrcapOutput with "Write speed #" and "(CD" but no 'x' after "(CD"; Branch 3 skip.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ScanDeviceTest, Storage_Service_ScanDeviceTest_ParseWodimPrcapOutput_WriteSpeedCdWithoutX, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "ParseWodimPrcapOutput_WriteSpeedCdWithoutX start";
+    ScanDevice scanner(mockSysPath);
+    // Line truncated right after "(CD" -> no 'x' follows -> must be skipped.
+    std::vector<std::string> output;
+    output.push_back("Write speed #0: 1764 kB/s CLV/PCAV (CD");
+    json result = scanner.ParseWodimPrcapOutput(output);
+    EXPECT_TRUE(result.is_array());
+    EXPECT_EQ(result.size(), 0);
+    GTEST_LOG_(INFO) << "ParseWodimPrcapOutput_WriteSpeedCdWithoutX end";
+}
+
+/**
+ * @tc.name: Storage_Service_ScanDeviceTest_ParseWodimPrcapOutput_EmptySpeedBetweenCdAndX
+ * @tc.desc: Test ParseWodimPrcapOutput with "(CDx)" where nothing is between "(CD" and 'x';
+ *           the extracted speedStr is empty and must be skipped. Branch 5a (!speedStr.empty() false).
+ * @tc.type: FUNC
+ */
+HWTEST_F(ScanDeviceTest, Storage_Service_ScanDeviceTest_ParseWodimPrcapOutput_EmptySpeedBetweenCdAndX, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "ParseWodimPrcapOutput_EmptySpeedBetweenCdAndX start";
+    ScanDevice scanner(mockSysPath);
+    // "(CDx)" -> cdPos+3 == xPos -> substr returns empty -> speedStr.empty() true -> skip (Branch 5a).
+    std::vector<std::string> output;
+    output.push_back("Write speed #0: 0 kB/s CLV/PCAV (CDx,DVD1x)");
+    json result = scanner.ParseWodimPrcapOutput(output);
+    EXPECT_TRUE(result.is_array());
+    EXPECT_EQ(result.size(), 0);
+    GTEST_LOG_(INFO) << "ParseWodimPrcapOutput_EmptySpeedBetweenCdAndX end";
+}
+
+/**
+ * @tc.name: Storage_Service_ScanDeviceTest_ParseWodimPrcapOutput_ValidNoSpace
+ * @tc.desc: Test ParseWodimPrcapOutput with valid "Write speed #0" line, no space between "(CD" and speed.
+ *           "Write speed #0:1764 kB/s CLV/PCAV (CD10x,DVD1x)" -> extracts "10". Branch 4 success.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ScanDeviceTest, Storage_Service_ScanDeviceTest_ParseWodimPrcapOutput_ValidNoSpace, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "ParseWodimPrcapOutput_ValidNoSpace start";
+    ScanDevice scanner(mockSysPath);
+    std::vector<std::string> output;
+    output.push_back("Write speed #0:1764 kB/s CLV/PCAV (CD10x,DVD1x)");
+    json result = scanner.ParseWodimPrcapOutput(output);
+    EXPECT_TRUE(result.is_array());
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_EQ(result[0].get<std::string>(), "10");
+    GTEST_LOG_(INFO) << "ParseWodimPrcapOutput_ValidNoSpace end";
+}
+
+/**
+ * @tc.name: Storage_Service_ScanDeviceTest_ParseWodimPrcapOutput_ValidWithSpace
+ * @tc.desc: Test ParseWodimPrcapOutput with valid "Write speed # 1" line, space between "(CD" and speed.
+ *           "Write speed # 1: 1411 kB/s CLV/PCAV (CD 8x, DVD 1x)" -> extracts "8". Branch 4 success.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ScanDeviceTest, Storage_Service_ScanDeviceTest_ParseWodimPrcapOutput_ValidWithSpace, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "ParseWodimPrcapOutput_ValidWithSpace start";
+    ScanDevice scanner(mockSysPath);
+    std::vector<std::string> output;
+    output.push_back("Write speed # 1: 1411 kB/s CLV/PCAV (CD 8x, DVD 1x)");
+    json result = scanner.ParseWodimPrcapOutput(output);
+    EXPECT_TRUE(result.is_array());
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_EQ(result[0].get<std::string>(), "8");
+    GTEST_LOG_(INFO) << "ParseWodimPrcapOutput_ValidWithSpace end";
+}
+
+/**
+ * @tc.name: Storage_Service_ScanDeviceTest_ParseWodimPrcapOutput_DuplicateSpeeds
+ * @tc.desc: Test ParseWodimPrcapOutput deduplicates identical speed values; Branch 5 skip-on-duplicate.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ScanDeviceTest, Storage_Service_ScanDeviceTest_ParseWodimPrcapOutput_DuplicateSpeeds, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "ParseWodimPrcapOutput_DuplicateSpeeds start";
+    ScanDevice scanner(mockSysPath);
+    // Same speed "10" appears twice in different write-speed lines -> only first occurrence kept.
+    std::vector<std::string> output;
+    output.push_back(std::string("Write speed #0:1764 kB/s CLV/PCAV (CD10x,DVD1x)\n") +
+                     "Write speed #1:1764 kB/s CLV/PCAV (CD10x,DVD1x)");
+    json result = scanner.ParseWodimPrcapOutput(output);
+    EXPECT_TRUE(result.is_array());
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_EQ(result[0].get<std::string>(), "10");
+    GTEST_LOG_(INFO) << "ParseWodimPrcapOutput_DuplicateSpeeds end";
+}
+
+/**
+ * @tc.name: Storage_Service_ScanDeviceTest_ParseWodimPrcapOutput_MultipleChunks
+ * @tc.desc: Test ParseWodimPrcapOutput handles multiple vector elements (chunks); lines split across chunks.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ScanDeviceTest, Storage_Service_ScanDeviceTest_ParseWodimPrcapOutput_MultipleChunks, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "ParseWodimPrcapOutput_MultipleChunks start";
+    ScanDevice scanner(mockSysPath);
+    // Simulate ForkExec reading output in multiple chunks. Each chunk may contain multiple
+    // newline-separated lines; the parser must iterate all lines in all chunks.
+    std::vector<std::string> output;
+    output.push_back(std::string("Maximum read speed: 4234kB/s(CD 24x, DVD 3x)\n") +
+                     "Write speed #0:1764 kB/s CLV/PCAV (CD10x,DVD1x)");
+    output.push_back(std::string("Write speed # 1: 1411 kB/s CLV/PCAV (CD 8x, DVD 1x)\n") +
+                     "Write speed #0:1764 kB/s CLV/PCAV (CD10x,DVD1x)");
+    json result = scanner.ParseWodimPrcapOutput(output);
+    EXPECT_TRUE(result.is_array());
+    ASSERT_EQ(result.size(), 2);
+    EXPECT_EQ(result[0].get<std::string>(), "10");
+    EXPECT_EQ(result[1].get<std::string>(), "8");
+    GTEST_LOG_(INFO) << "ParseWodimPrcapOutput_MultipleChunks end";
+}
+
+/**
+ * @tc.name: Storage_Service_ScanDeviceTest_ParseWodimPrcapOutput_RealWorldSingleChunk
+ * @tc.desc: Test ParseWodimPrcapOutput with full real-world wodim -prcap output as a single chunk.
+ *           Verifies the bug fix: only write speeds (10, 8) are extracted, NOT the read speed (24).
+ * @tc.type: FUNC
+ */
+HWTEST_F(ScanDeviceTest, Storage_Service_ScanDeviceTest_ParseWodimPrcapOutput_RealWorldSingleChunk, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "ParseWodimPrcapOutput_RealWorldSingleChunk start";
+    ScanDevice scanner(mockSysPath);
+    // Entire wodim -prcap output in a single string element (simulating the ForkExec behavior
+    // that reads the whole output into one chunk). The "Maximum read speed" and
+    // "Current read speed" lines contain "(CD 24x" BEFORE the "Write speed #" lines; the parser
+    // must skip them (no "Write speed #" marker) and only extract the write speeds 10 and 8.
+    std::string wodimOutput =
+        "Device type    : Removable CD-ROM\n"
+        "Version        : 0\n"
+        "Response Format: 2\n"
+        "Capabilities   :\n"
+        "Vendor_info    : 'Optiarc'\n"
+        "Identification : 'BD RW BD-5740H '\n"
+        "Revision       : '1.50\n"
+        "Device seems to be: Generic mmc2 DVD-R/DVD-RW.\n"
+        "Drive capabilities, per MMC-3 page 2A:\n"
+        "Does read CD-R media\n"
+        "Does write CD-R media\n"
+        "Maximum read speed: 4234kB/s(CD 24x, DVD 3x)\n"
+        "Current read speed: 4234 kB/s (CD 24x, DVD 3x)\n"
+        "Maximum write speed: 1764kB/s(CD 10x, DVD 1x)\n"
+        "Current write speed:1764 kB/s (CD 10x, DVD 1x)\n"
+        "Number of supported write speeds:2\n"
+        "Write speed #0:1764 kB/s CLV/PCAV (CD10x,DVD1x)\n"
+        "Write speed # 1: 1411 kB/s CLV/PCAV (CD 8x, DVD 1x)";
+    std::vector<std::string> output;
+    output.push_back(wodimOutput);
+    json result = scanner.ParseWodimPrcapOutput(output);
+    EXPECT_TRUE(result.is_array());
+    ASSERT_EQ(result.size(), 2);
+    EXPECT_EQ(result[0].get<std::string>(), "10");
+    EXPECT_EQ(result[1].get<std::string>(), "8");
+    // Explicitly verify the read speed (24) was NOT extracted.
+    for (size_t i = 0; i < result.size(); ++i) {
+        EXPECT_NE(result[i].get<std::string>(), "24");
+    }
+    GTEST_LOG_(INFO) << "ParseWodimPrcapOutput_RealWorldSingleChunk end";
 }
 
 } // namespace StorageDaemon

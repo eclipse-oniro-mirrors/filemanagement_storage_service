@@ -393,7 +393,7 @@ HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_GetUserStorageSt
     int32_t userId = 1012;
     StorageStats storageStats;
     auto ret = storageManagerProviderTest_->GetUserStorageStats(userId, storageStats);
-    EXPECT_EQ(ret, E_OK);
+    EXPECT_EQ(ret, E_NOT_SUPPORT);
     GTEST_LOG_(INFO) << "StorageManagerProviderTest_GetUserStorageStatsIpc_002 end";
 }
 
@@ -1296,6 +1296,52 @@ HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_UMountDfsDocs_00
     auto ret = storageManagerProviderTest_->UMountDfsDocs(userId, relativePath, networkId, deviceId);
     EXPECT_EQ(ret, E_SERVICE_IS_NULLPTR);
     GTEST_LOG_(INFO) << "StorageManagerProviderTest_UMountDfsDocs_002 end";
+}
+
+/**
+ * @tc.name: StorageManagerProviderTest_MountDfsDocs_003
+ * @tc.desc: Verify MountDfsDocs rejects networkId/deviceId containing relative traversal.
+ * @tc.type: FUNC
+ */
+HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_MountDfsDocs_003, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageManagerProviderTest_MountDfsDocs_003 start";
+    ASSERT_TRUE(storageManagerProviderTest_ != nullptr);
+    ScopedTestUid uidGuard(1009);
+    int32_t userId = 1002;
+    std::string relativePath = "/relative/path";
+    std::string networkId = "../etc";
+    std::string deviceId = "device123";
+    auto ret = storageManagerProviderTest_->MountDfsDocs(userId, relativePath, networkId, deviceId);
+    EXPECT_EQ(ret, E_PARAMS_INVALID);
+    networkId = "network123";
+    deviceId = "../etc";
+    ret = storageManagerProviderTest_->MountDfsDocs(userId, relativePath, networkId, deviceId);
+    EXPECT_EQ(ret, E_PARAMS_INVALID);
+    GTEST_LOG_(INFO) << "StorageManagerProviderTest_MountDfsDocs_003 end";
+}
+
+/**
+ * @tc.name: StorageManagerProviderTest_UMountDfsDocs_003
+ * @tc.desc: Verify UMountDfsDocs rejects networkId/deviceId containing relative traversal.
+ * @tc.type: FUNC
+ */
+HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_UMountDfsDocs_003, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageManagerProviderTest_UMountDfsDocs_003 start";
+    ASSERT_TRUE(storageManagerProviderTest_ != nullptr);
+    ScopedTestUid uidGuard(1009);
+    int32_t userId = 1002;
+    std::string relativePath = "/relative/path";
+    std::string networkId = "../etc";
+    std::string deviceId = "device123";
+    auto ret = storageManagerProviderTest_->UMountDfsDocs(userId, relativePath, networkId, deviceId);
+    EXPECT_EQ(ret, E_PARAMS_INVALID);
+    networkId = "network123";
+    deviceId = "../etc";
+    ret = storageManagerProviderTest_->UMountDfsDocs(userId, relativePath, networkId, deviceId);
+    EXPECT_EQ(ret, E_PARAMS_INVALID);
+    GTEST_LOG_(INFO) << "StorageManagerProviderTest_UMountDfsDocs_003 end";
 }
 
 /**

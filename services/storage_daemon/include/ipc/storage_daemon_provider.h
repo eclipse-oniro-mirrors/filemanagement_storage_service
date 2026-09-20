@@ -161,7 +161,10 @@ public:
                             const std::string &fsType,
                             bool force) override;
     virtual int32_t FormatVolume(const std::string &devPath,
-                                 const std::string &fsType) override;
+                                 const std::string &fsType,
+                                 const std::string &diskPath,
+                                 const std::string &partitionType,
+                                 const int32_t partitionNum) override;
     virtual int32_t Check(const std::string &devPath,
                           const std::string &fsType,
                           bool autoFix) override;
@@ -186,7 +189,8 @@ public:
     virtual int32_t DeletePartitionInfo(const std::string &devPath, const std::string &diskId,
                                         int32_t partitionNum) override;
     virtual int32_t FormatPartition(const std::string &devPath, const std::string &fsType,
-                                    const std::string &volumeName, bool quickFormat = true) override;
+                                    const std::string &volumeName,
+                                    const std::vector<std::string> &cmd, bool quickFormat = true) override;
     virtual int32_t Erase(const std::string &devPath) override;
     virtual int32_t Eject(const std::string &devName) override;
     virtual int32_t CreateIsoImage(const std::string &devPath,
@@ -199,6 +203,12 @@ public:
     virtual int32_t GetVolumeOpProcess(const std::string &devPath, int32_t &progressPct) override;
     virtual int32_t VerifyBurnData(const std::string &devPath, int32_t verifyType) override;
     virtual int32_t GetCapacity(const std::string& devPath, int64_t &totalSize, int64_t &freeSize) override;
+    virtual int32_t GetDiskSize(const std::string &devName, uint64_t &size) override;
+    virtual int32_t ExecuteCommand(const std::vector<std::string> &cmd, int32_t &execRet,
+                                   std::vector<std::string> &output) override;
+    virtual int32_t CreateDmLinear(const std::string &sourceDevPath,
+                                   uint64_t startSector, uint64_t sectorCount,
+                                   uint64_t &dmDev) override;
 
     class SystemAbilityStatusChangeListener : public OHOS::SystemAbilityStatusChangeStub {
     public:
@@ -227,7 +237,14 @@ private:
     void SetUserStatistics(uint32_t userId, RadarStatisticInfoType type);
     static int32_t ValidateBlockDevicePath(const std::string &devPath, std::string &verifiedPath);
     static int32_t ValidateMountPath(const std::string &mountPath, std::string &verifiedPath);
+    static int32_t CheckMountRequest(const std::string &devPath, const std::string &mountPath,
+                                     const std::string &fsType, const std::string &mountData,
+                                     std::string &verifiedDevPath, std::string &verifiedMountPath);
+    static int32_t CheckCreatePartitionRequest(const std::string &devPath, int32_t partitionNum,
+                                               int64_t startSector, int64_t endSector,
+                                               const std::string &typeCode, std::string &verifiedPath);
     int32_t CheckUserIdRange(int32_t userId);
+    bool IsDevPathValid(const std::string &devPath, std::string &verifiedPath);
 };
 } // namespace StorageDaemon
 } // namespace OHOS

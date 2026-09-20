@@ -731,13 +731,12 @@ HWTEST_F(QuotaManagerTest, QuotaManagerTest_SortAndCutSaInfoVec_004, TestSize.Le
     vec.push_back({1111, "memmgr", 1024});
 
     QuotaManager::GetInstance().SortAndCutSaInfoVec(vec, true);
-    EXPECT_EQ(vec.size(), saTopCount + 1);
+    EXPECT_EQ(vec.size(), saTopCount);
 
     if (!vec.empty()) {
         EXPECT_EQ(vec[0].size, 60 * 1024);
         EXPECT_EQ(vec[0].uid, 1000);
         EXPECT_EQ(vec[saTopCount - 1].size, 11 * 1024);
-        EXPECT_EQ(vec[saTopCount].size, 1024);
     }
 
     GTEST_LOG_(INFO) << "QuotaManagerTest_SortAndCutSaInfoVec_004 end";
@@ -801,6 +800,25 @@ HWTEST_F(QuotaManagerTest, QuotaManagerTest_GetFileData_001, TestSize.Level1)
     int32_t result = quotaManager_.GetFileData("/nonexistent/path/file.txt", size);
     EXPECT_EQ(result, E_FILE_PATH_INVALID);
     GTEST_LOG_(INFO) << "QuotaManagerTest_GetFileData_001 end";
+}
+
+/**
+ * @tc.name: QuotaManagerTest_GetFileData_002
+ * @tc.desc: Test QuotaManager::GetFileData rejects path traversal and escape characters.
+ * @tc.type: FUNC
+ * @tc.require: AR000XXXX
+ */
+HWTEST_F(QuotaManagerTest, QuotaManagerTest_GetFileData_002, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "QuotaManagerTest_GetFileData_002 start";
+    int64_t size = 0;
+    QuotaManager quotaManager_;
+    EXPECT_EQ(quotaManager_.GetFileData("/data/../etc/passwd", size), E_FILE_PATH_INVALID);
+    EXPECT_EQ(quotaManager_.GetFileData("../etc/passwd", size), E_FILE_PATH_INVALID);
+    EXPECT_EQ(quotaManager_.GetFileData("/data/..\\etc", size), E_FILE_PATH_INVALID);
+    EXPECT_EQ(quotaManager_.GetFileData("%2e%2e%2fsecret", size), E_FILE_PATH_INVALID);
+    EXPECT_EQ(quotaManager_.GetFileData(std::string("/data/\n../etc", 11), size), E_FILE_PATH_INVALID);
+    GTEST_LOG_(INFO) << "QuotaManagerTest_GetFileData_002 end";
 }
 
 /**

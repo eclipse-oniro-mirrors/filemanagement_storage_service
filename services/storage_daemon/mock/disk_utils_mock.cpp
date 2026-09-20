@@ -19,30 +19,6 @@ using namespace std;
 namespace OHOS {
 namespace StorageDaemon {
 
-int CreateDiskNode(const std::string &path, dev_t dev)
-{
-    if (IDiskUtilMoc::diskUtilMoc == nullptr) {
-        return 0;
-    }
-    return IDiskUtilMoc::diskUtilMoc->CreateDiskNode(path, dev);
-}
-
-int DestroyDiskNode(const std::string &path)
-{
-    if (IDiskUtilMoc::diskUtilMoc == nullptr) {
-        return 0;
-    }
-    return IDiskUtilMoc::diskUtilMoc->DestroyDiskNode(path);
-}
-
-int GetDevSize(const std::string &path, uint64_t *size)
-{
-    if (IDiskUtilMoc::diskUtilMoc == nullptr) {
-        return 0;
-    }
-    return IDiskUtilMoc::diskUtilMoc->GetDevSize(path, size);
-}
-
 int GetMaxVolume(dev_t device)
 {
     if (IDiskUtilMoc::diskUtilMoc == nullptr) {
@@ -67,20 +43,12 @@ int IsExistCD(const std::string &diskPath, bool &isExistCD)
     return IDiskUtilMoc::diskUtilMoc->IsExistCD(diskPath, isExistCD);
 }
 
-int Eject(const std::string &devPath)
+bool IsAcceptableUuid(const std::string &uuid)
 {
     if (IDiskUtilMoc::diskUtilMoc == nullptr) {
-        return 0;
+        return true;
     }
-    return IDiskUtilMoc::diskUtilMoc->Eject(devPath);
-}
-
-int32_t ReadMetadata(const std::string &devPath, std::string &uuid, std::string &type, std::string &label)
-{
-    if (IDiskUtilMoc::diskUtilMoc == nullptr) {
-        return 0;
-    }
-    return IDiskUtilMoc::diskUtilMoc->ReadMetadata(devPath, uuid, type, label);
+    return IDiskUtilMoc::diskUtilMoc->IsAcceptableUuid(uuid);
 }
 
 std::string GetBlkidData(const std::string &devPath, const std::string &type)
@@ -105,14 +73,6 @@ std::string GetAnonyString(const std::string &value)
         return " ";
     }
     return IDiskUtilMoc::diskUtilMoc->GetAnonyString(value);
-}
-
-int32_t ReadVolumeUuid(const std::string &devPath, std::string &uuid)
-{
-    if (IDiskUtilMoc::diskUtilMoc == nullptr) {
-        return 0;
-    }
-    return IDiskUtilMoc::diskUtilMoc->ReadVolumeUuid(devPath, uuid);
 }
 
 std::string GetCDType(const std::string &diskPath)
@@ -155,5 +115,36 @@ std::string GetOddDriverType(const std::string &sysPath)
     return IDiskUtilMoc::diskUtilMoc->GetOddDriverType(sysPath);
 }
 
+int GetDvdTotalCapacity(int fd, int64_t &dvdTotalCapacity)
+{
+    if (IDiskUtilMoc::diskUtilMoc == nullptr) {
+        return 0;
+    }
+    return IDiskUtilMoc::diskUtilMoc->GetDvdTotalCapacity(fd, dvdTotalCapacity);
+}
+
+int GetCdTotalCapacity(int fd, int64_t &cdTotalCapacity)
+{
+    if (IDiskUtilMoc::diskUtilMoc == nullptr) {
+        return 0;
+    }
+    return IDiskUtilMoc::diskUtilMoc->GetCdTotalCapacity(fd, cdTotalCapacity);
+}
+
+int GetDvdPlusRwTotalCapacity(int fd, int64_t &dvdTotalCapacity)
+{
+    if (IDiskUtilMoc::diskUtilMoc == nullptr) {
+        return 0;
+    }
+    return IDiskUtilMoc::diskUtilMoc->GetDvdPlusRwTotalCapacity(fd, dvdTotalCapacity);
+}
+
+int GetBdTotalCapacity(int fd, int64_t &bdTotalCapacity)
+{
+    if (IDiskUtilMoc::diskUtilMoc == nullptr) {
+        return 0;
+    }
+    return IDiskUtilMoc::diskUtilMoc->GetBdTotalCapacity(fd, bdTotalCapacity);
+}
 }
 }

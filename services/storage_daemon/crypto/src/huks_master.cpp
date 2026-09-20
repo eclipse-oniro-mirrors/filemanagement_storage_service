@@ -404,9 +404,9 @@ static int AppendSecureAccessParams(const UserAuth &auth, HksParamSet *paramSet)
     if (HuksMaster::GetInstance().IsSupportNewAuthType()) {
         HksParam param[] = {
             { .tag = HKS_TAG_USER_AUTH_TYPE_ATL, .uint32Param = HKS_USER_AUTH_ATL3 },
-            { .tag = HKS_TAG_KEY_AUTH_ACCESS_TYPE, .uint32Param = HKS_AUTH_ACCESS_ALWAYS_VALID },
+            { .tag = HKS_TAG_KEY_AUTH_ACCESS_TYPE, .uint32Param = HKS_AUTH_ACCESS_INVALID_CLEAR_PASSWORD },
             { .tag = HKS_TAG_CHALLENGE_TYPE, .uint32Param = HKS_CHALLENGE_TYPE_NONE },
-            { .tag = HKS_TAG_SPECIFIC_USER_ID, .int32Param = static_cast<int32_t>(auth.userId) },
+            { .tag = HKS_TAG_USER_AUTH_SECURE_UID, .blob = { sizeof(auth.secureUid), (uint8_t *)&auth.secureUid } },
             { .tag = HKS_TAG_AUTH_TIMEOUT, .uint32Param = 30 }
         };
         return HksAddParams(paramSet, param, HKS_ARRAY_SIZE(param));
@@ -550,8 +550,7 @@ static int AppendNonceAadToken(KeyContext &ctx, const UserAuth &auth, HksParamSe
     if (HuksMaster::GetInstance().IsSupportNewAuthType()) {
         HksParam addParam[] = {
             { .tag = HKS_TAG_USER_AUTH_TYPE_ATL, .uint32Param = HKS_USER_AUTH_ATL3 },
-            { .tag = HKS_TAG_KEY_AUTH_ACCESS_TYPE, .uint32Param = HKS_AUTH_ACCESS_ALWAYS_VALID },
-            { .tag = HKS_TAG_SPECIFIC_USER_ID, .int32Param = static_cast<int32_t>(auth.userId) },
+            { .tag = HKS_TAG_KEY_AUTH_ACCESS_TYPE, .uint32Param = HKS_AUTH_ACCESS_INVALID_CLEAR_PASSWORD },
             { .tag = HKS_TAG_NONCE,
               .blob =
                 { ctx.nonce.size, ctx.nonce.data.get() }
@@ -802,7 +801,7 @@ bool HuksMaster::IsSupportNewAuthType()
         LOGI("[L8:HuksMaster] IsSupportNewAuthType: GetHuksVersion failed, support=false");
         return false;
     }
-    bool support = (majorVer >= 1 && minorVer >= 2);
+    bool support = (majorVer > 1 || (majorVer == 1 && minorVer >= 2));
     LOGI("[L8:HuksMaster] IsSupportNewAuthType: support=%{public}d", support);
     return support;
 }
@@ -1020,57 +1019,56 @@ int32_t HuksMaster::DecryptKeyEx(KeyContext &ctx, const UserAuth &auth, KeyBlob 
 bool HuksMaster::UpgradeKey(KeyContext &ctx)
 {
 #ifdef HUKS_IDL_ENVIRONMENT
-    struct HksParamSet *paramSet = nullptr;
-    bool ret = false;
-
     if (!CheckNeedUpgrade(ctx.shield)) {
         LOGI("[L8:HuksMaster] UpgradeKey: no need to upgrade");
         return false;
     }
-
     LOGI("[L8:HuksMaster] UpgradeKey: Do upgradekey");
-    do {
-        int err = HksInitParamSet(&paramSet);
-        if (err != HKS_SUCCESS) {
-            LOGE("[L8:HuksMaster] UpgradeKey: HksInitParamSet failed ret %{public}d", err);
-            StorageRadar::ReportUserKeyResult("UpgradeKey", 0, err, "", "HksInitParamSet failed");
-            break;
-        }
-        err = HksAddParams(paramSet, g_generateKeyParam, HKS_ARRAY_SIZE(g_generateKeyParam));
-        if (err != HKS_SUCCESS) {
-            LOGE("[L8:HuksMaster] UpgradeKey: HksAddParams failed ret %{public}d", err);
-            StorageRadar::ReportUserKeyResult("UpgradeKey", 0, err, "", "HksAddParams failed");
-            break;
-        }
-        err = HksBuildParamSet(&paramSet);
-        if (err != HKS_SUCCESS) {
-            LOGE("[L8:HuksMaster] UpgradeKey: HksBuildParamSet failed ret %{public}d", err);
-            StorageRadar::ReportUserKeyResult("UpgradeKey", 0, err, "", "HksBuildParamSet failed");
-            break;
-        }
-
-        KeyBlob keyOut(CRYPTO_KEY_SHIELD_MAX_SIZE);
-        HuksBlob hksIn = ctx.shield.ToHuksBlob();
-        HuksBlob hksOut = keyOut.ToHuksBlob();
-
-        err = HdiAccessUpgradeKey(hksIn, paramSet, hksOut);
-        if (err == HKS_SUCCESS) {
-            LOGI("[L8:HuksMaster] UpgradeKey: Shield upgraded successfully");
-            keyOut.size = hksOut.dataLen;
-            ctx.shield.Clear();
-            ctx.shield = std::move(keyOut);
-            ret = true;
-        } else {
-            LOGE("[L8:HuksMaster] UpgradeKey: Shield upgrade failed ret %{public}d", err);
-            StorageRadar::ReportUserKeyResult("UpgradeKey", 0, err, "", "HdiAccessUpgradeKey failed");
-        }
-    } while (0);
+    struct HksParamSet *paramSet = nullptr;
+    int err = HksInitParamSet(&paramSet);
+    if (err != HKS_SUCCESS) {
+        LOGE("[L8:HuksMaster] UpgradeKey: HksInitParamSet failed ret %{public}d", err);
+        StorageRadar::ReportUserKeyResult("UpgradeKey", 0, err, "", "HksInitParamSet failed");
+        return false;
+    }
+    err = HksAddParams(paramSet, g_generateKeyParam, HKS_ARRAY_SIZE(g_generateKeyParam));
+    if (err != HKS_SUCCESS) {
+        LOGE("[L8:HuksMaster] UpgradeKey: HksAddParams failed ret %{public}d", err);
+        StorageRadar::ReportUserKeyResult("UpgradeKey", 0, err, "", "HksAddParams failed");
+        HksFreeParamSet(&paramSet);
+        return false;
+    }
+    err = HksBuildParamSet(&paramSet);
+    if (err != HKS_SUCCESS) {
+        LOGE("[L8:HuksMaster] UpgradeKey: HksBuildParamSet failed ret %{public}d", err);
+        StorageRadar::ReportUserKeyResult("UpgradeKey", 0, err, "", "HksBuildParamSet failed");
+        HksFreeParamSet(&paramSet);
+        return false;
+    }
+    KeyBlob keyOut(CRYPTO_KEY_SHIELD_MAX_SIZE);
+    HuksBlob hksIn = ctx.shield.ToHuksBlob();
+    HuksBlob hksOut = keyOut.ToHuksBlob();
+    err = HdiAccessUpgradeKey(hksIn, paramSet, hksOut);
     HksFreeParamSet(&paramSet);
-    return ret;
+    if (err != HKS_SUCCESS) {
+        LOGE("[L8:HuksMaster] UpgradeKey: Shield upgrade failed ret %{public}d", err);
+        StorageRadar::ReportUserKeyResult("UpgradeKey", 0, err, "", "HdiAccessUpgradeKey failed");
+        return false;
+    }
+    if (hksOut.dataLen > CRYPTO_KEY_SHIELD_MAX_SIZE) {
+        LOGE("[L8:HuksMaster] UpgradeKey: dataLen %{public}u exceeds buffer capacity", hksOut.dataLen);
+        StorageRadar::ReportUserKeyResult("UpgradeKey", 0, HKS_ERROR_INVALID_ARGUMENT, "",
+            "dataLen exceeds," + std::to_string(hksOut.dataLen));
+        return false;
+    }
+    LOGI("[L8:HuksMaster] UpgradeKey: Shield upgraded successfully");
+    keyOut.size = hksOut.dataLen;
+    ctx.shield.Clear();
+    ctx.shield = std::move(keyOut);
+    return true;
 #endif
     return false;
 }
-
 } // namespace StorageDaemon
 } // namespace OHOS
 

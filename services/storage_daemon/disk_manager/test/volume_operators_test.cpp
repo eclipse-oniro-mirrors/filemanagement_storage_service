@@ -48,6 +48,7 @@ using namespace testing;
 using namespace testing::ext;
 
 int g_realpathRet = 0;
+std::string g_realpathPath = "/dev/block/sr0";
 
 extern "C" char* realpath(const char *path, char *resolvedPath)
 {
@@ -58,7 +59,7 @@ extern "C" char* realpath(const char *path, char *resolvedPath)
     if (resolvedPath == nullptr) {
         return nullptr;
     }
-    if (strcpy_s(resolvedPath, PATH_MAX, "/dev/block/sr0") != 0) {
+    if (strcpy_s(resolvedPath, PATH_MAX, g_realpathPath.c_str()) != 0) {
         return nullptr;
     }
     return resolvedPath;
@@ -83,6 +84,7 @@ public:
         libraryFuncMock_ = std::make_shared<LibraryFuncMock>();
         LibraryFunc::libraryFunc_ = libraryFuncMock_;
         g_realpathRet = 0;
+        g_realpathPath = "/dev/block/sr0";
     }
     void TearDown() override
     {
@@ -112,12 +114,19 @@ HWTEST_F(ExtOperatorTest, ExfatOperator_DoMount, TestSize.Level1)
 HWTEST_F(ExtOperatorTest, ExfatOperator_Format, TestSize.Level1)
 {
     ExfatOperator op;
-    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_OK));
-    EXPECT_EQ(op.Format("/dev/block/mock_dev"), E_OK);
-    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_NO_CHILD));
-    EXPECT_EQ(op.Format("/dev/block/mock_dev"), E_OK);
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_OK)).WillOnce(Return(E_OK));
+    EXPECT_EQ(op.Format("/dev/block/mock_dev", "/dev/disk", "gpt", 1), E_OK);
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_NO_CHILD)).WillOnce(Return(E_OK));
+    EXPECT_EQ(op.Format("/dev/block/mock_dev", "/dev/disk", "gpt", 1), E_OK);
     EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_ERR));
-    EXPECT_EQ(op.Format("/dev/block/mock_dev"), E_ERR);
+    EXPECT_EQ(op.Format("/dev/block/mock_dev", "/dev/disk", "gpt", 1), E_ERR);
+}
+
+HWTEST_F(ExtOperatorTest, ExfatOperator_Format_PartitionNumZero, TestSize.Level1)
+{
+    ExfatOperator op;
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_OK));
+    EXPECT_EQ(op.Format("/dev/block/mock_dev", "/dev/disk", "gpt", 0), E_OK);
 }
 
 HWTEST_F(ExtOperatorTest, ExfatOperator_Check, TestSize.Level1)
@@ -191,6 +200,28 @@ HWTEST_F(ExtOperatorTest, NtfsOperator_SetLabel, TestSize.Level1)
     EXPECT_EQ(op.SetLabel("/dev/block/mock_dev", "MyLabel"), E_ERR);
 }
 
+HWTEST_F(ExtOperatorTest, NtfsOperator_ReadMetadata_DevMapperFallback, TestSize.Level1)
+{
+    NtfsOperator op;
+    g_realpathPath = "/dev/mapper/sr0";
+    ON_CALL(*diskUtilMoc_, IsAcceptableUuid(_)).WillByDefault(Return(true));
+    EXPECT_CALL(*diskUtilMoc_, GetBlkidData(_, _))
+        .WillOnce(Return("ntfs-uuid-1234"))
+        .WillOnce(Return("ntfs"))
+        .WillOnce(Return("?????"));
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
+        .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
+            output->push_back("ntfslabel v1.0");
+            output->push_back("Volume label :  MyMapperDrive");
+            return E_OK;
+        }));
+    std::string uuid, type, label;
+    EXPECT_EQ(op.ReadMetadata("/dev/mapper/sr0", uuid, type, label), E_OK);
+    EXPECT_EQ(type, "ntfs");
+    EXPECT_EQ(label, "MyMapperDrive");
+    g_realpathPath = "/dev/block/sr0";
+}
+
 HWTEST_F(ExtOperatorTest, VfatOperator_DoMount, TestSize.Level1)
 {
     VfatOperator op;
@@ -205,12 +236,12 @@ HWTEST_F(ExtOperatorTest, VfatOperator_DoMount, TestSize.Level1)
 HWTEST_F(ExtOperatorTest, VfatOperator_Format, TestSize.Level1)
 {
     VfatOperator op;
-    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_OK));
-    EXPECT_EQ(op.Format("/dev/block/mock_dev"), E_OK);
-    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_NO_CHILD));
-    EXPECT_EQ(op.Format("/dev/block/mock_dev"), E_OK);
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_OK)).WillOnce(Return(E_OK));
+    EXPECT_EQ(op.Format("/dev/block/mock_dev", "/dev/disk", "gpt", 1), E_OK);
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_NO_CHILD)).WillOnce(Return(E_OK));
+    EXPECT_EQ(op.Format("/dev/block/mock_dev", "/dev/disk", "gpt", 1), E_OK);
     EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_ERR));
-    EXPECT_EQ(op.Format("/dev/block/mock_dev"), E_ERR);
+    EXPECT_EQ(op.Format("/dev/block/mock_dev", "/dev/disk", "gpt", 1), E_ERR);
 }
 
 HWTEST_F(ExtOperatorTest, HmfsOperator_DoMount_EmptyDevPath, TestSize.Level1)
@@ -256,28 +287,28 @@ HWTEST_F(ExtOperatorTest, HmfsOperator_DoMount_MigrationRO_Failed, TestSize.Leve
 HWTEST_F(ExtOperatorTest, HmfsOperator_Format_EmptyDevPath, TestSize.Level1)
 {
     HmfsOperator op;
-    EXPECT_EQ(op.Format(""), E_PARAMS_INVALID);
+    EXPECT_EQ(op.Format("", "/dev/disk", "gpt", 1), E_PARAMS_INVALID);
 }
 
 HWTEST_F(ExtOperatorTest, HmfsOperator_Format_Success, TestSize.Level1)
 {
     HmfsOperator op;
     EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_OK));
-    EXPECT_EQ(op.Format("/dev/block/mock_dev"), E_OK);
+    EXPECT_EQ(op.Format("/dev/block/mock_dev", "/dev/disk", "gpt", 1), E_OK);
 }
 
 HWTEST_F(ExtOperatorTest, HmfsOperator_Format_ENoChild, TestSize.Level1)
 {
     HmfsOperator op;
     EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_NO_CHILD));
-    EXPECT_EQ(op.Format("/dev/block/mock_dev"), E_OK);
+    EXPECT_EQ(op.Format("/dev/block/mock_dev", "/dev/disk", "gpt", 1), E_OK);
 }
 
 HWTEST_F(ExtOperatorTest, HmfsOperator_Format_Failed, TestSize.Level1)
 {
     HmfsOperator op;
     EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_ERR));
-    EXPECT_EQ(op.Format("/dev/block/mock_dev"), E_ERR);
+    EXPECT_EQ(op.Format("/dev/block/mock_dev", "/dev/disk", "gpt", 1), E_ERR);
 }
 
 HWTEST_F(ExtOperatorTest, HmfsOperator_Check_EmptyDevPath, TestSize.Level1)
@@ -446,8 +477,8 @@ HWTEST_F(ExtOperatorTest, HmfsOperator_DoMount_ChmodFailedStillSucceeds_001, Tes
     HmfsOperator op;
     EXPECT_CALL(*libraryFuncMock_, mount(_, _, _, _, _)).WillOnce(Return(0));
     EXPECT_CALL(*libraryFuncMock_, chmod(_, _)).WillOnce(Return(-1));
-    EXPECT_CALL(*libraryFuncMock_, chown(_, _, _)).WillOnce(Return(0));
-    EXPECT_EQ(op.DoMount("/dev/block/mock_dev", "/mock/mnt/data", 0, ""), E_OK);
+    EXPECT_CALL(*libraryFuncMock_, umount2(_, _)).WillOnce(Return(0));
+    EXPECT_EQ(op.DoMount("/dev/block/mock_dev", "/mock/mnt/data", 0, ""), E_HMFS_MOUNT);
 }
 
 /**
@@ -461,7 +492,8 @@ HWTEST_F(ExtOperatorTest, HmfsOperator_DoMount_ChownFailedStillSucceeds_001, Tes
     EXPECT_CALL(*libraryFuncMock_, mount(_, _, _, _, _)).WillOnce(Return(0));
     EXPECT_CALL(*libraryFuncMock_, chmod(_, _)).WillOnce(Return(0));
     EXPECT_CALL(*libraryFuncMock_, chown(_, _, _)).WillOnce(Return(-1));
-    EXPECT_EQ(op.DoMount("/dev/block/mock_dev", "/mock/mnt/data", 0, ""), E_OK);
+    EXPECT_CALL(*libraryFuncMock_, umount2(_, _)).WillOnce(Return(0));
+    EXPECT_EQ(op.DoMount("/dev/block/mock_dev", "/mock/mnt/data", 0, ""), E_HMFS_MOUNT);
 }
 
 /**
@@ -474,8 +506,8 @@ HWTEST_F(ExtOperatorTest, HmfsOperator_DoMount_BothChmodChownFailed_001, TestSiz
     HmfsOperator op;
     EXPECT_CALL(*libraryFuncMock_, mount(_, _, _, _, _)).WillOnce(Return(0));
     EXPECT_CALL(*libraryFuncMock_, chmod(_, _)).WillOnce(Return(-1));
-    EXPECT_CALL(*libraryFuncMock_, chown(_, _, _)).WillOnce(Return(-1));
-    EXPECT_EQ(op.DoMount("/dev/block/mock_dev", "/mock/mnt/data", 0, ""), E_OK);
+    EXPECT_CALL(*libraryFuncMock_, umount2(_, _)).WillOnce(Return(0));
+    EXPECT_EQ(op.DoMount("/dev/block/mock_dev", "/mock/mnt/data", 0, ""), E_HMFS_MOUNT);
 }
 
 HWTEST_F(ExtOperatorTest, Ext4Operator_DoMount_EmptyDevPath, TestSize.Level1)
@@ -508,22 +540,29 @@ HWTEST_F(ExtOperatorTest, Ext4Operator_DoMount_MountFailed, TestSize.Level1)
 HWTEST_F(ExtOperatorTest, Ext4Operator_Format_Success, TestSize.Level1)
 {
     Ext4Operator op;
-    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_OK));
-    EXPECT_EQ(op.Format("/dev/block/mock_dev"), E_OK);
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_OK)).WillOnce(Return(E_OK));
+    EXPECT_EQ(op.Format("/dev/block/mock_dev", "/dev/disk", "gpt", 1), E_OK);
 }
 
 HWTEST_F(ExtOperatorTest, Ext4Operator_Format_ENoChild, TestSize.Level1)
 {
     Ext4Operator op;
-    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_NO_CHILD));
-    EXPECT_EQ(op.Format("/dev/block/mock_dev"), E_OK);
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_NO_CHILD)).WillOnce(Return(E_OK));
+    EXPECT_EQ(op.Format("/dev/block/mock_dev", "/dev/disk", "gpt", 1), E_OK);
 }
 
 HWTEST_F(ExtOperatorTest, Ext4Operator_Format_Failed, TestSize.Level1)
 {
     Ext4Operator op;
     EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_ERR));
-    EXPECT_EQ(op.Format("/dev/block/mock_dev"), E_ERR);
+    EXPECT_EQ(op.Format("/dev/block/mock_dev", "/dev/disk", "gpt", 1), E_ERR);
+}
+
+HWTEST_F(ExtOperatorTest, Ext4Operator_Format_PartitionNumZero, TestSize.Level1)
+{
+    Ext4Operator op;
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_OK));
+    EXPECT_EQ(op.Format("/dev/block/mock_dev", "/dev/disk", "gpt", 0), E_OK);
 }
 
 /**
@@ -575,7 +614,14 @@ HWTEST_F(ExtOperatorTest, VfatOperator_Format_Failed, TestSize.Level1)
 {
     VfatOperator op;
     EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_ERR));
-    EXPECT_EQ(op.Format("/dev/block/mock_dev"), E_ERR);
+    EXPECT_EQ(op.Format("/dev/block/mock_dev", "/dev/disk", "gpt", 1), E_ERR);
+}
+
+HWTEST_F(ExtOperatorTest, VfatOperator_Format_PartitionNumZero, TestSize.Level1)
+{
+    VfatOperator op;
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_OK));
+    EXPECT_EQ(op.Format("/dev/block/mock_dev", "/dev/disk", "gpt", 0), E_OK);
 }
 
 /**
@@ -660,7 +706,7 @@ HWTEST_F(ExtOperatorTest, ExfatOperator_Format_Failed, TestSize.Level1)
 {
     ExfatOperator op;
     EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_ERR));
-    EXPECT_EQ(op.Format("/dev/block/mock_dev"), E_ERR);
+    EXPECT_EQ(op.Format("/dev/block/mock_dev", "/dev/disk", "gpt", 1), E_ERR);
 }
 
 /**
@@ -672,8 +718,8 @@ HWTEST_F(ExtOperatorTest, ExfatOperator_Format_Failed, TestSize.Level1)
 HWTEST_F(ExtOperatorTest, ExfatOperator_Format_NoChild, TestSize.Level1)
 {
     ExfatOperator op;
-    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_NO_CHILD));
-    EXPECT_EQ(op.Format("/dev/block/mock_dev"), E_OK);
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_NO_CHILD)).WillOnce(Return(E_OK));
+    EXPECT_EQ(op.Format("/dev/block/mock_dev", "/dev/disk", "gpt", 1), E_OK);
 }
 
 HWTEST_F(ExtOperatorTest, UdfOperator_ReadMetadata_EmptyDevPath, TestSize.Level1)
@@ -844,6 +890,354 @@ HWTEST_F(ExtOperatorTest, IsoOperator_SetLabel_NotSupport, TestSize.Level1)
 {
     IsoOperator op;
     EXPECT_EQ(op.SetLabel("/dev/block/mock_dev", "label"), E_NOT_SUPPORT);
+}
+
+HWTEST_F(ExtOperatorTest, HmfsOperator_DoMount_ChmodFailed_Rollback, TestSize.Level1)
+{
+    HmfsOperator op;
+    EXPECT_CALL(*libraryFuncMock_, mount(_, _, _, _, _)).WillOnce(Return(0));
+    EXPECT_CALL(*libraryFuncMock_, chmod(_, _)).WillOnce(Return(-1));
+    EXPECT_CALL(*libraryFuncMock_, umount2(_, _)).WillOnce(Return(0));
+    EXPECT_EQ(op.DoMount("/dev/block/mock_dev", "/mock/mnt/data", 0, ""), E_HMFS_MOUNT);
+}
+
+HWTEST_F(ExtOperatorTest, HmfsOperator_DoMount_ChownFailed_Rollback, TestSize.Level1)
+{
+    HmfsOperator op;
+    EXPECT_CALL(*libraryFuncMock_, mount(_, _, _, _, _)).WillOnce(Return(0));
+    EXPECT_CALL(*libraryFuncMock_, chmod(_, _)).WillOnce(Return(0));
+    EXPECT_CALL(*libraryFuncMock_, chown(_, _, _)).WillOnce(Return(-1));
+    EXPECT_CALL(*libraryFuncMock_, umount2(_, _)).WillOnce(Return(0));
+    EXPECT_EQ(op.DoMount("/dev/block/mock_dev", "/mock/mnt/data", 0, ""), E_HMFS_MOUNT);
+}
+
+HWTEST_F(ExtOperatorTest, ExfatOperator_Format_EmptyDevPath, TestSize.Level1)
+{
+    ExfatOperator op;
+    EXPECT_EQ(op.Format("", "/dev/disk", "gpt", 1), E_PARAMS_INVALID);
+}
+
+HWTEST_F(ExtOperatorTest, Ext4Operator_Format_EmptyDevPath, TestSize.Level1)
+{
+    Ext4Operator op;
+    g_getParameter = "tobbasic/cn";
+    EXPECT_EQ(op.Format("", "/dev/disk", "gpt", 1), E_PARAMS_INVALID);
+}
+
+HWTEST_F(ExtOperatorTest, IsoOperator_DoDVDBurn_BurnPathStartsWithDash, TestSize.Level1)
+{
+    IsoOperator op;
+    BurnOptions options;
+    options.burnPath = "-evil";
+    EXPECT_EQ(op.DoDVDBurn("/dev/block/sr0", options, true), E_ERR);
+}
+
+HWTEST_F(ExtOperatorTest, IsoOperator_ExtractIsoFiles_IsFilePathInvalidIsoPath, TestSize.Level1)
+{
+    IsoOperator op;
+    EXPECT_CALL(*fileUtilMoc_, IsFilePathInvalid(_)).WillOnce(Return(true));
+    EXPECT_EQ(op.ExtractIsoFiles("/dev/block/sr0", "/data/local/tmp"), E_ERR);
+}
+
+HWTEST_F(ExtOperatorTest, IsoOperator_ExtractIsoFiles_ShellMetacharIsoPath, TestSize.Level1)
+{
+    IsoOperator op;
+    EXPECT_CALL(*fileUtilMoc_, IsFilePathInvalid(_)).WillRepeatedly(Return(false));
+    EXPECT_EQ(op.ExtractIsoFiles("/dev/block/sr0;evil", "/data/local/tmp"), E_ERR);
+}
+
+HWTEST_F(ExtOperatorTest, IsoOperator_ExtractIsoFiles_IsFilePathInvalidSourceDir, TestSize.Level1)
+{
+    IsoOperator op;
+    EXPECT_CALL(*fileUtilMoc_, IsFilePathInvalid(_))
+        .WillOnce(Return(false))
+        .WillOnce(Return(true));
+    EXPECT_EQ(op.ExtractIsoFiles("/dev/block/sr0", "/data/local/tmp"), E_ERR);
+}
+
+HWTEST_F(ExtOperatorTest, IsoOperator_ExtractIsoFiles_ShellMetacharSourceDir, TestSize.Level1)
+{
+    IsoOperator op;
+    EXPECT_CALL(*fileUtilMoc_, IsFilePathInvalid(_)).WillRepeatedly(Return(false));
+    EXPECT_EQ(op.ExtractIsoFiles("/dev/block/sr0", "/data/local/tmp$evil"), E_ERR);
+}
+
+HWTEST_F(ExtOperatorTest, IsoOperator_ExtractIsoFiles_ValidPathsForkExecFails, TestSize.Level1)
+{
+    IsoOperator op;
+    EXPECT_CALL(*fileUtilMoc_, IsFilePathInvalid(_)).WillRepeatedly(Return(false));
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_ERR));
+    EXPECT_EQ(op.ExtractIsoFiles("/dev/block/sr0", "/data/local/tmp"), E_ERR);
+}
+
+HWTEST_F(ExtOperatorTest, UdfOperator_ExtractIsoFiles_IsFilePathInvalidIsoPath, TestSize.Level1)
+{
+    UdfOperator op;
+    EXPECT_CALL(*fileUtilMoc_, IsFilePathInvalid(_)).WillOnce(Return(true));
+    EXPECT_EQ(op.ExtractIsoFiles("/dev/block/sr0", "/data/local/tmp"), E_ERR);
+}
+
+HWTEST_F(ExtOperatorTest, UdfOperator_ExtractIsoFiles_ShellMetacharIsoPath, TestSize.Level1)
+{
+    UdfOperator op;
+    EXPECT_CALL(*fileUtilMoc_, IsFilePathInvalid(_)).WillRepeatedly(Return(false));
+    EXPECT_EQ(op.ExtractIsoFiles("/dev/block/sr0|evil", "/data/local/tmp"), E_ERR);
+}
+
+HWTEST_F(ExtOperatorTest, UdfOperator_ExtractIsoFiles_IsFilePathInvalidSourceDir, TestSize.Level1)
+{
+    UdfOperator op;
+    EXPECT_CALL(*fileUtilMoc_, IsFilePathInvalid(_))
+        .WillOnce(Return(false))
+        .WillOnce(Return(true));
+    EXPECT_EQ(op.ExtractIsoFiles("/dev/block/sr0", "/data/local/tmp"), E_ERR);
+}
+
+HWTEST_F(ExtOperatorTest, UdfOperator_ExtractIsoFiles_ShellMetacharSourceDir, TestSize.Level1)
+{
+    UdfOperator op;
+    EXPECT_CALL(*fileUtilMoc_, IsFilePathInvalid(_)).WillRepeatedly(Return(false));
+    EXPECT_EQ(op.ExtractIsoFiles("/dev/block/sr0", "/data/local/tmp`cmd"), E_ERR);
+}
+
+HWTEST_F(ExtOperatorTest, UdfOperator_ExtractIsoFiles_ValidPathsForkExecFails, TestSize.Level1)
+{
+    UdfOperator op;
+    EXPECT_CALL(*fileUtilMoc_, IsFilePathInvalid(_)).WillRepeatedly(Return(false));
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_ERR));
+    EXPECT_EQ(op.ExtractIsoFiles("/dev/block/sr0", "/data/local/tmp"), E_ERR);
+}
+
+HWTEST_F(ExtOperatorTest, IsoOperator_DoDVDBurn_NotIsoImageDiskEmpty, TestSize.Level1)
+{
+    IsoOperator op;
+    BurnOptions options;
+    options.burnPath = "/data/local/tmp/burn";
+    options.diskName = "testdisk";
+    options.isIsoImage = false;
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_ERR));
+    EXPECT_EQ(op.DoDVDBurn("/dev/block/sr0", options, true), E_ERR);
+}
+
+HWTEST_F(ExtOperatorTest, IsoOperator_DoDVDBurn_NotIsoImageDiskNotEmpty, TestSize.Level1)
+{
+    IsoOperator op;
+    BurnOptions options;
+    options.burnPath = "/data/local/tmp/burn";
+    options.diskName = "testdisk";
+    options.isIsoImage = false;
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_ERR));
+    EXPECT_EQ(op.DoDVDBurn("/dev/block/sr0", options, false), E_ERR);
+}
+
+HWTEST_F(ExtOperatorTest, IsoOperator_DoDVDBurn_IsIsoImage, TestSize.Level1)
+{
+    IsoOperator op;
+    BurnOptions options;
+    options.burnPath = "/data/local/tmp/image.iso";
+    options.diskName = "testdisk";
+    options.isIsoImage = true;
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_ERR));
+    EXPECT_EQ(op.DoDVDBurn("/dev/block/sr0", options, true), E_ERR);
+}
+
+HWTEST_F(ExtOperatorTest, IsoOperator_ExtractIsoFiles_LineTraversalSkipped, TestSize.Level1)
+{
+    IsoOperator op;
+    EXPECT_CALL(*fileUtilMoc_, IsFilePathInvalid(_)).WillRepeatedly(Return(false));
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
+        .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
+            if (output) { output->push_back("-rwxrwxrwx   1     ../evil/file.txt"); }
+            return E_OK;
+        }));
+    EXPECT_CALL(*fileUtilMoc_, IsFilePathInvalid("../evil/file.txt")).WillOnce(Return(true));
+    EXPECT_EQ(op.ExtractIsoFiles("/dev/block/sr0", "/data/local/tmp"), E_OK);
+}
+
+HWTEST_F(ExtOperatorTest, IsoOperator_ExtractIsoFiles_LineShellMetacharSkipped, TestSize.Level1)
+{
+    IsoOperator op;
+    EXPECT_CALL(*fileUtilMoc_, IsFilePathInvalid(_)).WillRepeatedly(Return(false));
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
+        .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
+            if (output) { output->push_back("-rwxrwxrwx   1     file;evil.txt"); }
+            return E_OK;
+        }));
+    EXPECT_CALL(*fileUtilMoc_, IsFilePathInvalid("file;evil.txt")).WillOnce(Return(false));
+    EXPECT_EQ(op.ExtractIsoFiles("/dev/block/sr0", "/data/local/tmp"), E_OK);
+}
+
+HWTEST_F(ExtOperatorTest, IsoOperator_ExtractIsoFiles_ProcessMergedLineFailed, TestSize.Level1)
+{
+    IsoOperator op;
+    EXPECT_CALL(*fileUtilMoc_, IsFilePathInvalid(_)).WillRepeatedly(Return(false));
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
+        .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
+            if (output) { output->push_back("-rwxrwxrwx   1     goodfile.txt"); }
+            return E_OK;
+        }));
+    EXPECT_CALL(*fileUtilMoc_, ForkExecToFile(_, _, _)).WillOnce(Return(E_ERR));
+    EXPECT_EQ(op.ExtractIsoFiles("/dev/block/sr0", "/data/local/tmp"), E_ERR);
+}
+
+HWTEST_F(ExtOperatorTest, UdfOperator_ExtractIsoFiles_LineTraversalSkipped, TestSize.Level1)
+{
+    UdfOperator op;
+    EXPECT_CALL(*fileUtilMoc_, IsFilePathInvalid(_)).WillRepeatedly(Return(false));
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
+        .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
+            if (output) { output->push_back("-rwxrwxrwx   1     ../evil/file.txt"); }
+            return E_OK;
+        }));
+    EXPECT_CALL(*fileUtilMoc_, IsFilePathInvalid("../evil/file.txt")).WillOnce(Return(true));
+    EXPECT_EQ(op.ExtractIsoFiles("/dev/block/sr0", "/data/local/tmp"), E_OK);
+}
+
+HWTEST_F(ExtOperatorTest, UdfOperator_ExtractIsoFiles_LineShellMetacharSkipped, TestSize.Level1)
+{
+    UdfOperator op;
+    EXPECT_CALL(*fileUtilMoc_, IsFilePathInvalid(_)).WillRepeatedly(Return(false));
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
+        .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
+            if (output) { output->push_back("-rwxrwxrwx   1     file;evil.txt"); }
+            return E_OK;
+        }));
+    EXPECT_CALL(*fileUtilMoc_, IsFilePathInvalid("file;evil.txt")).WillOnce(Return(false));
+    EXPECT_EQ(op.ExtractIsoFiles("/dev/block/sr0", "/data/local/tmp"), E_OK);
+}
+
+HWTEST_F(ExtOperatorTest, UdfOperator_ExtractIsoFiles_ProcessMergedLineFailed, TestSize.Level1)
+{
+    UdfOperator op;
+    EXPECT_CALL(*fileUtilMoc_, IsFilePathInvalid(_)).WillRepeatedly(Return(false));
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
+        .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
+            if (output) { output->push_back("-rwxrwxrwx   1     goodfile.txt"); }
+            return E_OK;
+        }));
+    EXPECT_CALL(*fileUtilMoc_, ForkExecToFile(_, _, _)).WillOnce(Return(E_ERR));
+    EXPECT_EQ(op.ExtractIsoFiles("/dev/block/sr0", "/data/local/tmp"), E_ERR);
+}
+
+HWTEST_F(ExtOperatorTest, UdfOperator_DoDVDBurn_NotIsoImageDiskEmpty, TestSize.Level1)
+{
+    UdfOperator op;
+    BurnOptions options;
+    options.burnPath = "/data/local/tmp/burn";
+    options.diskName = "testdisk";
+    options.isIsoImage = false;
+    EXPECT_CALL(*fileUtilMoc_, IsDir(_)).WillOnce(Return(false));
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_ERR));
+    EXPECT_EQ(op.DoDVDBurn("/dev/block/sr0", options, true), E_ERR);
+}
+
+HWTEST_F(ExtOperatorTest, UdfOperator_DoDVDBurn_NotIsoImageDiskNotEmpty, TestSize.Level1)
+{
+    UdfOperator op;
+    BurnOptions options;
+    options.burnPath = "/data/local/tmp/burn";
+    options.diskName = "testdisk";
+    options.isIsoImage = false;
+    EXPECT_CALL(*fileUtilMoc_, IsDir(_)).WillOnce(Return(false));
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_ERR));
+    EXPECT_EQ(op.DoDVDBurn("/dev/block/sr0", options, false), E_ERR);
+}
+
+HWTEST_F(ExtOperatorTest, UdfOperator_DoDVDBurn_IsIsoImage, TestSize.Level1)
+{
+    UdfOperator op;
+    BurnOptions options;
+    options.burnPath = "/data/local/tmp/image.iso";
+    options.diskName = "testdisk";
+    options.isIsoImage = true;
+    EXPECT_CALL(*fileUtilMoc_, IsDir(_)).WillOnce(Return(false));
+    EXPECT_CALL(*fileUtilMoc_, MkDir(_, _)).WillOnce(Return(E_OK));
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_ERR));
+    EXPECT_EQ(op.DoDVDBurn("/dev/block/sr0", options, true), E_ERR);
+}
+
+HWTEST_F(ExtOperatorTest, ExfatOperator_FixTypeIdentifier_Mbr, TestSize.Level1)
+{
+    ExfatOperator op;
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_OK)).WillOnce(Return(E_OK));
+    EXPECT_EQ(op.Format("/dev/block/mock_dev", "/dev/disk", "mbr", 1), E_OK);
+}
+
+HWTEST_F(ExtOperatorTest, ExfatOperator_FixTypeIdentifier_Gpt, TestSize.Level1)
+{
+    ExfatOperator op;
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_OK)).WillOnce(Return(E_OK));
+    EXPECT_EQ(op.Format("/dev/block/mock_dev", "/dev/disk", "gpt", 1), E_OK);
+}
+
+HWTEST_F(ExtOperatorTest, ExfatOperator_FixTypeIdentifier_UnknownType, TestSize.Level1)
+{
+    ExfatOperator op;
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_OK));
+    EXPECT_EQ(op.Format("/dev/block/mock_dev", "/dev/disk", "unknown", 1), E_NOT_SUPPORT);
+}
+
+HWTEST_F(ExtOperatorTest, ExfatOperator_FixTypeIdentifier_ForkExecFailed, TestSize.Level1)
+{
+    ExfatOperator op;
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_OK)).WillOnce(Return(E_ERR));
+    EXPECT_EQ(op.Format("/dev/block/mock_dev", "/dev/disk", "gpt", 1), E_ERR);
+}
+
+HWTEST_F(ExtOperatorTest, Ext4Operator_FixTypeIdentifier_Mbr, TestSize.Level1)
+{
+    Ext4Operator op;
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_OK)).WillOnce(Return(E_OK));
+    EXPECT_EQ(op.Format("/dev/block/mock_dev", "/dev/disk", "mbr", 1), E_OK);
+}
+
+HWTEST_F(ExtOperatorTest, Ext4Operator_FixTypeIdentifier_Gpt, TestSize.Level1)
+{
+    Ext4Operator op;
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_OK)).WillOnce(Return(E_OK));
+    EXPECT_EQ(op.Format("/dev/block/mock_dev", "/dev/disk", "gpt", 1), E_OK);
+}
+
+HWTEST_F(ExtOperatorTest, Ext4Operator_FixTypeIdentifier_UnknownType, TestSize.Level1)
+{
+    Ext4Operator op;
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_OK));
+    EXPECT_EQ(op.Format("/dev/block/mock_dev", "/dev/disk", "unknown", 1), E_NOT_SUPPORT);
+}
+
+HWTEST_F(ExtOperatorTest, Ext4Operator_FixTypeIdentifier_ForkExecFailed, TestSize.Level1)
+{
+    Ext4Operator op;
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_OK)).WillOnce(Return(E_ERR));
+    EXPECT_EQ(op.Format("/dev/block/mock_dev", "/dev/disk", "gpt", 1), E_ERR);
+}
+
+HWTEST_F(ExtOperatorTest, VfatOperator_FixTypeIdentifier_Mbr, TestSize.Level1)
+{
+    VfatOperator op;
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_OK)).WillOnce(Return(E_OK));
+    EXPECT_EQ(op.Format("/dev/block/mock_dev", "/dev/disk", "mbr", 1), E_OK);
+}
+
+HWTEST_F(ExtOperatorTest, VfatOperator_FixTypeIdentifier_Gpt, TestSize.Level1)
+{
+    VfatOperator op;
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_OK)).WillOnce(Return(E_OK));
+    EXPECT_EQ(op.Format("/dev/block/mock_dev", "/dev/disk", "gpt", 1), E_OK);
+}
+
+HWTEST_F(ExtOperatorTest, VfatOperator_FixTypeIdentifier_UnknownType, TestSize.Level1)
+{
+    VfatOperator op;
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_OK));
+    EXPECT_EQ(op.Format("/dev/block/mock_dev", "/dev/disk", "unknown", 1), E_NOT_SUPPORT);
+}
+
+HWTEST_F(ExtOperatorTest, VfatOperator_FixTypeIdentifier_ForkExecFailed, TestSize.Level1)
+{
+    VfatOperator op;
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_OK)).WillOnce(Return(E_ERR));
+    EXPECT_EQ(op.Format("/dev/block/mock_dev", "/dev/disk", "gpt", 1), E_ERR);
 }
 } // namespace StorageDaemon
 } // namespace OHOS

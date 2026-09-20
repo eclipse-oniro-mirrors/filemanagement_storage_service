@@ -42,6 +42,7 @@ ohos_unittest("FbexTest") {
   sources = [
     "${storage_daemon_path}/crypto/src/fbex.cpp",
     "${storage_daemon_path}/mock/common_utils_mock.cpp",
+    "${storage_daemon_path}/mock/iam_client_mock.cpp",
     "${storage_daemon_path}/utils/file_utils.cpp",
     "${storage_daemon_path}/utils/storage_radar.cpp",
     "${storage_daemon_path}/utils/hi_audit.cpp",
@@ -52,6 +53,7 @@ ohos_unittest("FbexTest") {
   deps = [ "${storage_daemon_path}/libfscrypt:libfscryptutils" ]
 
   external_deps = [
+    "bounds_checking_function:libsec_shared",
     "c_utils:utils",
     "googletest:gmock_main",
     "googletest:gtest_main",

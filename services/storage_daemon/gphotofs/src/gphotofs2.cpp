@@ -879,9 +879,11 @@ static int ReleaseThumb(const char *path, struct fuse_file_info *fi)
 {
     auto *td = FhToPtr<ThumbDesc>(fi->fh);
     if (td) {
-        std::lock_guard<std::mutex> lockGuard(td->lock);
+        {
+            std::lock_guard<std::mutex> lockGuard(td->lock);
+            fi->fh = 0;
+        }
         delete td;
-        fi->fh = 0;
     }
     return 0;
 }
@@ -1200,6 +1202,7 @@ static int Release(const char *path, struct fuse_file_info *fileInfo)
         }
         file->ref--;
         if (ret != 0) {
+            CleanupTempFile(file);
             return ret;
         }
         CleanupTempFile(file);
@@ -1742,6 +1745,14 @@ static void FillStatfsFromStorageInfo(struct statvfs *stat, const CameraStorageI
     stat->f_ffree = STATFS_UNLIMITED;
 }
 
+static void FreeCameraStorageInformation(CameraStorageInformation *storageInfo)
+{
+    if (storageInfo != nullptr) {
+        free(storageInfo);
+        storageInfo = nullptr;
+    }
+}
+
 static int Statfs(const char *path, struct statvfs *stat)
 {
     if (stat == nullptr) {
@@ -1771,14 +1782,17 @@ static int Statfs(const char *path, struct statvfs *stat)
         if (ctx->statCache()) {
             LOGI("gphoto statfs return 0 by statcache() = true");
             *stat = *ctx->statCache();
+            FreeCameraStorageInformation(storageInfo);
             return 0;
         }
         LOGE("gphoto statfs returned err by ret = %{public}d", res);
+        FreeCameraStorageInformation(storageInfo);
         return GpresultToErrno(res);
     }
 
     if (numInfo == 0) {
         LOGE("Statfs: no storage found");
+        FreeCameraStorageInformation(storageInfo);
         return -EINVAL;
     }
 
@@ -1787,6 +1801,7 @@ static int Statfs(const char *path, struct statvfs *stat)
         FillStatfsFromStorageInfo(stat, storageInfo);
     }
     ctx->cacheStat(stat);
+    FreeCameraStorageInformation(storageInfo);
     return 0;
 }
 

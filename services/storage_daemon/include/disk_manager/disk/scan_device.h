@@ -35,17 +35,18 @@ public:
 
     std::vector<BlockInfo> GetDataDisks();
     std::vector<BlockInfo> GetExternalDisks(const std::string &devName, const std::string &diskId);
+    uint64_t GetDiskSize(const std::string &deviceName);
 
 private:
     int GetBlockInfo(const std::string &deviceName, const bool isNvmeDevice, BlockInfo &blockInfo);
     bool ReadSysfsNode(const std::string &path, std::string &content);
     bool ReadRemovableNode(const std::string &deviceName, bool &isRemovable);
     bool IsDataDisk(const std::string &deviceName, const bool isNeedCheckUfs, const bool isRemovable);
-    uint64_t GetDiskSize(const std::string &deviceName);
     std::string GetVendor(const std::string &deviceName);
     std::string GetModel(const std::string &deviceName);
     std::string GetInterfaceType(const std::string &deviceName);
     uint32_t GetDiskRpm(const std::string &deviceName, const bool isNvmeDevice);
+    int32_t GetRotational(const std::string &deviceName);
     std::string GetSataSerialNumber(int fd);
     std::string GetNvmeSerialNumber(const std::string &deviceName);
     std::string GetSerialNumber(const std::string &deviceName, const bool isNvmeDevice);
@@ -71,6 +72,8 @@ private:
     std::string GetMaxSpeedFromSpeedInfo(const nlohmann::json &speedInfo);
     nlohmann::json ParseWodimPrcapOutput(const std::vector<std::string> &output);
     nlohmann::json GetSpeedInfo(const std::string &devPath, const std::string &discType, std::string &maxWriteSpeed);
+    std::string GetScsiGenericDevPath(const std::string &devName);
+    std::string GetOpticalDriveTypeByScsiGeneric(const std::string &devName);
 
     std::string sysBlockPath;
     std::string devBlockPath;

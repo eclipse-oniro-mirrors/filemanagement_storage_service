@@ -39,7 +39,7 @@ static std::string GetNtfsLabelFallback(const std::string& devPath)
     std::vector<std::string> output;
     int32_t ret = ForkExec(cmd, &output);
     for (auto str : output) {
-        LOGI("NtfsOperator::GetNtfsLabelFallback output: %{public}s", str.c_str());
+        LOGI("NtfsOperator::GetNtfsLabelFallback output: %{public}s", GetAnonyString(str).c_str());
     }
     if (ret != E_OK) {
         LOGW("NtfsOperator::GetNtfsLabelFallback ForkExec failed, ret=%{public}d", ret);
@@ -87,7 +87,7 @@ int32_t NtfsOperator::ReadMetadata(const std::string& devPath,
         LOGI("NtfsOperator::ReadMetadata using ntfslabel fallback");
         char realPath[PATH_MAX] = {0};
         if (realpath(devPath.c_str(), realPath) != nullptr &&
-            std::string(realPath).find("/dev/block/") == 0) {
+            (std::string(realPath).find("/dev/block/") == 0 || std::string(realPath).find("/dev/mapper/") == 0)) {
             label = GetNtfsLabelFallback(realPath);
         }
     }

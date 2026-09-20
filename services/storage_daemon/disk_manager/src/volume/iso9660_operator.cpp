@@ -35,7 +35,18 @@ constexpr const char* MID_PATH = "/data/local/burn_tmp/midFile.iso";
 constexpr const char* BURN_TMP_DIR = "/data/local/burn_tmp";
 constexpr const char* VERIFY_MOUNT_PATH = "/mnt/data/burn_verify_mount";
 constexpr int32_t E_VERIFY_BURN_DATA_FAILED = 13600030;
+constexpr int32_t BURN_VERIFY_START_PROGRESS = 101;
 constexpr mode_t DEFAULT_DIR_PERMISSIONS = 0755;
+
+static bool OutputContains(const std::vector<std::string> &output, const std::string &pattern)
+{
+    for (const auto &line : output) {
+        if (line.find(pattern) != std::string::npos) {
+            return true;
+        }
+    }
+    return false;
+}
 
 int32_t IsoOperator::DoMount(const std::string& devPath,
                              const std::string& mountPath,
@@ -106,7 +117,7 @@ int32_t IsoOperator::ReadMetadata(const std::string& devPath,
     uuid = GetBlkidData(realPath, "UUID");
     std::string offset = devPath + "/" + type;
     if (uuid.empty()) {
-        uuid = GenerateRandomUuid(realPath, offset);
+        uuid = IVolumeOperator::GenerateRandomUuid(realPath, offset);
     }
 
     label = GetBlkidData(realPath, "LABEL");
@@ -130,7 +141,8 @@ int32_t IsoOperator::CreateIsoImage(const std::string &devPath,
         LOGE("IsoOperator CreateIsoImage: CleanTempDirectory entry failed, non-critical, res=%{public}d", res);
     }
     std::vector<std::string> output;
-    std::vector<std::string> cmd = {"genisoimage", "-V", "ISOIMAGE", "-J", "-r", "-o", filePath, mountPath};
+    std::vector<std::string> cmd = {"genisoimage", "-V", "ISOIMAGE", "-J", "-r", "-D", "-joliet-long",
+                                    "-input-charset", "utf-8", "-output-charset", "utf-8", "-o", filePath, mountPath};
 
     int32_t err = ForkExec(cmd, &output);
     for (const auto& s : output) {
@@ -175,10 +187,12 @@ int32_t IsoOperator::PrepareIsoImage(const std::string &devPath,
     std::vector<std::string> cmd;
     std::vector<std::string> output;
     if (isDiskEmpty) {
-        cmd = {"genisoimage", "-V", burnOptions.diskName, "-J", "-r", "-o", MID_PATH, burnOptions.burnPath};
+        cmd = {"genisoimage", "-V", burnOptions.diskName, "-J", "-r", "-D", "-joliet-long",
+               "-input-charset", "utf-8", "-output-charset", "utf-8", "-o", MID_PATH, burnOptions.burnPath};
     } else {
-        cmd = {"genisoimage", "-V", burnOptions.diskName, "-J", "-r", "-C", incBurnAddr, "-M", devPath, "-o",
-                MID_PATH, burnOptions.burnPath};
+        cmd = {"genisoimage", "-V", burnOptions.diskName, "-J", "-r", "-D", "-joliet-long",
+               "-input-charset", "utf-8", "-output-charset", "utf-8", "-C", incBurnAddr,
+               "-M", devPath, "-o", MID_PATH, burnOptions.burnPath};
     }
     err = ForkExec(cmd, &output);
     if (err != E_OK) {
@@ -225,6 +239,11 @@ int32_t IsoOperator::DoCDBurn(const std::string &devPath,
         LOGI("IsoOperator DoCDBurn:s=%{public}s", s.c_str());
     }
     if (err != E_OK) {
+        if (OutputContains(output, "WARNING: Data may not fit on current disk")) {
+            LOGE("BurnDoCDBurn: no space left on disc, devPath=%{public}s", devPath.c_str());
+            RmDirRecurse(BURN_TMP_DIR);
+            return E_BURN_NOSPC;
+        }
         LOGE("BurnDoCDBurn:<<< EXIT FAILED <<< wodim failed for devPath: %{public}s", devPath.c_str());
         RmDirRecurse(BURN_TMP_DIR);
         return err;
@@ -240,6 +259,10 @@ int32_t IsoOperator::DoCDBurn(const std::string &devPath,
 int32_t IsoOperator::DoDVDBurn(const std::string &devPath, const BurnOptions &burnOptions, bool isDiskEmpty)
 {
     LOGI("BurnDoDVDBurn: >>> ENTER <<< devPath=%{public}s", devPath.c_str());
+    if (!burnOptions.burnPath.empty() && burnOptions.burnPath[0] == '-') {
+        LOGE("BurnDoDVDBurn: burnPath starts with dash, possible argument injection");
+        return E_ERR;
+    }
     int32_t res = DiskUtils::CleanTempDirectory();
     if (res != E_OK) {
         LOGE("BurnDoDVDBurn: CleanTempDirectory entry failed, non-critical, res=%{public}d", res);
@@ -251,10 +274,10 @@ int32_t IsoOperator::DoDVDBurn(const std::string &devPath, const BurnOptions &bu
     if (!burnOptions.isIsoImage) {
         if (isDiskEmpty) {
             cmd = {"growisofs", speedOpt, "-Z", devPath,
-                   "-J", "-r", "-V", burnOptions.diskName, burnOptions.burnPath};
+                   "-J", "-r", "-D", "-joliet-long", "-V", burnOptions.diskName, burnOptions.burnPath};
         } else {
             cmd = {"growisofs", speedOpt, "-M", devPath,
-                   "-J", "-r", "-V", burnOptions.diskName, burnOptions.burnPath};
+                   "-J", "-r", "-D", "-joliet-long", "-V", burnOptions.diskName, burnOptions.burnPath};
         }
     } else {
         std::string isoBurnPath = devPath + "=" + burnOptions.burnPath;
@@ -265,6 +288,10 @@ int32_t IsoOperator::DoDVDBurn(const std::string &devPath, const BurnOptions &bu
         LOGI("IsoOperator DoDVDBurn:s=%{public}s", s.c_str());
     }
     if (err != E_OK) {
+        if (OutputContains(output, "No space left on device")) {
+            LOGE("BurnDoDVDBurn: no space left on disc, devPath=%{public}s", devPath.c_str());
+            return E_BURN_NOSPC;
+        }
         LOGE("BurnDoDVDBurn:<<< EXIT FAILED <<< failed for devPath: %{public}s", devPath.c_str());
         return err;
     }
@@ -281,15 +308,10 @@ int32_t IsoOperator::Burn(const std::string &devPath, const BurnOptions &burnOpt
     LOGI("Burn devPath = %{public}s, isVerifyBurn = %{public}d", devPath.c_str(), burnOptions.isVerifyBurn);
     int32_t err = 0;
 
-    bool isDiskEmpty = false;
-    bool isBlankCD = false;
-    int blankRet = IsCDBlank(devPath, isBlankCD);
-    if (blankRet == E_OK && isBlankCD) {
-        isDiskEmpty = true;
-    }
+    bool isDiskEmpty = IsCDBlank(devPath);
     std::string diskType = GetCDType(devPath);
     if (diskType.find("CD") != std::string::npos) {
-    std::string incBurnAddr;
+        std::string incBurnAddr;
         if (!isDiskEmpty) {
             err = GetIncBurnAddr("dev=" + devPath, incBurnAddr);
             if (err != E_OK) {
@@ -305,9 +327,15 @@ int32_t IsoOperator::Burn(const std::string &devPath, const BurnOptions &burnOpt
         LOGE("Burn:<<< EXIT FAILED <<< devPath:=%{public}s", devPath.c_str());
         return err;
     }
-
     if (burnOptions.isVerifyBurn) {
+        DiskUtils::WriteBurnProgress(BURN_VERIFY_START_PROGRESS);
         LOGI("Burn: starting verify process for devPath=%{public}s", devPath.c_str());
+        err = RefreshCDRomMediaNode(devPath);
+        if (err != E_OK) {
+            LOGE("Burn: RefreshCDRomMediaNode failed, non-critical, err=%{public}d", err);
+            DiskUtils::EjectCD(devPath);
+            return E_VERIFY_BURN_DATA_FAILED;
+        }
         err = DoVerifyBurnData(devPath, burnOptions, isDiskEmpty);
         if (err != E_OK) {
             LOGE("Burn: verify failed, err=%{public}d", err);
@@ -353,11 +381,11 @@ int32_t IsoOperator::ExecuteIsoInfoList(const std::string& isoPath,
         output.insert(output.end(), lines.begin(), lines.end());
     }
     for (const auto& s : output) {
-        LOGI("ExtractIsoFiles isoinfo list output: %{public}s", s.c_str());
+        LOGI("ExtractIsoFiles isoinfo list output: %{public}s", GetAnonyString(s).c_str());
     }
     mergedLines = DiskUtils::MergeOutputLines(output);
     for (const auto& s : mergedLines) {
-        LOGI("ExtractIsoFiles merged line: %{public}s", s.c_str());
+        LOGI("ExtractIsoFiles merged line: %{public}s", GetAnonyString(s).c_str());
     }
     return E_OK;
 }
@@ -400,11 +428,9 @@ int32_t IsoOperator::ProcessMergedLine(const std::string& isoPath, const std::st
         }
     }
     LOGI("ExtractIsoFiles: extracting file: %{public}s to %{public}s", fullIsoPath.c_str(), fullOutputPath.c_str());
-    std::string extractCmd = "isoinfo -R -i \"" + isoPath + "\" -x \"" +
-        fullIsoPath + "\" > \"" + fullOutputPath + "\"";
-    std::vector<std::string> cmd = {"/bin/sh", "-c", extractCmd};
+    std::vector<std::string> cmd = {"isoinfo", "-R", "-i", isoPath, "-x", fullIsoPath};
     std::vector<std::string> extractOutput;
-    int32_t extractErr = ForkExec(cmd, &extractOutput);
+    int32_t extractErr = ForkExecToFile(cmd, fullOutputPath, &extractOutput);
     for (const auto& s : extractOutput) {
         LOGI("ExtractIsoFiles extract output: %{public}s", s.c_str());
     }
@@ -418,6 +444,11 @@ int32_t IsoOperator::ProcessMergedLine(const std::string& isoPath, const std::st
 int32_t IsoOperator::ExtractIsoFiles(const std::string& isoPath,
                                      const std::string& sourceDir)
 {
+    if (IsFilePathInvalid(isoPath) || IsShellMetacharPresent(isoPath) ||
+        IsFilePathInvalid(sourceDir) || IsShellMetacharPresent(sourceDir)) {
+        LOGE("IsoOperator::ExtractIsoFiles path traversal or shell injection detected");
+        return E_ERR;
+    }
     std::vector<std::string> mergedLines;
     int32_t err = ExecuteIsoInfoList(isoPath, mergedLines);
     if (err != E_OK) {
@@ -425,6 +456,10 @@ int32_t IsoOperator::ExtractIsoFiles(const std::string& isoPath,
     }
     std::string currentPath;
     for (const auto& line : mergedLines) {
+        if (IsFilePathInvalid(line) || IsShellMetacharPresent(line)) {
+            LOGE("IsoOperator::ExtractIsoFiles line contains path traversal or shell metachar, skipped");
+            continue;
+        }
         err = ProcessMergedLine(isoPath, sourceDir, line, currentPath);
         if (err != E_OK) {
             return err;
@@ -492,7 +527,7 @@ void IsoOperator::LogChecksumMap(const std::string& mapName,
     LOGI("LogChecksumMap: %{public}s contents:", mapName.c_str());
     for (const auto& pair : map) {
         LOGI("LogChecksumMap:   [%{public}s] = [%{public}s]",
-             pair.first.c_str(), pair.second.c_str());
+             GetAnonyString(pair.first).c_str(), GetAnonyString(pair.second).c_str());
     }
 }
 
@@ -526,6 +561,13 @@ int32_t IsoOperator::CompareChecksums(
 int32_t IsoOperator::PrepareSourceDirectory(const BurnOptions& burnOptions, std::string& sourceDir)
 {
     if (burnOptions.isIsoImage) {
+        if (!IsDir(BURN_TMP_DIR)) {
+            int32_t err = MkDir(BURN_TMP_DIR, DEFAULT_DIR_PERMISSIONS);
+            if (err != E_OK) {
+                LOGE("DoVerifyBurnData: create burn_tmp dir failed, err=%{public}d, errno=%{public}d", err, errno);
+                return E_ERR;
+            }
+        }
         sourceDir = std::string(BURN_TMP_DIR) + "/source_extract";
         if (IsDir(sourceDir)) {
             RmDirRecurse(sourceDir);
@@ -553,11 +595,13 @@ int32_t IsoOperator::GenerateAndCompareChecksums(const std::string& sourceDir,
     int32_t err = DiskUtils::GenerateChecksums(sourceDir, sourceChecksumPath);
     if (err != E_OK) {
         LOGE("DoVerifyBurnData: generate source checksums failed");
+        Unmount(VERIFY_MOUNT_PATH, "iso9660", false);
         return err;
     }
     err = DiskUtils::GenerateChecksums(VERIFY_MOUNT_PATH, discChecksumPath);
     if (err != E_OK) {
         LOGE("DoVerifyBurnData: generate disc checksums failed");
+        Unmount(VERIFY_MOUNT_PATH, "iso9660", false);
         return err;
     }
     err = Unmount(VERIFY_MOUNT_PATH, "iso9660", false);
@@ -577,14 +621,6 @@ int32_t IsoOperator::GenerateAndCompareChecksums(const std::string& sourceDir,
     }
     std::map<std::string, std::string> sourceMap = DiskUtils::ParseChecksumFile(sourceChecksumContent, sourceDir);
     std::map<std::string, std::string> discMap = DiskUtils::ParseChecksumFile(discChecksumContent, VERIFY_MOUNT_PATH);
-    LOGI("LogChecksumMap: sourceMap contents:");
-    for (const auto& pair : sourceMap) {
-        LOGI("LogChecksumMap:   [%{public}s] = [%{public}s]", pair.first.c_str(), pair.second.c_str());
-    }
-    LOGI("LogChecksumMap: discMap contents:");
-    for (const auto& pair : discMap) {
-        LOGI("LogChecksumMap:   [%{public}s] = [%{public}s]", pair.first.c_str(), pair.second.c_str());
-    }
     return DiskUtils::CompareChecksums(sourceMap, discMap);
 }
 

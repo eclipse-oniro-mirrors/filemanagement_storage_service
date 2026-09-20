@@ -167,12 +167,6 @@ ohos_executable("storage_daemon") {
     ]
   }
 
-  if (storage_service_external_storage_manager || enable_disk_manager) {
-    sources += [
-      "volume/src/process.cpp",
-    ]
-  }
-
   if (storage_service_external_storage_manager) {
     defines += [ "EXTERNAL_STORAGE_MANAGER" ]
     sources += [
@@ -196,6 +190,7 @@ ohos_executable("storage_daemon") {
       "disk_manager/src/disk/disk_utils.cpp",
       "disk_manager/src/volume/volume_utils.cpp",
       "disk_manager/src/disk/scan_device.cpp",
+      "disk_manager/src/disk/dm_device.cpp",
       "disk_manager/src/volume/udf_operator.cpp",
       "disk_manager/src/volume/iso9660_operator.cpp",
       "disk_manager/src/volume/exfat_operator.cpp",
@@ -297,6 +292,8 @@ ohos_executable("storage_daemon") {
       "common_event_service:cesfwk_innerkits",
       "init:libbeget_proxy",
       "libmtp:libmtp",
+      "drivers_interface_usb:usb_idl_headers_1.1",
+      "drivers_interface_usb:usb_idl_headers_1.2",
       "usb_manager:usbsrv_client",
     ]
   }
@@ -450,6 +447,15 @@ ohos_shared_library("storage_common_utils") {
     "-Wl,-O1",
   ]
 
+  ldflags += [
+    "-Wl,--exclude-libs=libGL.a",
+    "-Wl,--exclude-libs=libEGL.a",
+    "-Wl,--exclude-libs=libunwind.a",
+    "-Wl,--exclude-libs=libc++_static.a"
+  ]
+
+  version_script = "libstorage_common_utils.map"
+
   sources = [
     "utils/disk_utils.cpp",
     "utils/file_utils.cpp",
@@ -462,6 +468,8 @@ ohos_shared_library("storage_common_utils") {
     "utils/memory_reclaim_manager.cpp",
     "${storage_service_path}/services/common/src/storage_service_constant.cpp",
     "utils/hi_audit.cpp",
+    "utils/volume_op_diag.cpp",
+    "utils/fsck_diagnose.cpp",
     "utils/zip_utils.cpp",
   ]
 
@@ -472,7 +480,7 @@ ohos_shared_library("storage_common_utils") {
     "hilog:libhilog",
     "hisysevent:libhisysevent",
     "init:libbegetutil",
-    "openssl:libcrypto_shared",
+    "json:nlohmann_json_static",
     "zlib:shared_libz",
     "resource_schedule_service:ressched_client",
     "samgr:samgr_proxy"
@@ -491,6 +499,11 @@ ohos_shared_library("storage_common_utils") {
 
   if (storage_service_media_fuse) {
     defines += [ "STORAGE_SERVICE_MEDIA_FUSE" ]
+  }
+
+  if (enable_disk_manager) {
+    defines += [ "DISK_MANAGER" ]
+    external_deps += [ "disk_manager:disk_manager_innerkits" ]
   }
 
   subsystem_name = "filemanagement"
@@ -579,7 +592,6 @@ group("storage_daemon_unit_test") {
       "disk/test:storage_daemon_disk_test",
       "disk_manager/test:storage_daemon_ext_storage_test",
       "netlink/test:storage_daemon_netlink_test",
-      "volume/test:storage_daemon_volume_test",
     ]
   }
   if (support_open_source_libmtp) {

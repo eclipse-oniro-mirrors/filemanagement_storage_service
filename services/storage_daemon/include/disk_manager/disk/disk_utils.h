@@ -72,10 +72,11 @@ public:
     static int32_t Erase(const std::string &devPath);
     static int32_t Eject(const std::string &devName);
     static int32_t GetVolumeOpProcess(const std::string &volId, int32_t &progressPct);
+    static int32_t WriteBurnProgress(int32_t progress);
     static int32_t VerifyBurnData(const std::string &devPath, int32_t verifyType);
     static int32_t GetCapacity(const std::string& devPath, int64_t &totalSize, int64_t &freeSize);
-    static int32_t GetDiscCapacity(int cmdFd, const std::string& discType,
-                                   int64_t &totalSize, int64_t &usedSize);
+    static int64_t GetDiscCapacity(int cmdFd, const std::string& discType);
+    static int64_t GetUsedSizeFromSysfs(const std::string &devPath);
     static void AdjustBlankDiscCapacity(const std::string& devPath, const std::string& discType,
                                         int64_t &totalSize, int64_t &usedSize);
     static int32_t ExecAsyncDamagePartition(const std::string &devPath, int32_t partitionNum);
@@ -105,12 +106,13 @@ int ExecuteScsiCmd(int fd, uint8_t *cdb, int cdbLen, uint8_t *dxferp, int dxferL
 int ReadCDDiscInfo(const std::string &diskPath, int32_t cmdIndex, uint8_t *buf, int len);
 int GetCDDiskStatus(const char *device, int &status);
 int IsCDExist(const std::string &diskPath, bool &isCDExist);
-int IsCDBlank(const std::string &diskPath, bool &isCDBlank);
+bool IsCDBlank(const std::string &diskPath);
 int32_t ParseBurnOptions(const std::string &burnOptions, BurnOptions &parsedOptions);
 int32_t ValidateBurnOptions(const BurnOptions &options);
 std::string GetLastNumberSimple(const std::vector<std::string>& lines);
 int32_t GetIncBurnAddr(const std::string &devPath, std::string &incBurnAddr);
-
+std::string GetOpticalDriveNode(const std::string &devPath);
+int32_t RefreshCDRomMediaNode(const std::string &devPath);
 } // namespace StorageDaemon
 } // namespace OHOS
 

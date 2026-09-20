@@ -16,6 +16,7 @@
 #define OHOS_STORAGE_DAEMON_MTP_DEVICE_MONITOR_H
 
 #include <nocopyable.h>
+#include <thread>
 #include <singleton.h>
 #include "mtp/mtp_device_manager.h"
 
@@ -42,7 +43,7 @@ public:
     int32_t Umount(const std::string &id);
     void MountMtpDeviceByBroadcast(DeviceType deviceType, uint32_t busLocation, uint8_t devNum);
     void UmountAllMtpDevice();
-    int32_t HasMTPDevice(bool &hasMtp);
+    int32_t HasMTPDevice(bool &hasMtp, DeviceType &deviceType);
 
     void RegisterMTPParamListener();
     void RemoveMTPParamListener();
@@ -67,11 +68,15 @@ private:
     int32_t MountDeviceByType(DeviceType deviceType, std::vector<MtpDeviceInfo> &devInfos,
                               const std::string &deviceTypeName, uint32_t busLocation, uint8_t devNum);
     void SetPtpMode(const std::vector<MtpDeviceInfo> &devInfos, bool isCamera);
+    bool NeedCameraFallback(const std::vector<MtpDeviceInfo> &detectedMtpDevices) const;
+    void StopMonitor();
 
 private:
     std::mutex listMutex_;
     std::vector<MtpDeviceInfo> lastestMtpDevList_;
     std::vector<MtpDeviceInfo> pendingMtpDevList_;
+    std::atomic<bool> stopMonitor_{false};
+    std::thread monitorThread_;
 };
 } // namespace StorageDaemon
 } // namespace OHOS

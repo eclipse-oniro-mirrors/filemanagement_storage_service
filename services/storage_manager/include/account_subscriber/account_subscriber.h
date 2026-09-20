@@ -41,7 +41,7 @@ private:
     AccountSubscriber &operator=(const AccountSubscriber &) = delete;
 
     int32_t MountCryptoPathAgain(int32_t userId);
-    void SendSecondMountedEvent(int32_t userId);
+    bool SendSecondMountedEvent(int32_t userId);
 
     int32_t userId_ = 0;
     std::unordered_map<int32_t, uint32_t> userRecord_;
@@ -50,7 +50,7 @@ private:
     uint32_t GetUserStatus(int32_t userId);
     uint32_t HandleUserUnlockEvent(uint32_t userStatus);
     uint32_t HandleUserSwitchedEvent(uint32_t userStatus);
-    void GetSystemAbility();
+    void GetSystemAbility(int32_t userId);
 };
 }  // namespace StorageManager
 }  // namespace OHOS

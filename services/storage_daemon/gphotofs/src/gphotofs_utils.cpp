@@ -19,6 +19,7 @@
 #include <cstring>
 #include <dirent.h>
 #include <unistd.h>
+#include <filesystem>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <securec.h>
@@ -130,14 +131,12 @@ std::string GphotoDirName(const std::string &path)
     if (path.empty() || path.length() > PATH_MAX) {
         return "";
     }
-    char *str = strdup(path.c_str());
-    if (!str) {
+    std::filesystem::path fsPath(path);
+    std::filesystem::path parentPath = fsPath.parent_path();
+    if (parentPath.empty()) {
         return "";
     }
-    std::string result(dirname(str));
-    free(static_cast<void *>(str));
-    str = nullptr;
-    return result;
+    return parentPath.string();
 }
 
 std::string GphotoBaseName(const std::string &path)
@@ -145,14 +144,12 @@ std::string GphotoBaseName(const std::string &path)
     if (path.empty() || path.length() > PATH_MAX) {
         return "";
     }
-    char *str = strdup(path.c_str());
-    if (!str) {
+    std::filesystem::path fsPath(path);
+    std::filesystem::path fileName = fsPath.filename();
+    if (fileName.empty()) {
         return "";
     }
-    std::string result(basename(str));
-    free(static_cast<void *>(str));
-    str = nullptr;
-    return result;
+    return fileName.string();
 }
 
 std::string GphotoRealPath(const std::string &path)
@@ -344,24 +341,35 @@ bool RemoveTmpDir()
 bool IsFilePathValid(const std::string &filePath)
 {
     if (filePath.empty()) {
-        LOGE("IsFilePathValid: file path is empty");
+        LOGE("IsFilePathValid: FilePath is empty");
         return false;
     }
+    char resolvedPath[PATH_MAX];
+    if (!realpath(filePath.c_str(), resolvedPath)) {
+        LOGW("IsFilePathValid: FilePath is abnormal");
+        return IsPathTraversalSafe(filePath);
+    }
+    if (std::string(resolvedPath) != filePath) {
+        LOGE("IsFilePathValid: Symbolic links is not allowed");
+        return false;
+    }
+    return true;
+}
 
+bool IsPathTraversalSafe(const std::string &filePath)
+{
     size_t pos = filePath.find(INVALID_PREFIX_PATH);
     while (pos != std::string::npos) {
         if (pos == 0 || filePath[pos - 1] == FILE_SEPARATOR_CHAR) {
-            LOGE("IsFilePathValid: Relative path is not allowed");
+            LOGE("IsPathTraversalSafe: Relative path is not allowed");
             return false;
         }
         pos = filePath.find(INVALID_PREFIX_PATH, pos + INVALID_PREFIX_PATH_LEN);
     }
-
     pos = filePath.rfind(INVALID_SUFFIX_PATH);
     if ((pos != std::string::npos) && (filePath.size() - pos == INVALID_SUFFIX_PATH_LEN)) {
-        LOGE("IsFilePathValid: Relative path is not allowed");
+        LOGE("IsPathTraversalSafe: Relative path is not allowed");
         return false;
     }
-
     return true;
 }

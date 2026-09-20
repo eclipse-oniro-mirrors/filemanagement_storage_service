@@ -80,7 +80,7 @@ int32_t VolumeUtils::ReadMetadata(const std::string& devPath,
         LOGE("VolumeUtils::ReadMetadata realpath failed, errno=%{public}d", errno);
         return E_PARAMS_INVALID;
     }
-    if (std::string(realPath).find("/dev/block/") != 0) {
+    if (std::string(realPath).find("/dev/block/") != 0 && std::string(realPath).find("/dev/mapper/") != 0) {
         LOGE("VolumeUtils::ReadMetadata invalid devPath prefix");
         return E_PARAMS_INVALID;
     }
@@ -148,6 +148,7 @@ int32_t VolumeUtils::MountFuseDevice(const std::string& mountPath,
         return ret;
     }
 
+    fuseFd = -1;
     fuseFd = open("/dev/fuse", O_RDWR);
     if (fuseFd < 0) {
         LOGE("VolumeUtils::MountFuseDevice open /dev/fuse failed, errno=%{public}d", errno);
@@ -174,6 +175,5 @@ int32_t VolumeUtils::MountFuseDevice(const std::string& mountPath,
     LOGI("VolumeUtils::MountFuseDevice success, fuseFd=%{public}d", fuseFd);
     return E_OK;
 }
-
 } // namespace StorageDaemon
 } // namespace OHOS

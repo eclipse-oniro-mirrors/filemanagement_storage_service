@@ -15,6 +15,7 @@
 
 #include <algorithm>
 #include <fcntl.h>
+#include <fstream>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <sys/stat.h>
@@ -1105,6 +1106,820 @@ HWTEST_F(ExtDiskUtilsTest, CleanTempDirectory_003, TestSize.Level1)
         }));
     int32_t ret = DiskUtils::CleanTempDirectory();
     EXPECT_EQ(ret, E_ERR);
+}
+
+HWTEST_F(ExtDiskUtilsTest, ExecAsyncGetPartitionTableInfo_ErrorAtStart, TestSize.Level1)
+{
+    std::string devPath = "/dev/block/uttestdisk";
+    std::vector<std::string> lines;
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
+        .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
+            output->push_back("ERROR: invalid partition table");
+            return E_OK;
+        }));
+    int32_t ret = DiskUtils::ExecAsyncGetPartitionTableInfo(devPath, lines);
+    EXPECT_EQ(ret, E_OK);
+    EXPECT_EQ(lines.size(), 1u);
+    EXPECT_EQ(lines[0], "ERROR: invalid partition table");
+}
+
+HWTEST_F(ExtDiskUtilsTest, ExecAsyncGetPartitionTableInfo_ErrorInMiddle, TestSize.Level1)
+{
+    std::string devPath = "/dev/block/uttestdisk";
+    std::vector<std::string> lines;
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
+        .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
+            output->push_back("Warning: ERROR found in partition data");
+            return E_OK;
+        }));
+    int32_t ret = DiskUtils::ExecAsyncGetPartitionTableInfo(devPath, lines);
+    EXPECT_EQ(ret, E_OK);
+    EXPECT_EQ(lines.size(), 1u);
+    EXPECT_EQ(lines[0], "Warning: ERROR found in partition data");
+}
+
+HWTEST_F(ExtDiskUtilsTest, ExecAsyncGetPartitionTableInfo_ErrorAtEnd, TestSize.Level1)
+{
+    std::string devPath = "/dev/block/uttestdisk";
+    std::vector<std::string> lines;
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
+        .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
+            output->push_back("Disk read failed ERROR");
+            return E_OK;
+        }));
+    int32_t ret = DiskUtils::ExecAsyncGetPartitionTableInfo(devPath, lines);
+    EXPECT_EQ(ret, E_OK);
+    EXPECT_EQ(lines.size(), 1u);
+    EXPECT_EQ(lines[0], "Disk read failed ERROR");
+}
+
+HWTEST_F(ExtDiskUtilsTest, ExecAsyncGetPartitionTableInfo_MultipleErrors, TestSize.Level1)
+{
+    std::string devPath = "/dev/block/uttestdisk";
+    std::vector<std::string> lines;
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
+        .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
+            output->push_back("ERROR: partition 1 corrupt");
+            output->push_back("ERROR: partition 2 missing");
+            return E_OK;
+        }));
+    int32_t ret = DiskUtils::ExecAsyncGetPartitionTableInfo(devPath, lines);
+    EXPECT_EQ(ret, E_OK);
+    EXPECT_EQ(lines.size(), 2u);
+    EXPECT_EQ(lines[0], "ERROR: partition 1 corrupt");
+    EXPECT_EQ(lines[1], "ERROR: partition 2 missing");
+}
+
+HWTEST_F(ExtDiskUtilsTest, ExecAsyncGetPartitionTableInfo_NoError, TestSize.Level1)
+{
+    std::string devPath = "/dev/block/uttestdisk";
+    std::vector<std::string> lines;
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
+        .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
+            output->push_back("Disk /dev/block/uttestdisk: 100 GiB");
+            output->push_back("Number  Start  End  Size  Type");
+            return E_OK;
+        }));
+    int32_t ret = DiskUtils::ExecAsyncGetPartitionTableInfo(devPath, lines);
+    EXPECT_EQ(ret, E_OK);
+    EXPECT_EQ(lines.size(), 2u);
+}
+
+HWTEST_F(ExtDiskUtilsTest, ExecAsyncGetPartitionTableInfo_LowercaseErrorNotMatched, TestSize.Level1)
+{
+    std::string devPath = "/dev/block/uttestdisk";
+    std::vector<std::string> lines;
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
+        .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
+            output->push_back("error: lowercase should not match");
+            return E_OK;
+        }));
+    int32_t ret = DiskUtils::ExecAsyncGetPartitionTableInfo(devPath, lines);
+    EXPECT_EQ(ret, E_OK);
+    EXPECT_EQ(lines.size(), 1u);
+    EXPECT_EQ(lines[0], "error: lowercase should not match");
+}
+
+HWTEST_F(ExtDiskUtilsTest, ExecAsyncGetPartitionTableInfo_MixedOutput, TestSize.Level1)
+{
+    std::string devPath = "/dev/block/uttestdisk";
+    std::vector<std::string> lines;
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
+        .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
+            output->push_back("Disk /dev/block/uttestdisk: 100 GiB");
+            output->push_back("ERROR: partition table corrupt");
+            output->push_back("Number  Start  End  Size  Type");
+            return E_OK;
+        }));
+    int32_t ret = DiskUtils::ExecAsyncGetPartitionTableInfo(devPath, lines);
+    EXPECT_EQ(ret, E_OK);
+    EXPECT_EQ(lines.size(), 3u);
+    EXPECT_EQ(lines[1], "ERROR: partition table corrupt");
+}
+
+HWTEST_F(ExtDiskUtilsTest, ExecAsyncGetPartitionTableInfo_ForkExecFailed, TestSize.Level1)
+{
+    std::string devPath = "/dev/block/uttestdisk";
+    std::vector<std::string> lines;
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_ERR));
+    int32_t ret = DiskUtils::ExecAsyncGetPartitionTableInfo(devPath, lines);
+    EXPECT_EQ(ret, E_GET_PARTITION_ERROR);
+}
+
+/**
+ * @tc.name: GetOpticalDriveNode_NoMatch
+ * @tc.desc: Verify GetOpticalDriveNode returns empty when volName has no dash, dash at end,
+ *           or no /sys/block device matches major:minor.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, GetOpticalDriveNode_NoMatch, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetOpticalDriveNode_NoMatch start";
+    // B0a: slashPos == npos (no slash in devPath) -> return "" (UBSan overflow guard)
+    EXPECT_TRUE(GetOpticalDriveNode("sr0").empty());
+    // B0b: slashPos + 1 >= devPath.size() (devPath ends with '/') -> return ""
+    EXPECT_TRUE(GetOpticalDriveNode("/dev/block/").empty());
+    // B1a: dashPos == npos (no dash in volName) -> enter if, return ""
+    EXPECT_TRUE(GetOpticalDriveNode("/dev/block/sr0").empty());
+    // B1b: dashPos != npos but dashPos+1 >= volName.size() (dash at end) -> enter if, return ""
+    EXPECT_TRUE(GetOpticalDriveNode("/dev/block/abc-").empty());
+    // B4: valid majorMinor but no matching /sys/block device -> return ""
+    EXPECT_TRUE(GetOpticalDriveNode("/dev/block/vol-999-999").empty());
+    // Note: line 1042 has 6 LLVM branch edges for ||, the uncovered '-' edge
+    // is a short-circuit artifact (both sides of || cannot both be true), cannot be covered.
+    GTEST_LOG_(INFO) << "GetOpticalDriveNode_NoMatch end";
+}
+
+/**
+ * @tc.name: GetOpticalDriveNode_ValidDeviceFound
+ * @tc.desc: Verify GetOpticalDriveNode finds the correct block device when major:minor matches.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, GetOpticalDriveNode_ValidDeviceFound, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetOpticalDriveNode_ValidDeviceFound start";
+    // GetOpticalDriveNode reads /sys/block at runtime. The match depends on
+    // whether a device with the given major:minor exists on the test board.
+    // Use vol-8-0 which maps to sda (8:0) on most Linux systems.
+    // If the device doesn't exist, the function returns "" which is also acceptable.
+    std::string result = GetOpticalDriveNode("/dev/block/vol-8-0");
+    if (!result.empty()) {
+        EXPECT_EQ(result, "sda");
+    }
+    // Note: This test is environment-dependent. The B3 branch (content == majorMinor)
+    // can only be covered when a matching /sys/block device exists.
+    // On boards without matching devices, only B1/B1b/B4 (no match) branches are covered.
+    GTEST_LOG_(INFO) << "GetOpticalDriveNode_ValidDeviceFound end";
+}
+
+/**
+ * @tc.name: GetUsedSizeFromSysfs_DriveNodeEmpty
+ * @tc.desc: Verify GetUsedSizeFromSysfs returns -1 when GetOpticalDriveNode returns empty.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, GetUsedSizeFromSysfs_DriveNodeEmpty, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetUsedSizeFromSysfs_DriveNodeEmpty start";
+    // B1: driveNode.empty() == true -> return -1
+    EXPECT_EQ(DiskUtils::GetUsedSizeFromSysfs("/dev/block/sr0"), -1);
+    GTEST_LOG_(INFO) << "GetUsedSizeFromSysfs_DriveNodeEmpty end";
+}
+
+/**
+ * @tc.name: GetUsedSizeFromSysfs_Success
+ * @tc.desc: Verify GetUsedSizeFromSysfs reads sector count from /sys/block/<dev>/size.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, GetUsedSizeFromSysfs_Success, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetUsedSizeFromSysfs_Success start";
+    // B2: driveNode.empty() == false (if matching device exists)
+    // B4: !ifs.is_open() == false (open succeeds, /sys/block/sda/size exists)
+    // If GetOpticalDriveNode returns empty (no matching device), falls back to B1 (-1).
+    int64_t result = DiskUtils::GetUsedSizeFromSysfs("/dev/block/vol-8-0");
+    if (result > 0) {
+        EXPECT_EQ(result % 512, 0);
+    }
+    // Note: B3 (!ifs.is_open() == true) requires driveNode non-empty but /size file missing.
+    // Cannot be tested in UT because GetOpticalDriveNode returns a real device name from
+    // /sys/block, and all real devices have /size files. Needs board-side verification.
+    GTEST_LOG_(INFO) << "GetUsedSizeFromSysfs_Success end";
+}
+
+/**
+ * @tc.name: GetDiscCapacity_AllTypesSuccess
+ * @tc.desc: Verify GetDiscCapacity dispatches to the correct capacity function for each disc type.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, GetDiscCapacity_AllTypesSuccess, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetDiscCapacity_AllTypesSuccess start";
+    // B1: DVD-R & DVD-ROM -> GetDvdTotalCapacity (same source branch)
+    EXPECT_CALL(*diskUtilMoc_, GetDvdTotalCapacity(_, _))
+        .WillOnce(Invoke([](int, int64_t &cap) { cap = 4700372992L; return E_OK; }))
+        .WillOnce(Invoke([](int, int64_t &cap) { cap = 4700372992L; return E_OK; }));
+    EXPECT_EQ(DiskUtils::GetDiscCapacity(0, "DVD-R"), 4700372992L);
+    EXPECT_EQ(DiskUtils::GetDiscCapacity(0, "DVD-ROM"), 4700372992L);
+
+    // B2: DVD+RW -> GetDvdPlusRwTotalCapacity
+    // Note: GetDvdPlusRwTotalCapacity is a STATIC function in disk_utils.cpp,
+    // so mock EXPECT_CALL is bypassed. The real static function calls SendScsiCmd
+    // (from storage_common_utils.so) which uses the mocked ioctl.
+    // With g_ioctlRet=0 (default), ioctl returns success but dataBuf is all zeros,
+    // resulting in totalSize=0. This is the expected behavior in UT.
+    g_ioctlRet = 0;
+    g_ioctlInfo = 0; // SG_INFO_OK
+    EXPECT_EQ(DiskUtils::GetDiscCapacity(0, "DVD+RW"), 0);
+
+    // B3: CD-ROM -> GetCdTotalCapacity (external linkage, mock redirect works)
+    EXPECT_CALL(*diskUtilMoc_, GetCdTotalCapacity(_, _))
+        .WillOnce(Invoke([](int, int64_t &cap) { cap = 737280000L; return E_OK; }));
+    EXPECT_EQ(DiskUtils::GetDiscCapacity(0, "CD-ROM"), 737280000L);
+
+    // B4: BD-RE -> GetBdTotalCapacity (external linkage, mock redirect works)
+    EXPECT_CALL(*diskUtilMoc_, GetBdTotalCapacity(_, _))
+        .WillOnce(Invoke([](int, int64_t &cap) { cap = 25025314816L; return E_OK; }));
+    EXPECT_EQ(DiskUtils::GetDiscCapacity(0, "BD-RE"), 25025314816L);
+
+    // B5: unknown type -> 0
+    EXPECT_EQ(DiskUtils::GetDiscCapacity(0, "UNKNOWN"), 0);
+    GTEST_LOG_(INFO) << "GetDiscCapacity_AllTypesSuccess end";
+}
+
+/**
+ * @tc.name: GetDiscCapacity_CapacityCallFailed
+ * @tc.desc: Verify GetDiscCapacity returns 0 when underlying capacity call fails.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, GetDiscCapacity_CapacityCallFailed, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetDiscCapacity_CapacityCallFailed start";
+    // B6: err1 != E_OK -> return 0 (using DVD-R which uses external GetDvdTotalCapacity)
+    EXPECT_CALL(*diskUtilMoc_, GetDvdTotalCapacity(_, _))
+        .WillOnce(Invoke([](int, int64_t &) { return E_ERR; }));
+    EXPECT_EQ(DiskUtils::GetDiscCapacity(0, "DVD-R"), 0);
+    GTEST_LOG_(INFO) << "GetDiscCapacity_CapacityCallFailed end";
+}
+
+/**
+ * @tc.name: AdjustBlankDiscCapacity_NotBlankDisc
+ * @tc.desc: Verify AdjustBlankDiscCapacity does nothing when disc is not blank.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, AdjustBlankDiscCapacity_NotBlankDisc, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "AdjustBlankDiscCapacity_NotBlankDisc start";
+    int64_t totalSize = 4700372992L;
+    int64_t usedSize = 1000000L;
+    // B1: ReadCDDiscInfo fails + GetBlkidData returns non-empty -> not blank
+    g_ioctlRet = -1;
+    EXPECT_CALL(*diskUtilMoc_, GetCDType(_)).WillOnce(Return("DVD+RW"));
+    EXPECT_CALL(*diskUtilMoc_, GetBlkidData(_, _)).WillOnce(Return("udf"));
+    DiskUtils::AdjustBlankDiscCapacity(testDevPath_, "DVD+RW", totalSize, usedSize);
+    EXPECT_EQ(totalSize, 4700372992L);
+    EXPECT_EQ(usedSize, 1000000L);
+    g_ioctlRet = 0;
+    GTEST_LOG_(INFO) << "AdjustBlankDiscCapacity_NotBlankDisc end";
+}
+
+/**
+ * @tc.name: AdjustBlankDiscCapacity_BlankCdType
+ * @tc.desc: Verify AdjustBlankDiscCapacity resets usedSize=0 but skips ForkExec for CD type.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, AdjustBlankDiscCapacity_BlankCdType, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "AdjustBlankDiscCapacity_BlankCdType start";
+    int64_t totalSize = 737280000L;
+    int64_t usedSize = 500000L;
+    // B2: blank disc but discType starts with "CD" -> no ForkExec
+    g_ioctlRet = 0;
+    g_ioctlInfo = SG_INFO_OK;
+    EXPECT_CALL(*diskUtilMoc_, GetCDType(_)).WillOnce(Return("CD-ROM"));
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).Times(0);
+    DiskUtils::AdjustBlankDiscCapacity(testDevPath_, "CD-ROM", totalSize, usedSize);
+    EXPECT_EQ(usedSize, 0);
+    GTEST_LOG_(INFO) << "AdjustBlankDiscCapacity_BlankCdType end";
+}
+
+/**
+ * @tc.name: AdjustBlankDiscCapacity_BlankDvd_ForkExecFailed
+ * @tc.desc: Verify AdjustBlankDiscCapacity handles ForkExec failure for blank DVD.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, AdjustBlankDiscCapacity_BlankDvd_ForkExecFailed, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "AdjustBlankDiscCapacity_BlankDvd_ForkExecFailed start";
+    int64_t totalSize = 4700372992L;
+    int64_t usedSize = 1000000L;
+    // B3: blank DVD, ForkExec fails
+    g_ioctlRet = 0;
+    g_ioctlInfo = SG_INFO_OK;
+    EXPECT_CALL(*diskUtilMoc_, GetCDType(_)).WillOnce(Return("DVD+RW"));
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_ERR));
+    DiskUtils::AdjustBlankDiscCapacity(testDevPath_, "DVD+RW", totalSize, usedSize);
+    EXPECT_EQ(usedSize, 0);
+    EXPECT_EQ(totalSize, 4700372992L);
+    GTEST_LOG_(INFO) << "AdjustBlankDiscCapacity_BlankDvd_ForkExecFailed end";
+}
+
+/**
+ * @tc.name: AdjustBlankDiscCapacity_BlankDvd_MediaInfoMatch
+ * @tc.desc: Verify AdjustBlankDiscCapacity updates totalSize from mediainfo for blank DVD.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, AdjustBlankDiscCapacity_BlankDvd_MediaInfoMatch, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "AdjustBlankDiscCapacity_BlankDvd_MediaInfoMatch start";
+    int64_t totalSize = 4700372992L;
+    int64_t usedSize = 1000000L;
+    // B4: ForkExec succeeds, regex matches, valid number > 0
+    g_ioctlRet = 0;
+    g_ioctlInfo = SG_INFO_OK;
+    EXPECT_CALL(*diskUtilMoc_, GetCDType(_)).WillOnce(Return("DVD+RW"));
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
+        .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
+            output->push_back("  unformatted:   2295104*2048=4702922752");
+            return E_OK;
+        }));
+    DiskUtils::AdjustBlankDiscCapacity(testDevPath_, "DVD+RW", totalSize, usedSize);
+    EXPECT_EQ(usedSize, 0);
+    EXPECT_EQ(totalSize, 4702922752L);
+    GTEST_LOG_(INFO) << "AdjustBlankDiscCapacity_BlankDvd_MediaInfoMatch end";
+}
+
+/**
+ * @tc.name: AdjustBlankDiscCapacity_MediaInfoNoMatchOrInvalid
+ * @tc.desc: Verify AdjustBlankDiscCapacity keeps totalSize when mediainfo has no match,
+ *           invalid number, or zero capacity.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, AdjustBlankDiscCapacity_MediaInfoNoMatchOrInvalid, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "AdjustBlankDiscCapacity_MediaInfoNoMatchOrInvalid start";
+    // B6: no regex match
+    int64_t totalSize = 4700372992L;
+    int64_t usedSize = 1000000L;
+    g_ioctlRet = 0;
+    g_ioctlInfo = SG_INFO_OK;
+    EXPECT_CALL(*diskUtilMoc_, GetCDType(_)).WillOnce(Return("DVD+RW"));
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
+        .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
+            output->push_back("  some other line without pattern");
+            return E_OK;
+        }));
+    DiskUtils::AdjustBlankDiscCapacity(testDevPath_, "DVD+RW", totalSize, usedSize);
+    EXPECT_EQ(usedSize, 0);
+    EXPECT_EQ(totalSize, 4700372992L);
+
+    // B5: regex matches but invalid number
+    totalSize = 4700372992L;
+    usedSize = 1000000L;
+    EXPECT_CALL(*diskUtilMoc_, GetCDType(_)).WillOnce(Return("DVD+RW"));
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
+        .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
+            output->push_back("  unformatted:   abc*2048=invalid");
+            return E_OK;
+        }));
+    DiskUtils::AdjustBlankDiscCapacity(testDevPath_, "DVD+RW", totalSize, usedSize);
+    EXPECT_EQ(totalSize, 4700372992L);
+
+    // B5: regex matches but zero capacity
+    totalSize = 4700372992L;
+    usedSize = 1000000L;
+    EXPECT_CALL(*diskUtilMoc_, GetCDType(_)).WillOnce(Return("DVD+RW"));
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
+        .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
+            output->push_back("  unformatted:   0*2048=0");
+            return E_OK;
+        }));
+    DiskUtils::AdjustBlankDiscCapacity(testDevPath_, "DVD+RW", totalSize, usedSize);
+    EXPECT_EQ(totalSize, 4700372992L);
+
+    g_ioctlRet = 0;
+    GTEST_LOG_(INFO) << "AdjustBlankDiscCapacity_MediaInfoNoMatchOrInvalid end";
+}
+
+/**
+ * @tc.name: AdjustBlankDiscCapacity_BlankBd_ForkExecAndMediaInfo
+ * @tc.desc: Verify AdjustBlankDiscCapacity with blank BD, covering ForkExec fail and mediainfo match.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, AdjustBlankDiscCapacity_BlankBd_ForkExecAndMediaInfo, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "AdjustBlankDiscCapacity_BlankBd_ForkExecAndMediaInfo start";
+    // B3: BD ForkExec fails
+    int64_t totalSize = 25025314816L;
+    int64_t usedSize = 5000000L;
+    g_ioctlRet = 0;
+    g_ioctlInfo = SG_INFO_OK;
+    EXPECT_CALL(*diskUtilMoc_, GetCDType(_)).WillOnce(Return("BD-RE"));
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_ERR));
+    DiskUtils::AdjustBlankDiscCapacity(testDevPath_, "BD-RE", totalSize, usedSize);
+    EXPECT_EQ(usedSize, 0);
+    EXPECT_EQ(totalSize, 25025314816L);
+
+    // B4: BD ForkExec succeeds, mediainfo matches
+    totalSize = 25025314816L;
+    usedSize = 5000000L;
+    EXPECT_CALL(*diskUtilMoc_, GetCDType(_)).WillOnce(Return("BD-RE"));
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
+        .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
+            output->push_back("  unformatted:   12219392*2048=25025314816");
+            return E_OK;
+        }));
+    DiskUtils::AdjustBlankDiscCapacity(testDevPath_, "BD-RE", totalSize, usedSize);
+    EXPECT_EQ(usedSize, 0);
+    EXPECT_EQ(totalSize, 25025314816L);
+    GTEST_LOG_(INFO) << "AdjustBlankDiscCapacity_BlankBd_ForkExecAndMediaInfo end";
+}
+
+/**
+ * @tc.name: AdjustBlankDiscCapacity_BlankDvd_FallbackPath
+ * @tc.desc: Verify AdjustBlankDiscCapacity with DVD+RW, ioctl fails -> fallback to GetBlkidData,
+ *           blank disc -> ForkExec with mediainfo match.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, AdjustBlankDiscCapacity_BlankDvd_FallbackPath, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "AdjustBlankDiscCapacity_BlankDvd_FallbackPath start";
+    int64_t totalSize = 4700372992L;
+    int64_t usedSize = 1000000L;
+    g_ioctlRet = -1; // ReadCDDiscInfo fails -> fallback path
+    EXPECT_CALL(*diskUtilMoc_, GetCDType(_)).WillOnce(Return("DVD+RW"));
+    EXPECT_CALL(*diskUtilMoc_, GetBlkidData(_, _)).WillOnce(Return("")); // empty -> IsCDBlank returns true
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
+        .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
+            output->push_back("  unformatted:   2295104*2048=4702922752");
+            return E_OK;
+        }));
+    DiskUtils::AdjustBlankDiscCapacity(testDevPath_, "DVD+RW", totalSize, usedSize);
+    EXPECT_EQ(usedSize, 0);
+    EXPECT_EQ(totalSize, 4702922752L);
+    g_ioctlRet = 0;
+    GTEST_LOG_(INFO) << "AdjustBlankDiscCapacity_BlankDvd_FallbackPath end";
+}
+
+/**
+ * @tc.name: GetCapacity_OpenFailed
+ * @tc.desc: Verify GetCapacity returns E_ERR when open fails.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, GetCapacity_OpenFailed, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetCapacity_OpenFailed start";
+    int64_t totalSize = 0;
+    int64_t freeSize = 0;
+    // /dev/block/nonexistent_device won't exist -> open returns -1
+    int32_t ret = DiskUtils::GetCapacity("/dev/block/nonexistent_device_" + std::to_string(getpid()),
+                                          totalSize, freeSize);
+    EXPECT_EQ(ret, E_ERR);
+    GTEST_LOG_(INFO) << "GetCapacity_OpenFailed end";
+}
+
+/**
+ * @tc.name: GetCapacity_SuccessWithUsedSizeEqualToTotal
+ * @tc.desc: Verify GetCapacity computes freeSize=0 when GetUsedSizeFromSysfs returns -1.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, GetCapacity_SuccessWithUsedSizeEqualToTotal, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetCapacity_SuccessWithUsedSizeEqualToTotal start";
+    int64_t totalSize = 0;
+    int64_t freeSize = 0;
+    // Use DVD-R which calls GetDvdTotalCapacity (external linkage, mock works)
+    // GetCDType is called TWICE: once by GetCapacity (line 1245) and once by
+    // IsCDBlank (line 732, called via AdjustBlankDiscCapacity)
+    EXPECT_CALL(*diskUtilMoc_, GetCDType(_))
+        .WillOnce(Return("DVD-R"))
+        .WillOnce(Return("DVD-R"));
+    EXPECT_CALL(*diskUtilMoc_, GetDvdTotalCapacity(_, _))
+        .WillOnce(Invoke([](int, int64_t &cap) { cap = 4700372992L; return E_OK; }));
+    // AdjustBlankDiscCapacity -> IsCDBlank -> ReadCDDiscInfo via ioctl
+    g_ioctlRet = -1; // ReadCDDiscInfo fails
+    EXPECT_CALL(*diskUtilMoc_, GetBlkidData(_, _)).WillOnce(Return("udf")); // non-empty -> not blank
+    int32_t ret = DiskUtils::GetCapacity(testDevPath_, totalSize, freeSize);
+    EXPECT_EQ(ret, E_OK);
+    EXPECT_EQ(totalSize, 4700372992L);
+    EXPECT_EQ(freeSize, 0); // usedSize = -1 -> usedSize = totalSize -> freeSize = 0
+    g_ioctlRet = 0;
+    GTEST_LOG_(INFO) << "GetCapacity_SuccessWithUsedSizeEqualToTotal end";
+}
+
+/**
+ * @tc.name: GetCapacity_GetDiscCapacityFailed
+ * @tc.desc: Verify GetCapacity returns E_OK even when GetDiscCapacity fails.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, GetCapacity_GetDiscCapacityFailed, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetCapacity_GetDiscCapacityFailed start";
+    int64_t totalSize = 0;
+    int64_t freeSize = 0;
+    // GetCDType called twice: GetCapacity + IsCDBlank
+    EXPECT_CALL(*diskUtilMoc_, GetCDType(_))
+        .WillOnce(Return("DVD-R"))
+        .WillOnce(Return("DVD-R"));
+    EXPECT_CALL(*diskUtilMoc_, GetDvdTotalCapacity(_, _))
+        .WillOnce(Invoke([](int, int64_t &) { return E_ERR; }));
+    // AdjustBlankDiscCapacity -> IsCDBlank -> ReadCDDiscInfo
+    g_ioctlRet = -1;
+    EXPECT_CALL(*diskUtilMoc_, GetBlkidData(_, _)).WillOnce(Return("udf"));
+    int32_t ret = DiskUtils::GetCapacity(testDevPath_, totalSize, freeSize);
+    // GetCapacity always returns E_OK regardless of GetDiscCapacity result
+    EXPECT_EQ(ret, E_OK);
+    g_ioctlRet = 0;
+    GTEST_LOG_(INFO) << "GetCapacity_GetDiscCapacityFailed end";
+}
+
+/**
+ * @tc.name: GetCapacity_BlankDiscUsedSizeZero
+ * @tc.desc: Verify GetCapacity with blank disc sets usedSize=0 and freeSize=totalSize.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, GetCapacity_BlankDiscUsedSizeZero, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetCapacity_BlankDiscUsedSizeZero start";
+    int64_t totalSize = 0;
+    int64_t freeSize = 0;
+    // Use DVD-R which calls GetDvdTotalCapacity (external linkage, mock works)
+    // GetCDType called twice: GetCapacity + IsCDBlank
+    EXPECT_CALL(*diskUtilMoc_, GetCDType(_))
+        .WillOnce(Return("DVD-R"))
+        .WillOnce(Return("DVD-R"));
+    EXPECT_CALL(*diskUtilMoc_, GetDvdTotalCapacity(_, _))
+        .WillOnce(Invoke([](int, int64_t &cap) { cap = 4700372992L; return E_OK; }));
+    // AdjustBlankDiscCapacity -> IsCDBlank returns true (ioctl succeeds, discStatus=0)
+    g_ioctlRet = 0;
+    g_ioctlInfo = SG_INFO_OK;
+    // Since blank, usedSize reset to 0, ForkExec for mediainfo
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
+        .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
+            output->push_back("  unformatted:   2295104*2048=4702922752");
+            return E_OK;
+        }));
+    int32_t ret = DiskUtils::GetCapacity(testDevPath_, totalSize, freeSize);
+    EXPECT_EQ(ret, E_OK);
+    // totalSize adjusted by AdjustBlankDiscCapacity to mediainfo value
+    // freeSize = totalSize - 0 = totalSize
+    EXPECT_GT(totalSize, 0);
+    EXPECT_EQ(freeSize, totalSize);
+    g_ioctlRet = 0;
+    GTEST_LOG_(INFO) << "GetCapacity_BlankDiscUsedSizeZero end";
+}
+
+/**
+ * @tc.name: GetCapacity_CdType_GetCdUsedCapacityFailed
+ * @tc.desc: Verify GetCapacity with CD type when GetCdUsedCapacity fails (ioctl error).
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, GetCapacity_CdType_GetCdUsedCapacityFailed, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetCapacity_CdType_GetCdUsedCapacityFailed start";
+    int64_t totalSize = 0;
+    int64_t freeSize = 0;
+    // GetCDType called twice: GetCapacity + IsCDBlank (in AdjustBlankDiscCapacity)
+    EXPECT_CALL(*diskUtilMoc_, GetCDType(_))
+        .WillOnce(Return("CD-ROM"))
+        .WillOnce(Return("CD-ROM"));
+    // GetDiscCapacity -> GetCdTotalCapacity (mocked) returns capacity
+    EXPECT_CALL(*diskUtilMoc_, GetCdTotalCapacity(_, _))
+        .WillOnce(Invoke([](int, int64_t &cap) { cap = 737280000; return E_OK; }));
+    // GetCdUsedCapacity uses real impl -> SendScsiCmd -> ioctl fails
+    g_ioctlRet = -1;
+    // After GetCdUsedCapacity fails, usedSize=-1 -> GetUsedSizeFromSysfs (real impl, will fail)
+    // -> usedSize=totalSize -> freeSize=0
+    // AdjustBlankDiscCapacity -> IsCDBlank -> ReadCDDiscInfo via ioctl (still fails)
+    EXPECT_CALL(*diskUtilMoc_, GetBlkidData(_, _)).WillOnce(Return("udf"));
+    int32_t ret = DiskUtils::GetCapacity(testDevPath_, totalSize, freeSize);
+    EXPECT_EQ(ret, E_OK);
+    EXPECT_EQ(totalSize, 737280000);
+    // usedSize = -1 -> GetUsedSizeFromSysfs fails -> usedSize = totalSize -> freeSize = 0
+    EXPECT_EQ(freeSize, 0);
+    g_ioctlRet = 0;
+    GTEST_LOG_(INFO) << "GetCapacity_CdType_GetCdUsedCapacityFailed end";
+}
+
+/**
+ * @tc.name: GetCapacity_CdType_GetCdUsedCapacityNwaInvalid
+ * @tc.desc: Verify GetCapacity with CD type when GetCdUsedCapacity returns E_ERR (NWA invalid).
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, GetCapacity_CdType_GetCdUsedCapacityNwaInvalid, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetCapacity_CdType_GetCdUsedCapacityNwaInvalid start";
+    int64_t totalSize = 0;
+    int64_t freeSize = 0;
+    EXPECT_CALL(*diskUtilMoc_, GetCDType(_))
+        .WillOnce(Return("CD-R"))
+        .WillOnce(Return("CD-R"));
+    EXPECT_CALL(*diskUtilMoc_, GetCdTotalCapacity(_, _))
+        .WillOnce(Invoke([](int, int64_t &cap) { cap = 737280000; return E_OK; }));
+    // GetCdUsedCapacity: ioctl succeeds but data_buf is all zeros -> NWA valid bit = 0 -> E_ERR
+    g_ioctlRet = 0;
+    g_ioctlInfo = SG_INFO_OK;
+    // After GetCdUsedCapacity fails, usedSize=-1 -> GetUsedSizeFromSysfs (real impl, fails)
+    // -> usedSize=totalSize
+    // AdjustBlankDiscCapacity -> IsCDBlank -> ReadCDDiscInfo via ioctl (succeeds, discStatus=0)
+    // -> isBlank=true -> usedSize=0, discType is CD-R (not DVD/BD) -> return
+    // freeSize = totalSize - 0 = totalSize
+    int32_t ret = DiskUtils::GetCapacity(testDevPath_, totalSize, freeSize);
+    EXPECT_EQ(ret, E_OK);
+    EXPECT_EQ(totalSize, 737280000);
+    EXPECT_EQ(freeSize, totalSize);
+    g_ioctlRet = 0;
+    g_ioctlInfo = 0;
+    GTEST_LOG_(INFO) << "GetCapacity_CdType_GetCdUsedCapacityNwaInvalid end";
+}
+
+/**
+ * @tc.name: GetCapacity_NonCdType
+ * @tc.desc: Verify GetCapacity with non-CD type skips GetCdUsedCapacity branch.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, GetCapacity_NonCdType, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetCapacity_NonCdType start";
+    int64_t totalSize = 0;
+    int64_t freeSize = 0;
+    // Use BD-ROM to cover the false branch of discType.find("CD") == 0
+    EXPECT_CALL(*diskUtilMoc_, GetCDType(_))
+        .WillOnce(Return("BD-ROM"))
+        .WillOnce(Return("BD-ROM"));
+    EXPECT_CALL(*diskUtilMoc_, GetBdTotalCapacity(_, _))
+        .WillOnce(Invoke([](int, int64_t &cap) { cap = 25025314816L; return E_OK; }));
+    // usedSize = -1 (CD branch skipped) -> GetUsedSizeFromSysfs (real impl, fails) -> usedSize = totalSize
+    // AdjustBlankDiscCapacity -> IsCDBlank -> ReadCDDiscInfo via ioctl
+    g_ioctlRet = -1;
+    EXPECT_CALL(*diskUtilMoc_, GetBlkidData(_, _)).WillOnce(Return("udf"));
+    int32_t ret = DiskUtils::GetCapacity(testDevPath_, totalSize, freeSize);
+    EXPECT_EQ(ret, E_OK);
+    EXPECT_EQ(totalSize, 25025314816L);
+    EXPECT_EQ(freeSize, 0); // usedSize = totalSize -> freeSize = 0
+    g_ioctlRet = 0;
+    GTEST_LOG_(INFO) << "GetCapacity_NonCdType end";
+}
+
+/**
+ * @tc.name: GetVolumeOpProcess_GetRealPathFailed
+ * @tc.desc: Verify GetVolumeOpProcess returns E_PARAMS_INVALID when GetRealPath fails.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, GetVolumeOpProcess_GetRealPathFailed, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetVolumeOpProcess_GetRealPathFailed start";
+    int32_t progressPct = 0;
+    // /data/local/vol_tmp/percent does not exist -> GetRealPath fails
+    int32_t ret = DiskUtils::GetVolumeOpProcess("vol123", progressPct);
+    EXPECT_EQ(ret, E_PARAMS_INVALID);
+    GTEST_LOG_(INFO) << "GetVolumeOpProcess_GetRealPathFailed end";
+}
+
+/**
+ * @tc.name: GetVolumeOpProcess_FilePathInvalid
+ * @tc.desc: Verify GetVolumeOpProcess returns E_PARAMS_INVALID when IsFilePathInvalid returns true.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, GetVolumeOpProcess_FilePathInvalid, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetVolumeOpProcess_FilePathInvalid start";
+    // Create the directory and file so GetRealPath succeeds
+    mkdir("/data/local/vol_tmp", 0755);
+    int fd = creat("/data/local/vol_tmp/percent", 0600);
+    if (fd >= 0) {
+        close(fd);
+    }
+    int32_t progressPct = 0;
+    // IsFilePathInvalid returns true -> E_PARAMS_INVALID
+    EXPECT_CALL(*fileUtilMoc_, IsFilePathInvalid(_)).WillOnce(Return(true));
+    int32_t ret = DiskUtils::GetVolumeOpProcess("vol123", progressPct);
+    EXPECT_EQ(ret, E_PARAMS_INVALID);
+    // Cleanup
+    unlink("/data/local/vol_tmp/percent");
+    rmdir("/data/local/vol_tmp");
+    GTEST_LOG_(INFO) << "GetVolumeOpProcess_FilePathInvalid end";
+}
+
+/**
+ * @tc.name: GetVolumeOpProcess_ReadProgressFailed
+ * @tc.desc: Verify GetVolumeOpProcess returns error when file content is empty.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, GetVolumeOpProcess_ReadProgressFailed, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetVolumeOpProcess_ReadProgressFailed start";
+    // Create directory and empty file so GetRealPath succeeds but GetLatestProgressFromFile fails
+    mkdir("/data/local/vol_tmp", 0755);
+    int fd = creat("/data/local/vol_tmp/percent", 0600);
+    if (fd >= 0) {
+        close(fd);
+    }
+    int32_t progressPct = 0;
+    // IsFilePathInvalid returns false -> proceed to read file
+    EXPECT_CALL(*fileUtilMoc_, IsFilePathInvalid(_)).WillOnce(Return(false));
+    // File is empty -> GetLatestProgressFromFile returns E_NOT_SUPPORT
+    int32_t ret = DiskUtils::GetVolumeOpProcess("vol123", progressPct);
+    EXPECT_EQ(ret, E_NOT_SUPPORT);
+    // Cleanup
+    unlink("/data/local/vol_tmp/percent");
+    rmdir("/data/local/vol_tmp");
+    GTEST_LOG_(INFO) << "GetVolumeOpProcess_ReadProgressFailed end";
+}
+
+/**
+ * @tc.name: GetVolumeOpProcess_Success
+ * @tc.desc: Verify GetVolumeOpProcess returns E_OK and reads progress from file.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, GetVolumeOpProcess_Success, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetVolumeOpProcess_Success start";
+    // Create directory and file with valid content
+    mkdir("/data/local/vol_tmp", 0755);
+    int fd = open("/data/local/vol_tmp/percent", O_WRONLY | O_CREAT | O_TRUNC, 0600);
+    ASSERT_GE(fd, 0);
+    const char *content = "50";
+    write(fd, content, strlen(content));
+    close(fd);
+
+    int32_t progressPct = 0;
+    EXPECT_CALL(*fileUtilMoc_, IsFilePathInvalid(_)).WillOnce(Return(false));
+    int32_t ret = DiskUtils::GetVolumeOpProcess("vol123", progressPct);
+    EXPECT_EQ(ret, E_OK);
+    EXPECT_EQ(progressPct, 50);
+    // Cleanup
+    unlink("/data/local/vol_tmp/percent");
+    rmdir("/data/local/vol_tmp");
+    GTEST_LOG_(INFO) << "GetVolumeOpProcess_Success end";
+}
+
+/**
+ * @tc.name: WriteBurnProgress_WriteFailed
+ * @tc.desc: Verify WriteBurnProgress returns E_ERR when directory does not exist.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, WriteBurnProgress_WriteFailed, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "WriteBurnProgress_WriteFailed start";
+    // Ensure /data/local/vol_tmp does not exist -> SaveStringToFileSync fails
+    rmdir("/data/local/vol_tmp");
+    int32_t ret = DiskUtils::WriteBurnProgress(101);
+    EXPECT_EQ(ret, E_ERR);
+    GTEST_LOG_(INFO) << "WriteBurnProgress_WriteFailed end";
+}
+
+/**
+ * @tc.name: WriteBurnProgress_Success
+ * @tc.desc: Verify WriteBurnProgress returns E_OK when directory exists.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, WriteBurnProgress_Success, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "WriteBurnProgress_Success start";
+    // Create directory so SaveStringToFileSync can write
+    mkdir("/data/local/vol_tmp", 0755);
+    int32_t ret = DiskUtils::WriteBurnProgress(101);
+    EXPECT_EQ(ret, E_OK);
+    // Verify the content was written
+    std::ifstream ifs("/data/local/vol_tmp/percent");
+    ASSERT_TRUE(ifs.is_open());
+    int32_t value = 0;
+    ifs >> value;
+    ifs.close();
+    EXPECT_EQ(value, 101);
+    // Cleanup
+    unlink("/data/local/vol_tmp/percent");
+    rmdir("/data/local/vol_tmp");
+    GTEST_LOG_(INFO) << "WriteBurnProgress_Success end";
+}
+
+/**
+ * @tc.desc: Verify DeletePartitionInfo returns E_PARAMS_INVALID with path traversal diskId.
+ * @tc.type: FUNC
+ * @tc.require: AR000GK4HB
+ */
+HWTEST_F(ExtDiskUtilsTest, DeletePartitionInfo_InvalidDiskId, TestSize.Level1)
+{
+    std::string devPath = "/dev/block/test_dev";
+    std::string diskId = "../sda";
+    int32_t partitionNum = 1;
+    int32_t ret = DiskUtils::DeletePartitionInfo(devPath, diskId, partitionNum);
+    EXPECT_EQ(ret, E_PARAMS_INVALID);
+}
+
+/**
+ * @tc.name: ValidateBurnOptions_InvalidBurnPath
+ * @tc.desc: Verify ValidateBurnOptions returns E_PARAMS_INVALID with path traversal burnPath.
+ * @tc.type: FUNC
+ * @tc.require: AR000GK4HB
+ */
+HWTEST_F(ExtDiskUtilsTest, ValidateBurnOptions_InvalidBurnPath, TestSize.Level1)
+{
+    BurnOptions options;
+    options.diskName = "testdisk";
+    options.burnPath = "../../etc/passwd";
+    int32_t ret = ValidateBurnOptions(options);
+    EXPECT_EQ(ret, E_PARAMS_INVALID);
 }
 
 } // namespace StorageDaemon

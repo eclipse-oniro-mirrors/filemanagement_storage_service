@@ -34,12 +34,14 @@ constexpr int32_t CLONE_STATE_START = 1;
 constexpr int32_t CLONE_STATE_END = 0;
 constexpr const char* BATTERY_SOC_KEY = "soc";
 constexpr const char* CLONE_EVENT_NAME = "usual.event.clone.CommonEventCloneState";
+constexpr const char* COMMON_EVENT_USER_SLEEP = "common.event.USER_NOT_CARE_CHARGE_SLEEP";
 StorageCommonEventSubscriber::StorageCommonEventSubscriber(const EventFwk::CommonEventSubscribeInfo &info)
     : EventFwk::CommonEventSubscriber(info) {}
 
 void StorageCommonEventSubscriber::SubscribeCommonEvent(void)
 {
     LOGI("subscribe common event start");
+    std::lock_guard<std::mutex> lock(subscriberMutex_);
     if (subscriber_ == nullptr) {
         EventFwk::MatchingSkills matchingSkills;
         matchingSkills.AddEvent(EventFwk::CommonEventSupport::COMMON_EVENT_PACKAGE_REMOVED);
@@ -49,6 +51,7 @@ void StorageCommonEventSubscriber::SubscribeCommonEvent(void)
         matchingSkills.AddEvent(EventFwk::CommonEventSupport::COMMON_EVENT_POWER_DISCONNECTED);
         matchingSkills.AddEvent(EventFwk::CommonEventSupport::COMMON_EVENT_BATTERY_CHANGED);
         matchingSkills.AddEvent(EventFwk::CommonEventSupport::COMMON_EVENT_USER_UNLOCKED);
+        matchingSkills.AddEvent(COMMON_EVENT_USER_SLEEP);
 #ifdef PHONE_DEVICE_ENABLE
         matchingSkills.AddEvent(CLONE_EVENT_NAME);
 #endif

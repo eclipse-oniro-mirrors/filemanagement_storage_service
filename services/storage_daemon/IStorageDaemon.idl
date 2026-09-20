@@ -117,7 +117,10 @@ interface OHOS.StorageDaemon.IStorageDaemon{
                                 [in] String fsType,
                                 [in] boolean force);
      [ipccode 206] void FormatVolume([in] String devPath,
-                                     [in] String fsType);
+                                     [in] String fsType,
+                                     [in] String diskPath,
+                                     [in] String partitionType,
+                                     [in] int partitionNum);
      [ipccode 207] void Check([in] String devPath,
                               [in] String fsType,
                               [in] boolean autoFix);
@@ -145,6 +148,7 @@ interface OHOS.StorageDaemon.IStorageDaemon{
      [ipccode 217] void FormatPartition([in] String devPath,
                                         [in] String fsType,
                                         [in] String volumeName,
+                                        [in] String[] cmd,
                                         [in] boolean quickFormat);
      [ipccode 221] void UMountDisShareFile([in] String[] distributeDirs);
      [ipccode 251] void GetCapacity([in] String devPath, [out] long totalSize, [out] long freeSize);
@@ -160,4 +164,9 @@ interface OHOS.StorageDaemon.IStorageDaemon{
      [ipccode 258] void GetVolumeOpProcess([in] String volumeId, [out] int process);
      [ipccode 259] void VerifyBurnData([in] String devPath, [in] int verType);
     [ipccode 260] void SetDirEncryptionPolicyWithKeyDesc([in] String dirPath, [in] unsigned int level, [in] String keyDesc);
+     [ipccode 261] void GetDiskSize([in] String devName, [out] unsigned long size);
+     [ipccode 263] void ExecuteCommand([in] String[] cmd, [out] int execRet, [out] String[] output);
+     [ipccode 264] void CreateDmLinear([in] String sourceDevPath,
+                                       [in] unsigned long startSector, [in] unsigned long sectorCount,
+                                       [out] unsigned long dmDev);
 }

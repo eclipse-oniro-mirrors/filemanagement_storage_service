@@ -481,6 +481,47 @@ HWTEST_F(FileUtilsTest, FileUtilsTest_ForkExecWithExit_003, TestSize.Level1)
 }
 
 /**
+ * @tc.name: FileUtilsTest_ForkExecWithExit_004
+ * @tc.desc: Capture stderr when output is provided.
+ * @tc.type: FUNC
+ */
+HWTEST_F(FileUtilsTest, FileUtilsTest_ForkExecWithExit_004, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "FileUtilsTest_ForkExecWithExit_004 start";
+    std::vector<std::string> cmd = {"ls", "/no_such_dir_fork_exec_stderr"};
+    std::vector<std::string> output;
+    int res = 0;
+    EXPECT_EQ(ForkExecWithExit(cmd, &res, &output), E_WEXITSTATUS);
+    std::string text;
+    for (const auto &chunk : output) {
+        text += chunk;
+    }
+    EXPECT_FALSE(text.empty());
+    GTEST_LOG_(INFO) << "FileUtilsTest_ForkExecWithExit_004 end";
+}
+
+/**
+ * @tc.name: FileUtilsTest_ForkExecWithExit_005
+ * @tc.desc: ForkExecWithExit success path captures stdout when output is set.
+ * @tc.type: FUNC
+ */
+HWTEST_F(FileUtilsTest, FileUtilsTest_ForkExecWithExit_005, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "FileUtilsTest_ForkExecWithExit_005 start";
+    std::vector<std::string> cmd = {"ls", "/data"};
+    std::vector<std::string> output;
+    int res = -1;
+    int ret = ForkExecWithExit(cmd, &res, &output);
+    if (ret == E_OK) {
+        EXPECT_EQ(res, 0);
+        EXPECT_FALSE(output.empty());
+    } else {
+        EXPECT_EQ(ret, E_WEXITSTATUS);
+    }
+    GTEST_LOG_(INFO) << "FileUtilsTest_ForkExecWithExit_005 end";
+}
+
+/**
  * @tc.name: FileUtilsTest_ForkExec_001
  * @tc.desc: Verify the ForkExec function.
  * @tc.type: FUNC
@@ -987,38 +1028,6 @@ HWTEST_F(FileUtilsTest, FileUtilsTest_DeleteFile_003, TestSize.Level1)
     GTEST_LOG_(INFO) << "FileUtilsTest_DeleteFile_003 end";
 }
 
-HWTEST_F(FileUtilsTest, FileUtilsTest_ForkExecInteractive_Basic, TestSize.Level1)
-{
-    std::vector<std::string> cmd = {"echo", "test"};
-    std::vector<std::string> output;
-    std::vector<std::string> input = {"y"};
-    int ret = ForkExecInteractive(cmd, &output, &input);
-    EXPECT_EQ(ret, E_OK);
-}
-
-HWTEST_F(FileUtilsTest, FileUtilsTest_ForkExecInteractive_EdgeCases, TestSize.Level1)
-{
-    std::vector<std::string> cmd1 = {"echo", "test"};
-    std::vector<std::string> output;
-    std::vector<std::string> input = {"y"};
-    EXPECT_EQ(ForkExecInteractive(cmd1, nullptr, nullptr), E_OK);
-    EXPECT_EQ(ForkExecInteractive(cmd1, nullptr, &input), E_OK);
-    EXPECT_EQ(ForkExecInteractive(cmd1, &output, nullptr), E_OK);
-    std::vector<std::string> invalidCmd = {"invalid_cmd"};
-    EXPECT_EQ(ForkExecInteractive(invalidCmd, nullptr, nullptr), E_OK);
-    std::vector<std::string> emptyCmd = {};
-    EXPECT_EQ(ForkExecInteractive(emptyCmd, nullptr, nullptr), E_OK);
-}
-
-HWTEST_F(FileUtilsTest, FileUtilsTest_ForkExecInteractive_RealInteraction, TestSize.Level1)
-{
-    std::vector<std::string> cmd = {"cat"};
-    std::vector<std::string> output;
-    std::vector<std::string> input = {"hello", "world"};
-    int ret = ForkExecInteractive(cmd, &output, &input);
-    EXPECT_EQ(ret, E_OK);
-}
-
 HWTEST_F(FileUtilsTest, FileUtilsTest_ReadFileContent_001, TestSize.Level1)
 {
     GTEST_LOG_(INFO) << "FileUtilsTest_ReadFileContent_001 start";
@@ -1253,6 +1262,490 @@ HWTEST_F(FileUtilsTest, FileUtilsTest_CleanOrphanNode_002, TestSize.Level1)
     EXPECT_TRUE(ret);
 
     GTEST_LOG_(INFO) << "FileUtilsTest_CleanOrphanNode_002 end";
+}
+
+/**
+ * @tc.name: FileUtilsTest_CheckAndReportOverLoop_TwoParams_001
+ * @tc.desc: Verify CheckAndReportOverLoop(funcName, loopCount) increments loopCount when <= 3000.
+ * @tc.type: FUNC
+ * @tc.require:
+ */
+HWTEST_F(FileUtilsTest, FileUtilsTest_CheckAndReportOverLoop_TwoParams_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "FileUtilsTest_CheckAndReportOverLoop_TwoParams_001 start";
+    uint32_t loopCount = 0;
+    CheckAndReportOverLoop("TestFunc", loopCount);
+    EXPECT_EQ(loopCount, 1u);
+    CheckAndReportOverLoop("TestFunc", loopCount);
+    EXPECT_EQ(loopCount, 2u);
+    GTEST_LOG_(INFO) << "FileUtilsTest_CheckAndReportOverLoop_TwoParams_001 end";
+}
+
+/**
+ * @tc.name: FileUtilsTest_CheckAndReportOverLoop_TwoParams_002
+ * @tc.desc: Verify CheckAndReportOverLoop(funcName, loopCount) stops incrementing when > 3000.
+ * @tc.type: FUNC
+ * @tc.require:
+ */
+HWTEST_F(FileUtilsTest, FileUtilsTest_CheckAndReportOverLoop_TwoParams_002, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "FileUtilsTest_CheckAndReportOverLoop_TwoParams_002 start";
+    uint32_t loopCount = 3000;
+    CheckAndReportOverLoop("TestFunc", loopCount);
+    EXPECT_EQ(loopCount, 3001u);
+    CheckAndReportOverLoop("TestFunc", loopCount);
+    EXPECT_EQ(loopCount, 3001u);
+    GTEST_LOG_(INFO) << "FileUtilsTest_CheckAndReportOverLoop_TwoParams_002 end";
+}
+
+/**
+ * @tc.name: FileUtilsTest_CheckAndReportOverLoop_TwoParams_003
+ * @tc.desc: Verify CheckAndReportOverLoop(funcName, loopCount) reports radar at loopCount == 1000.
+ * @tc.type: FUNC
+ * @tc.require:
+ */
+HWTEST_F(FileUtilsTest, FileUtilsTest_CheckAndReportOverLoop_TwoParams_003, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "FileUtilsTest_CheckAndReportOverLoop_TwoParams_003 start";
+    uint32_t loopCount = 999;
+    CheckAndReportOverLoop("TestFunc", loopCount);
+    EXPECT_EQ(loopCount, 1000u);
+    loopCount = 1000;
+    CheckAndReportOverLoop("TestFunc", loopCount);
+    EXPECT_EQ(loopCount, 1001u);
+    GTEST_LOG_(INFO) << "FileUtilsTest_CheckAndReportOverLoop_TwoParams_003 end";
+}
+
+/**
+ * @tc.name: FileUtilsTest_CheckAndReportOverLoop_TwoParams_004
+ * @tc.desc: Verify CheckAndReportOverLoop(funcName, loopCount) reports radar at loopCount == 2000.
+ * @tc.type: FUNC
+ * @tc.require:
+ */
+HWTEST_F(FileUtilsTest, FileUtilsTest_CheckAndReportOverLoop_TwoParams_004, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "FileUtilsTest_CheckAndReportOverLoop_TwoParams_004 start";
+    uint32_t loopCount = 1999;
+    CheckAndReportOverLoop("TestFunc", loopCount);
+    EXPECT_EQ(loopCount, 2000u);
+    loopCount = 2000;
+    CheckAndReportOverLoop("TestFunc", loopCount);
+    EXPECT_EQ(loopCount, 2001u);
+    GTEST_LOG_(INFO) << "FileUtilsTest_CheckAndReportOverLoop_TwoParams_004 end";
+}
+
+/**
+ * @tc.name: FileUtilsTest_CheckAndReportOverLoop_TwoParams_005
+ * @tc.desc: Verify CheckAndReportOverLoop(funcName, loopCount) does not report radar at normal count.
+ * @tc.type: FUNC
+ * @tc.require:
+ */
+HWTEST_F(FileUtilsTest, FileUtilsTest_CheckAndReportOverLoop_TwoParams_005, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "FileUtilsTest_CheckAndReportOverLoop_TwoParams_005 start";
+    uint32_t loopCount = 500;
+    CheckAndReportOverLoop("TestFunc", loopCount);
+    EXPECT_EQ(loopCount, 501u);
+    loopCount = 1500;
+    CheckAndReportOverLoop("TestFunc", loopCount);
+    EXPECT_EQ(loopCount, 1501u);
+    GTEST_LOG_(INFO) << "FileUtilsTest_CheckAndReportOverLoop_TwoParams_005 end";
+}
+
+/**
+ * @tc.name: FileUtilsTest_CheckAndReportOverLoop_ThreeParams_001
+ * @tc.desc: Verify CheckAndReportOverLoop(funcName, loopCount, maxCount) increments when <= 3*maxCount.
+ * @tc.type: FUNC
+ * @tc.require:
+ */
+HWTEST_F(FileUtilsTest, FileUtilsTest_CheckAndReportOverLoop_ThreeParams_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "FileUtilsTest_CheckAndReportOverLoop_ThreeParams_001 start";
+    uint32_t loopCount = 0;
+    uint32_t maxCount = 100;
+    CheckAndReportOverLoop("TestFunc", loopCount, maxCount);
+    EXPECT_EQ(loopCount, 1u);
+    CheckAndReportOverLoop("TestFunc", loopCount, maxCount);
+    EXPECT_EQ(loopCount, 2u);
+    GTEST_LOG_(INFO) << "FileUtilsTest_CheckAndReportOverLoop_ThreeParams_001 end";
+}
+
+/**
+ * @tc.name: FileUtilsTest_CheckAndReportOverLoop_ThreeParams_002
+ * @tc.desc: Verify CheckAndReportOverLoop(funcName, loopCount, maxCount) stops incrementing when > 3*maxCount.
+ * @tc.type: FUNC
+ * @tc.require:
+ */
+HWTEST_F(FileUtilsTest, FileUtilsTest_CheckAndReportOverLoop_ThreeParams_002, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "FileUtilsTest_CheckAndReportOverLoop_ThreeParams_002 start";
+    uint32_t maxCount = 100;
+    uint32_t loopCount = 3 * maxCount;
+    CheckAndReportOverLoop("TestFunc", loopCount, maxCount);
+    EXPECT_EQ(loopCount, 301u);
+    CheckAndReportOverLoop("TestFunc", loopCount, maxCount);
+    EXPECT_EQ(loopCount, 301u);
+    GTEST_LOG_(INFO) << "FileUtilsTest_CheckAndReportOverLoop_ThreeParams_002 end";
+}
+
+/**
+ * @tc.name: FileUtilsTest_CheckAndReportOverLoop_ThreeParams_003
+ * @tc.desc: Verify CheckAndReportOverLoop(funcName, loopCount, maxCount) reports radar at loopCount == maxCount.
+ * @tc.type: FUNC
+ * @tc.require:
+ */
+HWTEST_F(FileUtilsTest, FileUtilsTest_CheckAndReportOverLoop_ThreeParams_003, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "FileUtilsTest_CheckAndReportOverLoop_ThreeParams_003 start";
+    uint32_t maxCount = 100;
+    uint32_t loopCount = 99;
+    CheckAndReportOverLoop("TestFunc", loopCount, maxCount);
+    EXPECT_EQ(loopCount, 100u);
+    loopCount = 100;
+    CheckAndReportOverLoop("TestFunc", loopCount, maxCount);
+    EXPECT_EQ(loopCount, 101u);
+    GTEST_LOG_(INFO) << "FileUtilsTest_CheckAndReportOverLoop_ThreeParams_003 end";
+}
+
+/**
+ * @tc.name: FileUtilsTest_CheckAndReportOverLoop_ThreeParams_004
+ * @tc.desc: Verify CheckAndReportOverLoop(funcName, loopCount, maxCount) reports radar at loopCount == 2*maxCount.
+ * @tc.type: FUNC
+ * @tc.require:
+ */
+HWTEST_F(FileUtilsTest, FileUtilsTest_CheckAndReportOverLoop_ThreeParams_004, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "FileUtilsTest_CheckAndReportOverLoop_ThreeParams_004 start";
+    uint32_t maxCount = 100;
+    uint32_t loopCount = 199;
+    CheckAndReportOverLoop("TestFunc", loopCount, maxCount);
+    EXPECT_EQ(loopCount, 200u);
+    loopCount = 200;
+    CheckAndReportOverLoop("TestFunc", loopCount, maxCount);
+    EXPECT_EQ(loopCount, 201u);
+    GTEST_LOG_(INFO) << "FileUtilsTest_CheckAndReportOverLoop_ThreeParams_004 end";
+}
+
+/**
+ * @tc.name: FileUtilsTest_CheckAndReportOverLoop_ThreeParams_005
+ * @tc.desc: Verify CheckAndReportOverLoop(funcName, loopCount, maxCount) does not report radar at normal count.
+ * @tc.type: FUNC
+ * @tc.require:
+ */
+HWTEST_F(FileUtilsTest, FileUtilsTest_CheckAndReportOverLoop_ThreeParams_005, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "FileUtilsTest_CheckAndReportOverLoop_ThreeParams_005 start";
+    uint32_t maxCount = 100;
+    uint32_t loopCount = 50;
+    CheckAndReportOverLoop("TestFunc", loopCount, maxCount);
+    EXPECT_EQ(loopCount, 51u);
+    loopCount = 150;
+    CheckAndReportOverLoop("TestFunc", loopCount, maxCount);
+    EXPECT_EQ(loopCount, 151u);
+    GTEST_LOG_(INFO) << "FileUtilsTest_CheckAndReportOverLoop_ThreeParams_005 end";
+}
+
+/**
+ * @tc.name: FileUtilsTest_ForkExec_EmptyCmd
+ * @tc.desc: Verify ForkExec returns E_PARAMS_INVALID with empty cmd.
+ * @tc.type: FUNC
+ * @tc.require: AR000GK4HB
+ */
+HWTEST_F(FileUtilsTest, FileUtilsTest_ForkExec_EmptyCmd, TestSize.Level1)
+{
+    std::vector<std::string> cmd;
+    std::vector<std::string> output;
+    EXPECT_EQ(ForkExec(cmd, &output), E_PARAMS_INVALID);
+}
+
+/**
+ * @tc.name: FileUtilsTest_ForkExecToFile_EmptyCmd
+ * @tc.desc: Verify ForkExecToFile with empty cmd. FormatCmd produces {nullptr},
+ *           execvp(nullptr) causes child to be killed by signal, resulting in E_WIFEXITED.
+ * @tc.type: FUNC
+ */
+HWTEST_F(FileUtilsTest, FileUtilsTest_ForkExecToFile_EmptyCmd, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "FileUtilsTest_ForkExecToFile_EmptyCmd start";
+    std::vector<std::string> cmd;
+    std::string outputFilePath = "/data/service/fork_exec_to_file_empty_cmd_" + std::to_string(getpid()) + ".txt";
+    std::vector<std::string> output;
+    int ret = ForkExecToFile(cmd, outputFilePath, &output);
+    // FormatCmd produces {nullptr} -> execvp(nullptr) fails with SIGSEGV
+    // -> child killed by signal -> WIFEXITED returns false -> E_WIFEXITED
+    EXPECT_EQ(ret, E_WIFEXITED);
+    unlink(outputFilePath.c_str());
+    GTEST_LOG_(INFO) << "FileUtilsTest_ForkExecToFile_EmptyCmd end";
+}
+
+/**
+ * @tc.name: FileUtilsTest_ForkExecToFile_Success_001
+ * @tc.desc: Verify ForkExecToFile returns E_OK with a valid cmd and writable outputFilePath.
+ * @tc.type: FUNC
+ */
+HWTEST_F(FileUtilsTest, FileUtilsTest_ForkExecToFile_Success_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "FileUtilsTest_ForkExecToFile_Success_001 start";
+    std::string outputFilePath = "/data/service/fork_exec_to_file_test_" + std::to_string(getpid()) + ".txt";
+    std::vector<std::string> cmd = {"echo", "hello_fork_exec_to_file"};
+    std::vector<std::string> output;
+    int ret = ForkExecToFile(cmd, outputFilePath, &output);
+    EXPECT_EQ(ret, E_OK);
+    // Verify output file was created and contains expected content
+    std::ifstream ifs(outputFilePath);
+    EXPECT_TRUE(ifs.is_open());
+    std::string content;
+    std::getline(ifs, content);
+    EXPECT_TRUE(content.find("hello_fork_exec_to_file") != std::string::npos);
+    ifs.close();
+    unlink(outputFilePath.c_str());
+    GTEST_LOG_(INFO) << "FileUtilsTest_ForkExecToFile_Success_001 end";
+}
+
+/**
+ * @tc.name: FileUtilsTest_ForkExecToFile_Success_NullOutput
+ * @tc.desc: Verify ForkExecToFile returns E_OK when output param is nullptr.
+ * @tc.type: FUNC
+ */
+HWTEST_F(FileUtilsTest, FileUtilsTest_ForkExecToFile_Success_NullOutput, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "FileUtilsTest_ForkExecToFile_Success_NullOutput start";
+    std::string outputFilePath = "/data/service/fork_exec_to_file_null_out_" + std::to_string(getpid()) + ".txt";
+    std::vector<std::string> cmd = {"echo", "null_output_test"};
+    int ret = ForkExecToFile(cmd, outputFilePath, nullptr);
+    EXPECT_EQ(ret, E_OK);
+    unlink(outputFilePath.c_str());
+    GTEST_LOG_(INFO) << "FileUtilsTest_ForkExecToFile_Success_NullOutput end";
+}
+
+/**
+ * @tc.name: FileUtilsTest_ForkExecToFile_ChildOpenFailed
+ * @tc.desc: Verify ForkExecToFile returns E_WEXITSTATUS when outputFilePath is invalid
+ *           (child process open fails, causing _exit(1)).
+ * @tc.type: FUNC
+ */
+HWTEST_F(FileUtilsTest, FileUtilsTest_ForkExecToFile_ChildOpenFailed, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "FileUtilsTest_ForkExecToFile_ChildOpenFailed start";
+    // Use a path that cannot be opened for writing
+    std::string outputFilePath = "/proc/1/nonexistent_dir/impossible_file";
+    std::vector<std::string> cmd = {"echo", "should_not_write"};
+    std::vector<std::string> output;
+    int ret = ForkExecToFile(cmd, outputFilePath, &output);
+    // Child open() fails -> _exit(1) -> parent sees E_WEXITSTATUS
+    EXPECT_EQ(ret, E_WEXITSTATUS);
+    GTEST_LOG_(INFO) << "FileUtilsTest_ForkExecToFile_ChildOpenFailed end";
+}
+
+/**
+ * @tc.name: FileUtilsTest_ForkExecToFile_ExecvpFailed
+ * @tc.desc: Verify ForkExecToFile returns E_WEXITSTATUS when cmd does not exist
+ *           (child process execvp fails, causing _exit(1)).
+ * @tc.type: FUNC
+ */
+HWTEST_F(FileUtilsTest, FileUtilsTest_ForkExecToFile_ExecvpFailed, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "FileUtilsTest_ForkExecToFile_ExecvpFailed start";
+    std::string outputFilePath = "/data/service/fork_exec_to_file_noexec_" + std::to_string(getpid()) + ".txt";
+    std::vector<std::string> cmd = {"nonexistent_command_xyz_12345"};
+    std::vector<std::string> output;
+    int ret = ForkExecToFile(cmd, outputFilePath, &output);
+    // Child execvp fails -> _exit(1) -> parent sees E_WEXITSTATUS
+    EXPECT_EQ(ret, E_WEXITSTATUS);
+    unlink(outputFilePath.c_str());
+    GTEST_LOG_(INFO) << "FileUtilsTest_ForkExecToFile_ExecvpFailed end";
+}
+
+/**
+ * @tc.name: FileUtilsTest_ForkExecToFile_CmdExitsWithError
+ * @tc.desc: Verify ForkExecToFile returns E_WEXITSTATUS when the command exits with non-zero status.
+ * @tc.type: FUNC
+ */
+HWTEST_F(FileUtilsTest, FileUtilsTest_ForkExecToFile_CmdExitsWithError, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "FileUtilsTest_ForkExecToFile_CmdExitsWithError start";
+    std::string outputFilePath = "/data/service/fork_exec_to_file_errcmd_" + std::to_string(getpid()) + ".txt";
+    // ls on a nonexistent directory exits with non-zero status
+    std::vector<std::string> cmd = {"ls", "/no_such_dir_fork_exec_to_file_test"};
+    std::vector<std::string> output;
+    int ret = ForkExecToFile(cmd, outputFilePath, &output);
+    EXPECT_EQ(ret, E_WEXITSTATUS);
+    unlink(outputFilePath.c_str());
+    GTEST_LOG_(INFO) << "FileUtilsTest_ForkExecToFile_CmdExitsWithError end";
+}
+
+#ifdef EXTERNAL_STORAGE_QOS_TRANS
+/**
+ * @tc.name: FileUtilsTest_ExtStorageMountForkExec_EmptyCmd
+ * @tc.desc: Verify ExtStorageMountForkExec returns E_PARAMS_INVALID with empty cmd.
+ * @tc.type: FUNC
+ * @tc.require: AR000GK4HB
+ */
+HWTEST_F(FileUtilsTest, FileUtilsTest_ExtStorageMountForkExec_EmptyCmd, TestSize.Level1)
+{
+    std::vector<std::string> cmd;
+    int32_t exitStatus = 0;
+    EXPECT_EQ(ExtStorageMountForkExec(cmd, &exitStatus), E_PARAMS_INVALID);
+}
+#endif
+
+/**
+ * @tc.name: FileUtilsTest_IsFilePathInvalid_001
+ * @tc.desc: Verify the IsFilePathInvalid function.
+ * @tc.type: FUNC
+ */
+HWTEST_F(FileUtilsTest, FileUtilsTest_IsFilePathInvalid_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "FileUtilsTest_IsFilePathInvalid_001 start";
+    EXPECT_TRUE(IsFilePathInvalid(""));
+    EXPECT_TRUE(IsFilePathInvalid("../somefile.txt"));
+    EXPECT_TRUE(IsFilePathInvalid("/some/path/../otherfile.txt"));
+
+    std::string longPath(PATH_MAX, 'a');
+    EXPECT_FALSE(IsFilePathInvalid(longPath));
+    EXPECT_FALSE(IsFilePathInvalid("/data/system/hiview/unzip_configs/sys_event_def"));
+    GTEST_LOG_(INFO) << "FileUtilsTest_IsFilePathInvalid_001 end";
+}
+
+/**
+ * @tc.name: FileUtilsTest_ContainsInvalidChars_001
+ * @tc.desc: Verify the ContainsInvalidChars function.
+ * @tc.type: FUNC
+ */
+HWTEST_F(FileUtilsTest, FileUtilsTest_ContainsInvalidChars_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "FileUtilsTest_ContainsInvalidChars_001 start";
+    EXPECT_TRUE(ContainsInvalidChars("../somefile.txt"));
+    EXPECT_TRUE(ContainsInvalidChars("/some/path/../otherfile.txt"));
+    EXPECT_TRUE(ContainsInvalidChars("/some/path/.."));
+
+    EXPECT_FALSE(ContainsInvalidChars("/some/valid/path/to/file.txt"));
+    GTEST_LOG_(INFO) << "FileUtilsTest_ContainsInvalidChars_001 end";
+}
+
+/**
+ * @tc.number: FileUtilsTest_IsPathStartWithFileMgr_ValidPrefix
+ * @tc.name: IsPathStartWithFileMgr_ValidPrefix
+ * @tc.desc: Test path with valid FileMgr prefix returns true.
+ * @tc.type: FUNC
+ */
+HWTEST_F(FileUtilsTest, IsPathStartWithFileMgr_ValidPrefix, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "IsPathStartWithFileMgr_ValidPrefix start";
+ 
+    EXPECT_TRUE(IsPathStartWithFileMgr(100, "/mnt/data/100/userExternal/sub"));
+ 
+    GTEST_LOG_(INFO) << "IsPathStartWithFileMgr_ValidPrefix end";
+}
+ 
+/**
+ * @tc.number: FileUtilsTest_IsPathStartWithFileMgr_TooShort
+ * @tc.name: IsPathStartWithFileMgr_TooShort
+ * @tc.desc: Test too short path returns false.
+ * @tc.type: FUNC
+ */
+HWTEST_F(FileUtilsTest, IsPathStartWithFileMgr_TooShort, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "IsPathStartWithFileMgr_TooShort start";
+ 
+    EXPECT_FALSE(IsPathStartWithFileMgr(100, "/mnt/data/"));
+ 
+    GTEST_LOG_(INFO) << "IsPathStartWithFileMgr_TooShort end";
+}
+ 
+/**
+ * @tc.number: FileUtilsTest_IsPathStartWithFileMgr_Mismatch
+ * @tc.name: IsPathStartWithFileMgr_Mismatch
+ * @tc.desc: Test path with mismatched prefix returns false.
+ * @tc.type: FUNC
+ */
+HWTEST_F(FileUtilsTest, IsPathStartWithFileMgr_Mismatch, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "IsPathStartWithFileMgr_Mismatch start";
+ 
+    EXPECT_FALSE(IsPathStartWithFileMgr(100, "/data/local/evil"));
+ 
+    GTEST_LOG_(INFO) << "IsPathStartWithFileMgr_Mismatch end";
+}
+ 
+/**
+ * @tc.number: FileUtilsTest_IsPathStartWithFileMgr_PrefixMismatchLong
+ * @tc.name: IsPathStartWithFileMgr_PrefixMismatchLong
+ * @tc.desc: Test path long enough but with mismatched prefix returns false (covers if2 true).
+ * @tc.type: FUNC
+ */
+HWTEST_F(FileUtilsTest, IsPathStartWithFileMgr_PrefixMismatchLong, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "IsPathStartWithFileMgr_PrefixMismatchLong start";
+ 
+    EXPECT_FALSE(IsPathStartWithFileMgr(100, "/mnt/data/100/userInternal/sub"));
+ 
+    GTEST_LOG_(INFO) << "IsPathStartWithFileMgr_PrefixMismatchLong end";
+}
+ 
+/**
+ * @tc.number: FileUtilsTest_IsPathStartWithFileMgr_Empty
+ * @tc.name: IsPathStartWithFileMgr_Empty
+ * @tc.desc: Test empty path returns false.
+ * @tc.type: FUNC
+ */
+HWTEST_F(FileUtilsTest, IsPathStartWithFileMgr_Empty, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "IsPathStartWithFileMgr_Empty start";
+ 
+    EXPECT_FALSE(IsPathStartWithFileMgr(100, ""));
+ 
+    GTEST_LOG_(INFO) << "IsPathStartWithFileMgr_Empty end";
+}
+ 
+/**
+ * @tc.number: FileUtilsTest_IsPathStartWithFileMgr_EqualPrefixLen
+ * @tc.name: IsPathStartWithFileMgr_EqualPrefixLen
+ * @tc.desc: Test path whose length equals prefix length returns false.
+ * @tc.type: FUNC
+ */
+HWTEST_F(FileUtilsTest, IsPathStartWithFileMgr_EqualPrefixLen, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "IsPathStartWithFileMgr_EqualPrefixLen start";
+ 
+    EXPECT_FALSE(IsPathStartWithFileMgr(100, "/mnt/data/100/userExternal/"));
+ 
+    GTEST_LOG_(INFO) << "IsPathStartWithFileMgr_EqualPrefixLen end";
+}
+
+/**
+ * @tc.name: FileUtilsTest_StringToUint32_001
+ * @tc.desc: Verify StringToUint32 accepts full uint32_t range and rejects invalid input.
+ * @tc.type: FUNC
+ * @tc.require: DTS2026082537775
+ */
+HWTEST_F(FileUtilsTest, FileUtilsTest_StringToUint32_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "FileUtilsTest_StringToUint32_001 start";
+    uint32_t num = 0;
+
+    EXPECT_FALSE(StringToUint32("", num));
+    EXPECT_FALSE(StringToUint32("abc", num));
+    EXPECT_FALSE(StringToUint32("123abc", num));
+    EXPECT_FALSE(StringToUint32("-5", num));
+    EXPECT_FALSE(StringToUint32("4294967296", num));
+
+    EXPECT_TRUE(StringToUint32("0", num));
+    EXPECT_EQ(num, 0u);
+
+    EXPECT_TRUE(StringToUint32("1", num));
+    EXPECT_EQ(num, 1u);
+
+    EXPECT_TRUE(StringToUint32("2147483646", num));
+    EXPECT_EQ(num, 2147483646u);
+
+    EXPECT_TRUE(StringToUint32("2147483647", num));
+    EXPECT_EQ(num, 2147483647u);
+
+    EXPECT_TRUE(StringToUint32("4294967295", num));
+    EXPECT_EQ(num, 4294967295u);
+
+    GTEST_LOG_(INFO) << "FileUtilsTest_StringToUint32_001 end";
 }
 } // namespace StorageDaemon
 } // namespace OHOS

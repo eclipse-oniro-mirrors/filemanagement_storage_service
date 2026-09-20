@@ -104,8 +104,10 @@ public:
     char *GetDeviceFriendlyName();
     void FreeObjectHandles(MtpFsTypeDir *dir);
     void FreeAllObjectHandles();
+    static bool IsTransferring();
     int GetDirChildren(std::string path, MtpFsTypeDir *dir, uint32_t *out);
     void HandleRemoveEvent(uint32_t handleId);
+    void HandleObjectInfoChangedEvent(uint32_t handleId);
     static int AddRemovingFile(const std::string &path);
     static int EraseRemovingFile(const std::string &path);
     static bool IsFileRemoving(const std::string &path);
@@ -114,6 +116,9 @@ public:
 
 private:
     bool EnumStorages();
+    bool ShouldRetryEnumStorages(int32_t attempt);
+    bool TryConnectRawDevice(LIBMTP_raw_device_t *rawDevice);
+    int32_t OpenAndEnumStorages(LIBMTP_raw_device_t *rawDevice);
     static Capabilities GetCapabilities(const MtpFsDevice &device);
     bool ConvertErrorCode(LIBMTP_error_number_t err);
     const void HandleDir(LIBMTP_file_t *content, MtpFsTypeDir *dir);
@@ -151,6 +156,7 @@ private:
     static std::mutex setMutex_;
     static std::set<std::string> removingFileSet_;
     std::thread eventThread_;
+    std::thread pushThread_;
 };
 
 #endif // MTPFS_MTP_DEVICE_H

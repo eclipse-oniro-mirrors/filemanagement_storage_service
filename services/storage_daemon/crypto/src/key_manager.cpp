@@ -102,6 +102,44 @@ std::shared_ptr<BaseKey> KeyManager::GetBaseKey(const std::string& dir)
     return std::dynamic_pointer_cast<BaseKey>(std::make_shared<FscryptKeyV1>(dir));
 }
 
+#ifdef GLASSES_DEVICE
+bool KeyManager::CheckLatestDirFilesExist(const std::string &latestDir)
+{
+    std::error_code errCode;
+    std::string shieldPath = latestDir + SHIELD_DIR;
+    std::string secDiscardPath = latestDir + SEC_DISCARD_DIR;
+    std::string encryptPath = latestDir + ENCRYPT_VERSION_DIR;
+    return std::filesystem::exists(shieldPath, errCode) &&
+           std::filesystem::exists(secDiscardPath, errCode) &&
+           std::filesystem::exists(encryptPath, errCode);
+}
+
+bool KeyManager::IsLatestDirEmptyOrNotExist(const std::string &el1Dir, const std::string &backupEl1Dir)
+{
+    std::error_code errCode;
+    std::string latestDir = el1Dir + "/latest";
+    std::string backupLatestDir = backupEl1Dir + "/latest";
+
+    bool el1DirExist = std::filesystem::exists(el1Dir, errCode);
+    if (!el1DirExist || std::filesystem::is_empty(el1Dir, errCode)) {
+        LOGI("[L3:KeyManager] el1Dir=%{public}s, el1DirExist=%{public}d, isEmpty=%{public}d, return true",
+             el1Dir.c_str(), el1DirExist, el1DirExist && std::filesystem::is_empty(el1Dir, errCode));
+        return true;
+    }
+
+    bool latestDirExist = std::filesystem::exists(latestDir, errCode);
+    if (!latestDirExist || std::filesystem::is_empty(latestDir, errCode)) {
+        LOGI("[L3:KeyManager] latestDir=%{public}s, latestDirExist=%{public}d, isEmpty=%{public}d, return true",
+             latestDir.c_str(), latestDirExist, latestDirExist && std::filesystem::is_empty(latestDir, errCode));
+        return true;
+    }
+
+    LOGI("[L3:KeyManager] el1Dir=%{public}s, latestDir=%{public}s, backupLatestDir=%{public}s, return false",
+         el1Dir.c_str(), latestDir.c_str(), backupLatestDir.c_str());
+    return false;
+}
+#endif
+
 int KeyManager::GenerateAndInstallDeviceKey(const std::string &dir)
 {
     LOGW("[L3:KeyManager] GenerateAndInstallDeviceKey: >>> ENTER <<< [dir=%{public}s]", dir.c_str());
@@ -178,6 +216,7 @@ int KeyManager::RestoreDeviceKey(const std::string &dir)
 
     auto ret = globalEl1Key_->RestoreKey(NULL_KEY_AUTH);
     if (ret != E_OK) {
+        globalEl1Key_->ClearKeyInfo();
         globalEl1Key_ = nullptr;
         LOGE("[L3:KeyManager] RestoreDeviceKey: <<< EXIT FAILED <<< [global security key restore failed]");
         std::string extraData = "RestoreKey ret = " + std::to_string(ret);
@@ -186,6 +225,7 @@ int KeyManager::RestoreDeviceKey(const std::string &dir)
     }
     ret = globalEl1Key_->ActiveKey({}, RETRIEVE_KEY);
     if (ret != E_OK) {
+        globalEl1Key_->ClearKeyInfo();
         globalEl1Key_ = nullptr;
         LOGE("[L3:KeyManager] RestoreDeviceKey: <<< EXIT FAILED <<< [global security key activation failed]");
         std::string extraData = "ActiveKey ret = " + std::to_string(ret);
@@ -198,6 +238,79 @@ int KeyManager::RestoreDeviceKey(const std::string &dir)
     return 0;
 }
 
+#ifdef GLASSES_DEVICE
+int KeyManager::InitGlobalDeviceKey(void)
+{
+    LOGW("[L3:KeyManager] InitGlobalDeviceKey: >>> ENTER <<<");
+    int ret = InitFscryptPolicy();
+    if (ret < 0) {
+        LOGE("[L3:KeyManager] InitGlobalDeviceKey: <<< EXIT FAILED <<< [fscrypt initialization failed, fscrypt will"
+            "not be enabled]");
+        StorageRadar::ReportUserKeyResult("InitGlobalDeviceKey::InitFscryptPolicy", 0, ret, "EL1", "");
+        return ret;
+    }
+
+    std::lock_guard<std::mutex> lock(keyMutex_);
+    if (hasGlobalDeviceKey_ || globalEl1Key_ != nullptr) {
+        LOGI("[L3:KeyManager] InitGlobalDeviceKey: global device el1 already exists");
+        return 0;
+    }
+    ret = MkDir(STORAGE_DAEMON_DIR, S_IRWXU); // para.0700: root only
+    if (ret && errno != EEXIST) {
+        LOGE("[L3:KeyManager] InitGlobalDeviceKey: <<< EXIT FAILED <<< [failed to create storage daemon directory]");
+        StorageRadar::ReportUserKeyResult("InitGlobalDeviceKey::MkDir", 0, ret, "EL1",
+            std::string("errno = ") + std::to_string(errno) + ", path = " + STORAGE_DAEMON_DIR);
+        return ret;
+    }
+    std::string el0Dir = std::string(DEVICE_EL1_DIR);
+    std::string el0bakDir = std::string(DEVICE_EL1_DIR) + BACKUP_NAME;
+    bool mainLatestExist = CheckLatestDirFilesExist(el0Dir);
+    bool backupLatestExist = CheckLatestDirFilesExist(el0bakDir);
+    /*
+        1. If the /sd/latest or /sd_bak/latest directory exists and the key structure is complete
+        (the shield, sec_discard, and encrypted files must exist at the same time),
+        the decryption process is performed.
+        -- This corresponds to the scenario where the device is restarted or upgraded normally, not the first startup.
+    */
+    if (mainLatestExist || backupLatestExist) {
+        LOGI("[L3:KeyManager] Found valid latest dir, mainLatestExist:%{public}d, backupLatestExist:%{public}d",
+            mainLatestExist, backupLatestExist);
+        UpgradeKeys({{0, DEVICE_EL1_DIR}});
+        return RestoreDeviceKey(DEVICE_EL1_DIR);
+    }
+    std::error_code errCode;
+    if (std::filesystem::exists(DEVICE_EL1_DIR, errCode) && !std::filesystem::is_empty(DEVICE_EL1_DIR)) {
+        LOGI("[L3:KeyManager] InitGlobalDeviceKey: DEVICE_EL1_DIR exists and is not empty, try to create!");
+    }
+    /*
+        2. If the /sd or /sd/latest directory does not exist, or the directory exists but is empty,
+        the key creation process is performed.
+        -- This corresponds to the first startup after ROM flashing or factory data restoration,
+            including the scenario where the first startup is interrupted abnormally and the device is restarted again.
+    */
+    if (IsLatestDirEmptyOrNotExist(DEVICE_EL1_DIR, el0bakDir)) {
+        LOGI("[L3:KeyManager] InitGlobalDeviceKey: device el1 dir or latest dir does not exist or is empty.");
+        ret = MkDir(DEVICE_EL1_DIR, S_IRWXU);
+        if (ret && errno != EEXIST) {
+            LOGE("[L3:KeyManager] InitGlobalDeviceKey: <<< EXIT FAILED <<< failed to create device el1 key directory");
+            StorageRadar::ReportUserKeyResult("InitGlobalDeviceKey::MkDir", 0, ret, "EL1",
+                std::string("errno = ") + std::to_string(errno) + ", path = " + DEVICE_EL1_DIR);
+            return ret;
+        }
+        return GenerateAndInstallDeviceKey(DEVICE_EL1_DIR);
+    }
+
+    LOGE("[L3:KeyManager] InitGlobalDeviceKey: <<< EXIT FAILED <<< [both latest dirs missing required files]");
+    StorageRadar::ReportUserKeyResult("InitGlobalDeviceKey", 0, E_GLOBAL_KEY_INIT_ERROR, "EL1",
+        "both sd/latest and sd_bak/latest missing required files");
+    /*
+        3. If the /sd/latest and /sd_bak/latest directories exist but the key structure is incomplete,
+        an error is returned.
+        -- This corresponds to the startup scenario where the key is damaged.
+    */
+    return E_GLOBAL_KEY_INIT_ERROR;
+}
+#else
 int KeyManager::InitGlobalDeviceKey(void)
 {
     LOGW("[L3:KeyManager] InitGlobalDeviceKey: >>> ENTER <<<");
@@ -223,7 +336,7 @@ int KeyManager::InitGlobalDeviceKey(void)
         return ret;
     }
     std::error_code errCode;
-    if (std::filesystem::exists(DEVICE_EL1_DIR, errCode) && !std::filesystem::is_empty(DEVICE_EL1_DIR)) {
+    if (std::filesystem::exists(DEVICE_EL1_DIR, errCode) && !std::filesystem::is_empty(DEVICE_EL1_DIR, errCode)) {
         UpgradeKeys({{0, DEVICE_EL1_DIR}});
         return RestoreDeviceKey(DEVICE_EL1_DIR);
     }
@@ -237,6 +350,7 @@ int KeyManager::InitGlobalDeviceKey(void)
 
     return GenerateAndInstallDeviceKey(DEVICE_EL1_DIR);
 }
+#endif
 
 int KeyManager::GenerateAndInstallUserKey(uint32_t userId, const std::string &dir, const UserAuth &auth, KeyType type)
 {
@@ -305,7 +419,7 @@ int KeyManager::GenerateAndInstallEl5Key(uint32_t userId, const std::string &dir
     saveESecretStatus[userId] = true;
     auto ret = elKey->AddClassE(isNeedEncryptClassE, saveESecretStatus[userId], FIRST_CREATE_KEY);
     if (ret != E_OK) {
-        if (elKey->ClearKey() != E_OK) {
+        if (!elKey->ClearKey()) {
             LOGW("[L3:KeyManager] GenerateAndInstallEl5Key: <<< EXIT FAILED <<< user %{public}u"
                 "ClearKey failed after AddClassE error", userId);
         }
@@ -573,6 +687,77 @@ int KeyManager::InitUserElkeyStorageDir(void)
     return 0;
 }
 
+#ifdef GLASSES_DEVICE
+int KeyManager::InitGlobalUserKeys(void)
+{
+    LOGW("[L3:KeyManager] InitGlobalUserKeys: >>> ENTER <<<");
+    if (!KeyCtrlHasFscryptSyspara()) {
+        LOGW("[L3:KeyManager] InitGlobalUserKeys: fscrypt syspara not found or encryption not enabled");
+        return 0;
+    }
+    int ret = InitUserElkeyStorageDir();
+    if (ret) {
+        LOGE("[L3:KeyManager] InitGlobalUserKeys: failed to initialize user el storage directory");
+        StorageRadar::ReportUserKeyResult("InitGlobalUserKeys::InitUserElkeyStorageDir", GLOBAL_USER_ID,
+            ret, "EL1", "InitUserElkeyStorageDir failed");
+        return ret;
+    }
+
+    std::string globalUserEl1Path = std::string(USER_EL1_DIR) + "/" + std::to_string(GLOBAL_USER_ID);
+    std::string globalUserEl1BakPath = std::string(USER_EL1_DIR) + BACKUP_NAME + "/" + std::to_string(GLOBAL_USER_ID);
+    bool mainLatestExist = CheckLatestDirFilesExist(globalUserEl1Path);
+    bool backupLatestExist = CheckLatestDirFilesExist(globalUserEl1BakPath);
+    /*
+        1. If the latest dir of main or backup exists and the key structure is complete
+        (the shield, sec_discard, and encrypted files must exist at the same time),
+        the restore process is performed.
+        -- This corresponds to the scenario where the device is restarted or upgraded normally, not the first startup.
+    */
+    if (mainLatestExist || backupLatestExist) {
+        ret = RestoreUserKey(GLOBAL_USER_ID, globalUserEl1Path, NULL_KEY_AUTH, EL1_KEY);
+        if (ret != 0) {
+            LOGE("[L3:KeyManager] InitGlobalUserKeys: failed to restore el1 key");
+            StorageRadar::ReportUserKeyResult("InitGlobalUserKeys::RestoreUserKey", GLOBAL_USER_ID,
+                ret, "EL1", "global user el1 path = " + globalUserEl1Path);
+            return ret;
+        }
+    } else if (IsLatestDirEmptyOrNotExist(globalUserEl1Path, globalUserEl1BakPath)) {
+        /*
+            2. If the el1 dir or latest dir does not exist, or the dir exists but is empty,
+            the key creation process is performed.
+            -- This corresponds to the first startup after ROM flashing or factory data restoration,
+                including the scenario where the first startup is interrupted abnormally and restarted again.
+        */
+        std::lock_guard<std::mutex> lock(keyMutex_);
+        ret = GenerateAndInstallUserKey(GLOBAL_USER_ID, globalUserEl1Path, NULL_KEY_AUTH, EL1_KEY);
+        if (ret != 0) {
+            LOGE("[L3:KeyManager] InitGlobalUserKeys: failed to generate el1 key");
+            StorageRadar::ReportUserKeyResult("InitGlobalUserKeys::GenerateAndInstallUserKey", GLOBAL_USER_ID,
+                ret, "EL1", "global user el1 path = " + globalUserEl1Path);
+            return ret;
+        }
+    } else {
+        /*
+            3. If the latest dirs exist but the key structure is incomplete, an error is returned.
+            -- This corresponds to the startup scenario where the key is damaged.
+        */
+        LOGE("[L3:KeyManager] InitGlobalUserKeys: <<< EXIT FAILED <<< [both latest dirs missing required files]");
+        StorageRadar::ReportUserKeyResult("InitGlobalUserKeys", GLOBAL_USER_ID, E_ELX_KEY_INIT_ERROR, "EL1",
+            "both el1/latest and el1_bak/latest missing required files");
+        return E_ELX_KEY_INIT_ERROR;
+    }
+
+    ret = LoadAllUsersEl1Key();
+    if (ret) {
+        LOGE("[L3:KeyManager] InitGlobalUserKeys: failed to load all users el1 keys");
+        StorageRadar::ReportUserKeyResult("InitGlobalUserKeys::LoadAllUsersEl1Key", GLOBAL_USER_ID,
+            ret, "EL1", "Load all users el1 failed");
+        return ret;
+    }
+    LOGW("[L3:KeyManager] InitGlobalUserKeys: <<< EXIT SUCCESS <<< [retval=0]");
+    return 0;
+}
+#else
 int KeyManager::InitGlobalUserKeys(void)
 {
     LOGW("[L3:KeyManager] InitGlobalUserKeys: >>> ENTER <<<");
@@ -618,6 +803,7 @@ int KeyManager::InitGlobalUserKeys(void)
     LOGW("[L3:KeyManager] InitGlobalUserKeys: <<< EXIT SUCCESS <<< [retval=0]");
     return 0;
 }
+#endif
 
 int KeyManager::GenerateUserKeys(unsigned int user, uint32_t flags)
 {
@@ -805,7 +991,7 @@ int KeyManager::GenerateUserKeyByType(unsigned int user, KeyType type,
         IamClient::GetInstance().GetSecureUid(user, secureUid);
         LOGE("[L3:KeyManager] GenerateUserKeyByType: token exists, secure uid obtained");
     }
-    UserAuth auth = { .token = token, .secret = secret, .secureUid = secureUid, .userId = user };
+    UserAuth auth = { .token = token, .secret = secret, .secureUid = secureUid };
     int ret = GenerateAndInstallUserKey(user, elUserKeyPath, auth, type);
     if (ret) {
         LOGE("[L3:KeyManager] GenerateUserKeyByType: <<< EXIT FAILED <<< [failed to create el key for user"
@@ -954,7 +1140,7 @@ int KeyManager::DeleteGlobalDeviceKey(const std::string &dir)
     LOGI("[L3:KeyManager] DeleteGlobalDeviceKey: >>> ENTER <<<");
     globalEl1Key_ = GetBaseKey(dir);
     if (globalEl1Key_ != nullptr) {
-        if (globalEl1Key_->ClearKey() != E_OK) {
+        if (!globalEl1Key_->ClearKey()) {
             LOGW("[L3:KeyManager] DeleteGlobalDeviceKey:ClearKey failed in DeleteGlobalDeviceKey");
         }
         globalEl1Key_ = nullptr;
@@ -964,12 +1150,12 @@ int KeyManager::DeleteGlobalDeviceKey(const std::string &dir)
     std::string backupDir = dir + BACKUP_NAME;
     globalEl1Key_ = GetBaseKey(backupDir);
     if (globalEl1Key_ != nullptr) {
-        if (globalEl1Key_->ClearKey() != E_OK) {
+        if (!globalEl1Key_->ClearKey()) {
             LOGW("[L3:KeyManager] DeleteGlobalDeviceKey:ClearKey failed for backup key in DeleteGlobalDeviceKey");
         }
         globalEl1Key_ = nullptr;
         hasGlobalDeviceKey_ = false;
-        LOGE("[L3:KeyManager] DeleteGlobalDeviceKey: global security backup key cleared");
+        LOGI("[L3:KeyManager] DeleteGlobalDeviceKey: global security backup key cleared");
     }
     LOGI("[L3:KeyManager] DeleteGlobalDeviceKey: <<< EXIT SUCCESS <<<");
     return E_OK;
@@ -1135,7 +1321,7 @@ int32_t KeyManager::UpdateUseAuthWithRecoveryKey(const std::vector<uint8_t> &aut
         KeyBlob originKey(plainText[i]);
         elxKey->SetOriginKey(originKey);
         i++;
-        auto ret = elxKey->StoreKey({authToken, newSecret, secureUid, userId});
+        auto ret = elxKey->StoreKey({authToken, newSecret, secureUid});
         if (ret != E_OK) {
             LOGE("[L3:KeyManager] UpdateUseAuthWithRecoveryKey: <<< EXIT FAILED <<< [failed to store key]");
             return E_ELX_KEY_STORE_ERROR;
@@ -1148,7 +1334,7 @@ int32_t KeyManager::UpdateUseAuthWithRecoveryKey(const std::vector<uint8_t> &aut
             return E_PARAMS_NULLPTR_ERR;
         }
         bool tempUeceSupport = true;
-        UserAuth userAuth = {.token = authToken, .secret = newSecret, .secureUid = secureUid, .userId = userId};
+        UserAuth userAuth = {.token = authToken, .secret = newSecret, .secureUid = secureUid};
         auto ret = el5Key->EncryptClassE(userAuth, tempUeceSupport, userId, USER_ADD_AUTH);
         if (ret != E_OK) {
             el5Key->ClearKey();
@@ -1203,8 +1389,7 @@ int KeyManager::UpdateESecret(unsigned int user, struct UserTokenSecret &tokenSe
     }
     uint32_t status = tokenSecret.oldSecret.empty() ? USER_ADD_AUTH : USER_CHANGE_AUTH;
     LOGI("[L3:KeyManager] UpdateESecret: status=%{public}u", status);
-    UserAuth auth = { .token = tokenSecret.token, .secret = tokenSecret.newSecret, .secureUid = tokenSecret.secureUid,
-        .userId = user };
+    UserAuth auth = { .token = tokenSecret.token, .secret = tokenSecret.newSecret, .secureUid = tokenSecret.secureUid };
     saveESecretStatus[user] = true;
     auto ret = el5Key->EncryptClassE(auth, saveESecretStatus[user], user, status);
     if (static_cast<uint32_t>(ret) == FILE_ENCRY_ERROR_UECE_AUTH_STATUS_WRONG) {
@@ -1255,8 +1440,9 @@ int KeyManager::UpdateCeEceSeceUserAuth(unsigned int user,
         return E_PARAMS_NULLPTR_ERR;
     }
 
-    UserAuth auth = { {}, userTokenSecret.oldSecret, userTokenSecret.secureUid, user };
-    UserAuth auth_newSec = { userTokenSecret.token, userTokenSecret.newSecret, userTokenSecret.secureUid, user };
+    UserAuth auth = { .token = {}, .secret = userTokenSecret.oldSecret, .secureUid = userTokenSecret.secureUid };
+    UserAuth auth_newSec = { .token = userTokenSecret.token, .secret = userTokenSecret.newSecret,
+        .secureUid = userTokenSecret.secureUid };
     LOGW("[L3:KeyManager] UpdateCeEceSeceUserAuth: param status token=%{public}d, oldSec=%{public}d,"
         "newSec=%{public}d", userTokenSecret.token.empty(),
         userTokenSecret.oldSecret.empty(), userTokenSecret.newSecret.empty());
@@ -1310,7 +1496,7 @@ int KeyManager::CheckNeedRestoreVersion(unsigned int user, KeyType type)
         restore_version == DEFAULT_NEED_RESTORE_UPDATE_VERSION && !IsAppCloneUser(user)) {
         LOGI("[L3:KeyManager] NEED_RESTORE path exist: %{public}s, errcode: %{public}d",
             need_restore_path.c_str(), errCode.value());
-        return type == EL5_KEY ? -ENONET : -EFAULT;
+        return type == EL5_KEY ? -ENOENT : -EFAULT;
     }
     return E_OK;
 }
@@ -1591,7 +1777,8 @@ int KeyManager::CheckAndDeleteEmptyEl5Directory(std::string keyDir, unsigned int
         return -ENOENT;
     }
 
-    if (IsDir(keyDir) && std::filesystem::is_empty(keyDir)) {
+    std::error_code isEmptyEc;
+    if (IsDir(keyDir) && std::filesystem::is_empty(keyDir, isEmptyEc) && !isEmptyEc) {
         OHOS::ForceRemoveDirectory(keyDir);
         LOGE("[L3:KeyManager] CheckAndDeleteEmptyEl5Directory: removed empty el5 key directory for user %{public}u",
             user);
@@ -1662,13 +1849,15 @@ int KeyManager::ActiveElXUserKey(unsigned int user,
         LOGE("[L3:KeyManager] ActiveElXUserKey: <<< EXIT FAILED <<< [failed to initialize el key]");
         return E_ELX_KEY_INIT_ERROR;
     }
-    UserAuth auth = { token, secret, 0, user };
+    UserAuth auth = { .token = token, .secret = secret };
     auto keyResult = elKey->RestoreKey(auth);
     bool noKeyResult = (keyResult != E_OK) && (elKey->RestoreKey(NULL_KEY_AUTH) == E_OK);
     // key and no-key situation all failed, include upgrade situation, return err
     if (keyResult != E_OK && !noKeyResult) {
         std::string extraData = "keyResult: " + std::to_string(keyResult);
-        StorageRadar::ReportUserKeyResult("ActiveElxUserKey", user, E_RESTORE_KEY_FAILED, "", extraData);
+        if (!token.empty() || !secret.empty() || !IamClient::GetInstance().HasPinProtect(user)) {
+            StorageRadar::ReportUserKeyResult("ActiveElxUserKey", user, E_RESTORE_KEY_FAILED, "", extraData);
+        }
         LOGE("[L3:KeyManager] ActiveElXUserKey: <<< EXIT FAILED <<< [failed to restore el key, type=%{public}u]",
             keyType);
         return E_RESTORE_KEY_FAILED;
@@ -1699,8 +1888,10 @@ int KeyManager::ActiveElXUserKey(unsigned int user,
     elKey->GenerateHashKey();
     int32_t ret = elKey->ActiveKey(auth.token, RETRIEVE_KEY);
     if (ret != E_OK) {
-        StorageRadar::ReportUserKeyResult("ActiveElxUserKey", user, E_ELX_KEY_ACTIVE_ERROR, "",
-            "Active failed, ret=" + std::to_string(ret));
+        if (!token.empty() || !secret.empty() || !IamClient::GetInstance().HasPinProtect(user)) {
+            StorageRadar::ReportUserKeyResult("ActiveElxUserKey", user, E_ELX_KEY_ACTIVE_ERROR, "",
+                "Active failed, ret=" + std::to_string(ret));
+        }
         LOGE("[L3:KeyManager] ActiveElXUserKey: <<< EXIT FAILED <<< [failed to activate key for user %{public}u]",
             user);
         return E_ELX_KEY_ACTIVE_ERROR;
@@ -1823,8 +2014,7 @@ int KeyManager::GenerateAppkey(uint32_t userId, uint32_t hashId, std::string &ke
 {
     if (!IsUeceSupport()) {
         LOGI("[L3:KeyManager] GenerateAppkey: UECE not supported or encryption not enabled");
-        StorageRadar::ReportEl5KeyMgrResult("GenerateAppkey", userId, -ENOTSUP,
-            "IsUeceSupport check failed");
+        StorageRadar::ReportFucBehavior("GenerateAppkey", userId, "UECE not supported", -ENOTSUP);
         return -ENOTSUP;
     }
     LOGD("[L3:KeyManager] GenerateAppkey: >>> ENTER <<< [userId=%{public}u, hashId=%{public}u, needReSet=%{public}d]",
@@ -1839,7 +2029,7 @@ int KeyManager::GenerateAppkey(uint32_t userId, uint32_t hashId, std::string &ke
         auto el5Key = GetBaseKey(GetKeyDirByUserAndType(userId, EL5_KEY));
         if (el5Key == nullptr) {
             LOGE("[L3:KeyManager] GenerateAppkey: <<< EXIT FAILED <<< [el5Key is null]");
-            StorageRadar::ReportEl5KeyMgrResult("GenerateAppkey", userId, E_PARAMS_NULLPTR_ERR,
+            StorageRadar::ReportEl5KeyMgrResult("GenerateAppkey", E_PARAMS_NULLPTR_ERR, userId,
                 "GetBaseKey failed, userId=KEY_RECOVERY_USER_ID");
             return E_PARAMS_NULLPTR_ERR;
         }
@@ -1847,7 +2037,7 @@ int KeyManager::GenerateAppkey(uint32_t userId, uint32_t hashId, std::string &ke
         if (ret != E_OK) {
             LOGE("[L3:KeyManager] GenerateAppkey: <<< EXIT FAILED <<< [failed to generate app key, error=%{public}d]",
                 ret);
-            StorageRadar::ReportEl5KeyMgrResult("GenerateAppkey", userId, E_EL5_GENERATE_APP_KEY_ERR,
+            StorageRadar::ReportEl5KeyMgrResult("GenerateAppkey", E_EL5_GENERATE_APP_KEY_ERR, userId,
                 "GenerateAppkey failed, userId=KEY_RECOVERY_USER_ID, ret=" + std::to_string(ret));
             return E_EL5_GENERATE_APP_KEY_ERR;
         }
@@ -1857,15 +2047,19 @@ int KeyManager::GenerateAppkey(uint32_t userId, uint32_t hashId, std::string &ke
     auto el5Key = GetBaseKey(GetKeyDirByUserAndType(userId, EL5_KEY));
     if (el5Key == nullptr) {
         LOGE("[L3:KeyManager] GenerateAppkey: <<< EXIT FAILED <<< [el5Key is null]");
-        StorageRadar::ReportEl5KeyMgrResult("GenerateAppkey", userId, E_PARAMS_NULLPTR_ERR,
-            "GetBaseKey failed, userId=" + std::to_string(userId));
+        if (HashElxActived(userId, EL5_KEY)) {
+            StorageRadar::ReportEl5KeyMgrResult("GenerateAppkey", E_PARAMS_NULLPTR_ERR, userId,
+                "GetBaseKey failed, userId=" + std::to_string(userId));
+        }
         return E_PARAMS_NULLPTR_ERR;
     }
     auto ret = el5Key->GenerateAppkey(userId, hashId, keyId);
     if (ret != E_OK) {
         LOGE("[L3:KeyManager] GenerateAppkey: <<< EXIT FAILED <<< [failed to generate app key, error=%{public}d]", ret);
-        StorageRadar::ReportEl5KeyMgrResult("GenerateAppKey", userId, E_EL5_GENERATE_APP_KEY_ERR,
-            "GenerateAppkey failed, userId=" + std::to_string(userId) + ", ret=" + std::to_string(ret));
+        if (HashElxActived(userId, EL5_KEY)) {
+            StorageRadar::ReportEl5KeyMgrResult("GenerateAppKey", E_EL5_GENERATE_APP_KEY_ERR, userId,
+                "GenerateAppkey failed, userId=" + std::to_string(userId) + ", ret=" + std::to_string(ret));
+        }
         return E_EL5_GENERATE_APP_KEY_ERR;
     }
     LOGD("[L3:KeyManager] GenerateAppkey: <<< EXIT SUCCESS <<< [retval=0]");
@@ -1903,22 +2097,24 @@ int32_t KeyManager::DeleteAppkey(uint32_t user, const std::string &keyId)
     LOGD("[L3:KeyManager] DeleteAppkey: >>> ENTER <<< [userId=%{public}u]", user);
     if (!IsUeceSupport()) {
         LOGI("[L3:KeyManager] DeleteAppkey: UECE not supported or encryption not enabled");
-        StorageRadar::ReportEl5KeyMgrResult("DeleteAppkey", user, ENOTSUP,
-            "IsUeceSupport check failed");
+        StorageRadar::ReportFucBehavior("DeleteAppkey", user, "UECE not supported", -ENOTSUP);
         return -ENOTSUP;
     }
     std::lock_guard<std::mutex> lock(keyMutex_);
     auto el5Key = GetBaseKey(GetKeyDirByUserAndType(user, EL5_KEY));
     if (el5Key == nullptr) {
         LOGE("[L3:KeyManager] DeleteAppkey: <<< EXIT FAILED <<< [el5Key is null]");
-        StorageRadar::ReportEl5KeyMgrResult("DeleteAppkey", user, E_PARAMS_NULLPTR_ERR,
-            "GetBaseKey failed, userId=" + std::to_string(user));
+        if (HashElxActived(user, EL5_KEY)) {
+            StorageRadar::ReportEl5KeyMgrResult("DeleteAppkey", E_PARAMS_NULLPTR_ERR, user,
+                "GetBaseKey failed, userId=" + std::to_string(user));
+        }
         return E_PARAMS_NULLPTR_ERR;
     }
     if (el5Key->DeleteAppkey(keyId) != E_OK) {
         LOGE("[L3:KeyManager] DeleteAppkey: <<< EXIT FAILED <<< [failed to delete app key]");
-        StorageRadar::ReportEl5KeyMgrResult("DeleteAppkey", user, E_EL5_DELETE_APP_KEY_ERR,
-            "DeleteAppkey failed, userId=" + std::to_string(user) + ", keyId=" + keyId);
+        if (HashElxActived(user, EL5_KEY)) {
+            StorageRadar::ReportEl5KeyMgrResult("DeleteAppkey", E_EL5_DELETE_APP_KEY_ERR, user, "DeleteAppkey failed");
+        }
         return E_EL5_DELETE_APP_KEY_ERR;
     }
     LOGD("[L3:KeyManager] DeleteAppkey: <<< EXIT SUCCESS <<< [retval=0]");
@@ -1978,7 +2174,6 @@ int KeyManager::CreateRecoverKey(uint32_t userId, uint32_t userType, const std::
 int KeyManager::SetRecoverKey(const std::vector<uint8_t> &key)
 {
     LOGI("[L3:KeyManager] SetRecoverKey: >>> ENTER <<< [key_len=%{public}zu]", key.size());
-    std::vector<KeyBlob> originIvs;
     if (RecoveryManager::GetInstance().SetRecoverKey(key) != E_OK) {
         LOGE("[L3:KeyManager] SetRecoverKey: <<< EXIT FAILED <<< [failed to set recovery key]");
         return E_SET_RECOVERY_KEY_ERR;
@@ -2107,8 +2302,8 @@ int32_t KeyManager::ResetSecretWithRecoveryKey(uint32_t userId, uint32_t rkType,
 
         elxKey->SetOriginKey(originIvs[i]);
         i++;
-        auto ret = elxKey->StoreKey(NULL_KEY_AUTH);
-        if (ret != E_OK) {
+        auto storeRet = elxKey->StoreKey(NULL_KEY_AUTH);
+        if (storeRet != E_OK) {
             LOGE("[L3:KeyManager] ResetSecretWithRecoveryKey: <<< EXIT FAILED <<< [failed to store key]");
             return E_ELX_KEY_STORE_ERROR;
         }
@@ -2367,7 +2562,12 @@ int KeyManager::getElxKeyPath(unsigned int user, KeyType type, std::string &elxK
         return -ENOENT;
     }
     if (type >= EL1_KEY && type <= EL4_KEY) {
-        elxKeyPath = userElKeys_[user][type]->GetDir();
+        auto elKey = userElKeys_[user][type];
+        if (elKey == nullptr) {
+            LOGE("[L3:KeyManager] getElxKeyPath: elKey is nullptr, user=%{public}u, type=%{public}u", user, type);
+            return -ENOENT;
+        }
+        elxKeyPath = elKey->GetDir();
     }
     return E_OK;
 }
@@ -2535,12 +2735,13 @@ int KeyManager::IsUeceSupportWithErrno()
 {
     int fd = open(UECE_PATH, O_RDWR);
     if (fd < 0) {
-        if (errno == ENOENT) {
+        int32_t tmpErrno = errno;
+        if (tmpErrno == ENOENT) {
             LOGE("[L3:KeyManager] IsUeceSupportWithErrno: UECE not supported");
             return ENOENT;
         }
-        LOGE("[L3:KeyManager] IsUeceSupportWithErrno: failed to open UECE, errno=%{public}d", errno);
-        return errno;
+        LOGE("[L3:KeyManager] IsUeceSupportWithErrno: failed to open UECE, errno=%{public}d", tmpErrno);
+        return tmpErrno;
     }
     close(fd);
     LOGI("[L3:KeyManager] IsUeceSupportWithErrno: <<< EXIT SUCCESS <<< [retval=0, uece supported=true]");
@@ -2651,8 +2852,13 @@ int KeyManager::TryToFixUserCeEceSeceKey(unsigned int userId,
 
     uint64_t secureUid = { 0 };
     if (!secret.empty() && !token.empty()) {
-        IamClient::GetInstance().GetSecureUid(userId, secureUid);
-        LOGE("[L3:KeyManager] TryToFixUserCeEceSeceKey: pin code exists, secure uid obtained");
+        if (!IamClient::GetInstance().GetSecureUid(userId, secureUid)) {
+            LOGE("[L3:KeyManager] TryToFixUserCeEceSeceKey: <<< EXIT FAILED <<< GetSecureUid failed");
+            StorageRadar::ReportUpdateUserAuth("TryToFixUserCeEceSeceKey::GetSecureUid",
+                userId, E_TRY_TO_FIX_USER_KEY_ERR, std::to_string(keyType), "get secure uid failed");
+        } else {
+            LOGI("[L3:KeyManager] TryToFixUserCeEceSeceKey: pin code exists, secure uid obtained");
+        }
     }
     UserAuth auth = { .token = token, .secret = secret, .secureUid = secureUid };
     UserTokenSecret userTokenSecret = { .token = token, .oldSecret = {}, .newSecret = secret, .secureUid = secureUid };
@@ -2692,8 +2898,13 @@ int KeyManager::TryToFixUeceKey(unsigned int userId,
 
     uint64_t secureUid = { 0 };
     if (!secret.empty() && !token.empty()) {
-        IamClient::GetInstance().GetSecureUid(userId, secureUid);
-        LOGE("Pin code is exist, get secure uid.");
+        if (!IamClient::GetInstance().GetSecureUid(userId, secureUid)) {
+            LOGE("[L3:KeyManager] TryToFixUeceKey: <<< EXIT FAILED <<< GetSecureUid failed");
+            StorageRadar::ReportUpdateUserAuth("TryToFixUeceKey::GetSecureUid", userId,
+                E_TRY_TO_FIX_USER_KEY_ERR, "EL5", "get secure uid failed");
+        } else {
+            LOGI("[L3:KeyManager] TryToFixUeceKey: pin code exists, secure uid obtained");
+        }
     }
     UserAuth auth = { .token=token, .secret=secret, .secureUid = secureUid };
     UserTokenSecret tokenSecret = { .token = token, .oldSecret = { }, .newSecret = secret, .secureUid = secureUid};
@@ -2705,8 +2916,10 @@ int KeyManager::TryToFixUeceKey(unsigned int userId,
     }
     ret = UpdateCeEceSeceKeyContext(userId, EL5_KEY);
     if (ret != E_OK) {
-        LOGE("try to fix elx key context failed !");
-        StorageRadar::ReportUpdateUserAuth("TryToFixUeceKey::UpdateCeEceSeceKeyContext", userId, ret, "EL5", "");
+        LOGE("[L3:KeyManager] TryToFixUeceKey: <<< EXIT FAILED <<< UpdateCeEceSeceKeyContext failed,"
+             "ret=%{public}d", ret);
+        std::string extraData = "UpdateCeEceSeceKeyContext failed";
+        StorageRadar::ReportUpdateUserAuth("TryToFixUeceKey::UpdateCeEceSeceKeyContext", userId, ret, "EL5", extraData);
         return ret;
     }
     return E_OK;
@@ -2792,8 +3005,8 @@ int KeyManager::NotifyUeceActivation(uint32_t userId, int32_t resultCode, bool n
             "userId=%{public}u, needGetAllAppKey=%{public}d", resultCode, userId, needGetAllAppKey);
         if (callback != nullptr) {
             callback->OnEl5Activation(resultCode, userId, needGetAllAppKey, retValue);
-            StorageRadar::ReportUpdateUserAuth("NotifyUeceActivation", userId, resultCode, "EL5",
-                "callback is not nullptr");
+            std::string extraData = "EL5 callback executed, resultCode=" + std::to_string(resultCode);
+            StorageRadar::ReportFucBehavior("NotifyUeceActivation", userId, extraData, resultCode);
         }
         p.set_value(retValue);
     });
@@ -2803,7 +3016,7 @@ int KeyManager::NotifyUeceActivation(uint32_t userId, int32_t resultCode, bool n
         callbackThread.detach();
         std::ostringstream extraData;
         extraData << "Notify EL5 timeout, needGetAllAppKey: " << needGetAllAppKey << " resultCode: " << resultCode;
-        StorageRadar::ReportUpdateUserAuth("NotifyUeceActivation", userId, E_TASK_TIME_OUT, "EL5", extraData.str());
+        StorageRadar::ReportFucBehavior("NotifyUeceActivation", userId, extraData.str(), E_TASK_TIME_OUT);
         return E_OK;
     }
 

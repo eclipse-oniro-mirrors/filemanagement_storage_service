@@ -22,6 +22,7 @@
 #include <cstring>
 #include <dirent.h>
 #include <fcntl.h>
+#include <fnmatch.h>
 #include <fstream>
 #include <cerrno>
 #include <cinttypes>
@@ -29,6 +30,7 @@
 #include <linux/hdreg.h>
 #include <regex>
 #include <algorithm>
+#include <string>
 #include <unordered_set>
 #include <sstream>
 #include <cctype>
@@ -51,6 +53,7 @@ constexpr const char *NVME0_STRING = "nvme0";
 constexpr const char *SIZE_NODE = "/size";
 constexpr const char *DEV_PATH = "/dev/block";
 constexpr const char *DEV_NODE = "/dev";
+constexpr const char *ROTATIONAL_NODE = "/queue/rotational";
 constexpr const char *MODEL_NODE = "/device/model";
 constexpr const char *VENDOR_NODE = "/device/vendor";
 constexpr const char *UEVENT_NODE = "/uevent";
@@ -75,6 +78,21 @@ const char NVME_LINK = 'n';
 constexpr size_t HD_DRIVEID_SIZE = 512;
 constexpr uint16_t RPM_ARRAY_INDEX = 11;
 constexpr size_t NVME_MIN_NAME_LEN = 7;
+
+namespace {
+// disk_config 内嵌 data 盘 sysPattern，前缀 /sys 以匹配 GetRealPath 返回值
+constexpr const char *INTERNAL_DATA_SATA_PATTERN = "/sys/devices/platform/bfa00000.sata/*";
+constexpr const char *INTERNAL_DATA_NVME_PATTERN = "/sys/devices/platform/a0000000.hi_pcie/*/nvme/nvme1/*";
+
+bool MatchInternalDataDiskPattern(const std::string &realPath)
+{
+    if (realPath.empty()) {
+        return false;
+    }
+    return fnmatch(INTERNAL_DATA_SATA_PATTERN, realPath.c_str(), 0) == 0 ||
+           fnmatch(INTERNAL_DATA_NVME_PATTERN, realPath.c_str(), 0) == 0;
+}
+} // namespace
 
 ScanDevice::ScanDevice(const std::string &sysBlockPath, const std::string &devBlockPath)
     : sysBlockPath(sysBlockPath), devBlockPath(DEV_PATH)
@@ -170,6 +188,10 @@ std::vector<BlockInfo> ScanDevice::GetDataDisks()
             LOGI("Ignore %{public}s", deviceName.c_str());
             continue;
         }
+        if (IsFilePathInvalid(deviceName)) {
+            LOGE("Ignore invalid deviceName:%{public}s", deviceName.c_str());
+            continue;
+        }
         bool isSDevice = (deviceName.length() > 0 && deviceName[0] == 's');
         bool isNvmeDevice = (deviceName.find(NVME_STRING) == 0);
         if (!isSDevice && !isNvmeDevice) {
@@ -189,6 +211,10 @@ std::vector<BlockInfo> ScanDevice::GetDataDisks()
         if (isSDevice && !IsDataDisk(deviceName, isNeedCheckUfs, isRemovable)) {
             continue;
         }
+        if (!MatchInternalDataDiskPattern(GetRealPath(deviceName))) {
+            LOGE("Ignore non-internal data disk: %{public}s", deviceName.c_str());
+            continue;
+        }
         BlockInfo blockInfo;
         blockInfo.removable = isRemovable;
         if (GetBlockInfo(deviceName, isNvmeDevice, blockInfo) == 0) {
@@ -206,8 +232,13 @@ std::string ScanDevice::GetRealPath(const std::string &deviceName)
     char linkTarget[PATH_MAX] = {0};
     ssize_t len = readlink(modelPath.c_str(), linkTarget, sizeof(linkTarget) - 1);
     std::string linkTargetStr;
+    LOGI("linkTarget is %{public}s", linkTarget);
     if (len > 0) {
         linkTargetStr.assign(linkTarget, len);
+        if (linkTargetStr.rfind("/sys/", 0) == 0) {
+            LOGI("GetRealPath linkTargetStr: %{public}s", linkTargetStr.c_str());
+            return linkTargetStr;
+        }
         if (linkTargetStr.size() >= PARENT_DIR_PREFIX_LEN &&
             linkTargetStr.substr(0, PARENT_DIR_PREFIX_LEN) == PARENT_DIR_PREFIX) {
             linkTargetStr = "/sys" + linkTargetStr.substr(PARENT_DIR_SKIP_LEN);
@@ -245,7 +276,7 @@ std::vector<BlockInfo> ScanDevice::GetExternalDisks(const std::string &devName, 
         dev_t dev = st.st_rdev;
         if (major(dev) == DISK_CD_MAJOR) {
             nlohmann::json extraInfoJson;
-            std::string driveType = GetOpticalDriveType(devPath);
+            std::string driveType = GetOpticalDriveTypeByScsiGeneric(devName);
             std::string discType = GetCDType(devPath);
             std::string oddDriveType = GetOddDriverType(realPath);
             extraInfoJson["DRIVE_TYPE"] = driveType;
@@ -379,10 +410,14 @@ std::string ScanDevice::GetMaxSpeedFromSpeedInfo(const nlohmann::json &speedInfo
                  speedStr.c_str());
             continue;
         }
-        double speedValue = std::stod(speedStr);
-        if (speedValue > maxSpeed) {
-            maxSpeed = speedValue;
-            maxSpeedStr = speedStr;
+        char *endPtr = nullptr;
+        errno = 0;
+        double speedValue = std::strtod(speedStr.c_str(), &endPtr);
+        if (errno == 0 && endPtr != nullptr && endPtr != speedStr.c_str() && *endPtr == '\0') {
+            if (speedValue > maxSpeed) {
+                maxSpeed = speedValue;
+                maxSpeedStr = speedStr;
+            }
         }
     }
     LOGI("[L2:ScanDevice] GetMaxSpeedFromSpeedInfo: <<< EXIT SUCCESS <<< maxSpeedStr=%{public}s",
@@ -393,34 +428,31 @@ std::string ScanDevice::GetMaxSpeedFromSpeedInfo(const nlohmann::json &speedInfo
 nlohmann::json ScanDevice::ParseWodimPrcapOutput(const std::vector<std::string> &output)
 {
     LOGI("[L2:ScanDevice] ParseWodimPrcapOutput: >>> ENTER <<<");
-    
     std::unordered_set<std::string> seen;
     nlohmann::json speedArr = nlohmann::json::array();
-    
-    for (const auto &line : output) {
-        if (line.find("Write speed #") == std::string::npos) {
-            continue;
-        }
-        
-        size_t cdPos = line.find("(CD");
-        if (cdPos == std::string::npos) {
-            continue;
-        }
-        
-        size_t xPos = line.find('x', cdPos);
-        if (xPos == std::string::npos) {
-            continue;
-        }
-        
-        std::string speedStr = line.substr(cdPos + 3, xPos - (cdPos + 3));
-        speedStr.erase(std::remove_if(speedStr.begin(), speedStr.end(), ::isspace), speedStr.end());
-        
-        if (!speedStr.empty() && seen.insert(speedStr).second) {
-            speedArr.push_back(speedStr);
-            LOGI("[L2:ScanDevice] ParseWodimPrcapOutput: found CD speed=%{public}s", speedStr.c_str());
+    for (const auto &chunk : output) {
+        std::stringstream ss(chunk);
+        std::string line;
+        while (std::getline(ss, line)) {
+            if (line.find("Write speed #") == std::string::npos) {
+                continue;
+            }
+            size_t cdPos = line.find("(CD");
+            if (cdPos == std::string::npos) {
+                continue;
+            }
+            size_t xPos = line.find('x', cdPos);
+            if (xPos == std::string::npos) {
+                continue;
+            }
+            std::string speedStr = line.substr(cdPos + 3, xPos - (cdPos + 3));
+            speedStr.erase(std::remove_if(speedStr.begin(), speedStr.end(), ::isspace), speedStr.end());
+            if (!speedStr.empty() && seen.insert(speedStr).second) {
+                speedArr.push_back(speedStr);
+                LOGI("[L2:ScanDevice] ParseWodimPrcapOutput: found CD speed=%{public}s", speedStr.c_str());
+            }
         }
     }
-    
     LOGI("[L2:ScanDevice] ParseWodimPrcapOutput: <<< EXIT SUCCESS <<< speedArr=%{public}s", speedArr.dump().c_str());
     return speedArr;
 }
@@ -499,7 +531,7 @@ int ScanDevice::GetBlockInfo(const std::string &deviceName, const bool isNvmeDev
         dev_t dev = st.st_rdev;
         if (major(dev) == DISK_CD_MAJOR) {
             nlohmann::json extraInfoJson;
-            std::string driveType = GetOpticalDriveType(devPath);
+            std::string driveType = GetOpticalDriveTypeByScsiGeneric(deviceName);
             std::string discType = GetCDType(devPath);
             std::string oddDriveType = GetOddDriverType(realPath);
             extraInfoJson["DRIVE_TYPE"] = driveType;
@@ -516,6 +548,7 @@ int ScanDevice::GetBlockInfo(const std::string &deviceName, const bool isNvmeDev
     }
     blockInfo.interfaceType = GetInterfaceType(deviceName);
     blockInfo.rpm = GetDiskRpm(deviceName, isNvmeDevice);
+    blockInfo.rotational = GetRotational(deviceName);
     blockInfo.serialNumber = GetSerialNumber(deviceName, isNvmeDevice);
     blockInfo.diskId = GetDiskId(deviceName, isNvmeDevice);
     std::string pciePath = GetPciePath(deviceName);
@@ -678,6 +711,22 @@ uint32_t ScanDevice::GetDiskRpm(const std::string &deviceName, const bool isNvme
     return static_cast<uint32_t>(hdId.words206_254[RPM_ARRAY_INDEX]);
 }
 
+int32_t ScanDevice::GetRotational(const std::string &deviceName)
+{
+    std::string rotationalPath = sysBlockPath + SPLIT_STRING + deviceName + ROTATIONAL_NODE;
+    std::string content;
+    if (ReadSysfsNode(rotationalPath, content)) {
+        LOGI("GetRotational content success: %{public}s", content.c_str());
+        unsigned long long result = 0;
+        if (ParseStringToUlongLong(content, result)) {
+            return static_cast<int32_t>(result);
+        }
+        LOGE("GetRotational: failed to parse value from %{public}s", content.c_str());
+    }
+    LOGE("GetRotational failed");
+    return -1;
+}
+
 std::string ScanDevice::GetSataSerialNumber(int fd)
 {
     struct hd_driveid hdId;
@@ -695,7 +744,7 @@ std::string ScanDevice::GetNvmeSerialNumber(const std::string &deviceName)
     std::string serialPath = sysBlockPath + SPLIT_STRING + deviceName + SERIAL_NODE;
     std::string content;
     if (ReadSysfsNode(serialPath, content)) {
-        LOGI("GetNvmeSerialNumber success: %{public}s", content.c_str());
+        LOGI("GetNvmeSerialNumber success: %{public}s", GetAnonyString(content).c_str());
         return content;
     }
     LOGE("GetNvmeSerialNumber: read serial node failed for %{public}s", deviceName.c_str());
@@ -931,6 +980,52 @@ std::string ScanDevice::GetFwVersion(const std::string &deviceName)
     std::string content = ReadFileContent(modelPath);
     LOGI("GetFwVersion content: %{public}s", content.c_str());
     return content;
+}
+
+
+std::string ScanDevice::GetScsiGenericDevPath(const std::string &devName)
+{
+    std::string scsiGenericPath = sysBlockPath + SPLIT_STRING + devName + "/device/scsi_generic";
+    LOGI("GetScsiGenericDevPath: scsiGenericPath=%{public}s", scsiGenericPath.c_str());
+    DIR *dir = opendir(scsiGenericPath.c_str());
+    if (!dir) {
+        LOGE("GetScsiGenericDevPath: opendir failed for %{public}s, errno=%{public}d", scsiGenericPath.c_str(), errno);
+        return "";
+    }
+    std::string sgName;
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != nullptr) {
+        std::string name = entry->d_name;
+        if (name == "." || name == "..") {
+            continue;
+        }
+        if (name.find("sg") == 0) {
+            sgName = name;
+            break;
+        }
+    }
+    closedir(dir);
+    if (sgName.empty()) {
+        LOGE("GetScsiGenericDevPath: no sg node found under %{public}s", scsiGenericPath.c_str());
+        return "";
+    }
+    std::string devPath = std::string(DEV_NODE) + SPLIT_STRING + sgName;
+    LOGI("GetScsiGenericDevPath: found sg node=%{public}s, devPath=%{public}s", sgName.c_str(), devPath.c_str());
+    return devPath;
+}
+
+std::string ScanDevice::GetOpticalDriveTypeByScsiGeneric(const std::string &devName)
+{
+    LOGI("GetOpticalDriveTypeByScsiGeneric: >>> ENTER <<< devName=%{public}s", devName.c_str());
+    std::string devPath = GetScsiGenericDevPath(devName);
+    if (devPath.empty()) {
+        LOGE("GetOpticalDriveTypeByScsiGeneric: <<< EXIT FAILED <<< failed to get sg devPath for %{public}s",
+             devName.c_str());
+        return "";
+    }
+    std::string driveType = GetOpticalDriveType(devPath);
+    LOGI("GetOpticalDriveTypeByScsiGeneric: <<< EXIT SUCCESS <<< driveType=%{public}s", driveType.c_str());
+    return driveType;
 }
 } // namespace StorageDaemon
 } // namespace OHOS

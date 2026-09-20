@@ -90,12 +90,17 @@ ohos_shared_library("storage_manager_sa_proxy") {
     debug = false
   }
 
+  version_script = "libstorage_manager_sa_proxy.map"
+
   sources = [
     "${storage_manager_path}/innerkits_impl/src/bundle_stats.cpp",
+    "${storage_manager_path}/innerkits_impl/src/disk.cpp",
     "${storage_manager_path}/innerkits_impl/src/ext_bundle_stats.cpp",
     "${storage_manager_path}/innerkits_impl/src/storage_file_raw_data.cpp",
     "${storage_manager_path}/innerkits_impl/src/storage_stats.cpp",
     "${storage_manager_path}/innerkits_impl/src/userdata_dir_info.cpp",
+    "${storage_manager_path}/innerkits_impl/src/volume_core.cpp",
+    "${storage_manager_path}/innerkits_impl/src/volume_external.cpp",
     "${storage_manager_path}/innerkits_impl/src/statistic_info.cpp",
     "${storage_manager_path}/utils/src/storage_utils.cpp",
   ]
@@ -119,6 +124,13 @@ ohos_shared_library("storage_manager_sa_proxy") {
   ldflags = [
     "-Wl,--gc-sections",
     "-Wl,-O1",
+  ]
+
+  ldflags += [
+    "-Wl,--exclude-libs=libGL.a",
+    "-Wl,--exclude-libs=libEGL.a",
+    "-Wl,--exclude-libs=libunwind.a",
+    "-Wl,--exclude-libs=libc++_static.a"
   ]
 
   external_deps = [

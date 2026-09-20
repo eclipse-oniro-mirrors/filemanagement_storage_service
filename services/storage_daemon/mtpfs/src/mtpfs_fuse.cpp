@@ -122,6 +122,11 @@ int WrapReName(const char *path, const char *newpath, unsigned int flags)
         OHOS::StorageService::StorageRadar::ReportMtpResult("WrapReName::IsFilePathValid", E_PARAMS_INVALID, "NA");
         return EINVAL;
     }
+    if (!IsFilePathValid(newpath)) {
+        LOGE("Invalid path.");
+        OHOS::StorageService::StorageRadar::ReportMtpResult("WrapReName::IsFilePathValid", E_PARAMS_INVALID, "NA");
+        return EINVAL;
+    }
     bool readOnly = MtpFileSystem::GetInstance().IsCurrentUserReadOnly();
     if (readOnly) {
         LOGI("WrapReName fail");
@@ -729,6 +734,7 @@ int MtpFileSystem::GetAttr(const char *path, struct stat *buf)
     if (memset_s(buf, sizeof(struct stat), 0, sizeof(struct stat)) != EOK) {
         LOGE("memset stat fail");
         OHOS::StorageService::StorageRadar::ReportMtpResult("GetAttr::Memset", E_MEMORY_OPERATION_ERR, "NA");
+        return -ENOENT;
     }
     struct fuse_context *fc = fuse_get_context();
     if (buf == nullptr || fc == nullptr) {
@@ -765,7 +771,7 @@ int MtpFileSystem::GetAttr(const char *path, struct stat *buf)
     if (file != nullptr) {
         return SetupFileAttributes(path, file, buf);
     }
-    
+
     LOGE("MtpFileSystem: GetAttr error, content dir is null");
     OHOS::StorageService::StorageRadar::ReportMtpResult("GetAttr::Content", E_MTP_LIBMTP_INTERFACE_ERROR, "NA");
     return -ENOENT;
@@ -784,9 +790,17 @@ int MtpFileSystem::SetupFileAttributes(const char *path, const MtpFsTypeFile *fi
         }
     }
 
+    if (size > static_cast<uint64_t>(std::numeric_limits<ssize_t>::max())) {
+        LOGE("File size exceeds ssize_t maximum value");
+        return -EOVERFLOW;
+    }
     buf->st_size = static_cast<ssize_t>(size);
     const uint64_t fileSize = static_cast<uint64_t>(FILE_SIZE);
     const uint64_t blocksU64 = (size / fileSize) + ((size % fileSize) ? 1 : 0);
+    if (blocksU64 > static_cast<uint64_t>(std::numeric_limits<blkcnt_t>::max())) {
+        LOGE("Block count exceeds ssize_t maximum value");
+        return -EOVERFLOW;
+    }
     buf->st_blocks = static_cast<blkcnt_t>(blocksU64);
     buf->st_nlink = 1;
     buf->st_mode = S_IFREG | PERMISSION_TWO;
@@ -1453,7 +1467,10 @@ int MtpFileSystem::GetFriendlyName(const char *in, char *out, size_t size)
 {
     LOGI("GetXAttr key=%{public}s", in);
     char *deviceName = device_.GetDeviceFriendlyName();
-    if (deviceName == nullptr) {
+    if (deviceName == nullptr || strlen(deviceName) == 0) {
+        if (deviceName != nullptr) {
+            free(deviceName);
+        }
         LOGE("GetDeviceFriendlyName from device fail");
         return -ENOENT;
     }
@@ -1473,6 +1490,11 @@ int MtpFileSystem::GetFriendlyName(const char *in, char *out, size_t size)
 void MtpFileSystem::HandleRemove(uint32_t handleId)
 {
     std::thread([this, handleId]() { device_.HandleRemoveEvent(handleId); }).detach();
+}
+
+void MtpFileSystem::HandleObjectInfoChanged(uint32_t handleId)
+{
+    std::thread([this, handleId]() { device_.HandleObjectInfoChangedEvent(handleId); }).detach();
 }
 
 MtpFsTmpFilesPool* MtpFileSystem::GetTempFilesPool()

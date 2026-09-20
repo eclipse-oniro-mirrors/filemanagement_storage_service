@@ -80,6 +80,12 @@ if ("${target_platform}" == "pc") {
   pc_ext4_enable = false
 }
 
+if ("${target_platform}" == "glasses") {
+  storage_service_glasses_device = true
+} else {
+  storage_service_glasses_device = false
+}
+
 if ("${target_platform}" == "car") {
   car_device_enable = true
 } else {
@@ -90,4 +96,10 @@ if ("${target_platform}" == "phone") {
   phone_device_enable = true
 } else {
   phone_device_enable = false
+}
+
+if ("${target_platform}" == "tablet") {
+  tablet_device_enable = true
+} else {
+  tablet_device_enable = false
 }

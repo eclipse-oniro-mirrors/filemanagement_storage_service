@@ -19,11 +19,20 @@
 #include "storage_space_manager_errno.h"
 #include "storage/storage_total_status_service.h"
 #include "cache_clean_controller.h"
+#include "ipc_caller_auth_mock.h"
 
 namespace OHOS {
 namespace StorageSpaceManager {
 using namespace testing;
 using namespace testing::ext;
+
+namespace {
+    constexpr uint32_t MOCK_TOKEN_ID = 12345;
+    constexpr int32_t MOCK_UID = 1000;
+    constexpr uint32_t TOKEN_TYPE_NATIVE = 1;
+    constexpr int32_t PERMISSION_GRANTED = 0;
+    constexpr int32_t PERMISSION_DENIED = -1;
+}
 
 class StorageSpaceManagerProviderTest : public testing::Test {
 public:
@@ -55,6 +64,10 @@ void StorageSpaceManagerProviderTest::TearDownTestCase()
 void StorageSpaceManagerProviderTest::SetUp()
 {
     // Reset provider state before each test
+    g_mockCallingTokenId = MOCK_TOKEN_ID;
+    g_mockCallingUid = MOCK_UID;
+    g_mockVerifyAccessTokenResult = PERMISSION_GRANTED;
+    g_mockTokenTypeFlag = TOKEN_TYPE_NATIVE;
 }
 
 void StorageSpaceManagerProviderTest::TearDown()
@@ -449,6 +462,480 @@ HWTEST_F(StorageSpaceManagerProviderTest, Lifecycle_Restart, TestSize.Level2)
     provider_->OnStop();
 
     GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_Lifecycle_Restart end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_Provider_GetDataShareService_0001
+ * @tc.name: GetDataShareService_ServiceNotReady
+ * @tc.desc: Test GetDataShareService when service is not ready
+ * @tc.size: SMALL
+ * @tc.type: FUNC
+ * @tc.level Level 2
+ */
+HWTEST_F(StorageSpaceManagerProviderTest, GetDataShareService_ServiceNotReady, TestSize.Level2)
+{
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_GetDataShareService_ServiceNotReady start";
+
+    ASSERT_NE(provider_, nullptr);
+
+    std::string uri = "datashare://StorageSpaceMgr/SAID=8650/app_cache_clean_record";
+    sptr<IRemoteObject> remoteObject;
+    
+    int32_t ret = provider_->GetDataShareService(uri, remoteObject);
+    
+    EXPECT_EQ(ret, E_SERVICE_NOT_READY);
+    EXPECT_EQ(remoteObject, nullptr);
+
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_GetDataShareService_ServiceNotReady end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_Provider_GetDataShareService_0002
+ * @tc.name: GetDataShareService_ServiceReady
+ * @tc.desc: Test GetDataShareService when service is ready
+ * @tc.size: MEDIUM
+ * @tc.type: FUNC
+ * @tc.level Level 1
+ */
+HWTEST_F(StorageSpaceManagerProviderTest, GetDataShareService_ServiceReady, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_GetDataShareService_ServiceReady start";
+
+    ASSERT_NE(provider_, nullptr);
+
+    SystemAbilityOnDemandReason startReason;
+    provider_->OnStart(startReason);
+    provider_->Init();
+
+    std::string uri = "datashare://StorageSpaceMgr/SAID=8650/app_cache_clean_record";
+    sptr<IRemoteObject> remoteObject;
+    
+    int32_t ret = provider_->GetDataShareService(uri, remoteObject);
+    
+    EXPECT_TRUE(ret == E_OK || ret == E_PERMISSION_DENIED || ret == E_SERVICE_ON_IDLE);
+    if (ret == E_OK) {
+        EXPECT_NE(remoteObject, nullptr);
+    } else {
+        EXPECT_EQ(remoteObject, nullptr);
+    }
+
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_GetDataShareService_ServiceReady end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_Provider_GetDataShareService_0003
+ * @tc.name: GetDataShareService_InvalidUri
+ * @tc.desc: Test GetDataShareService with invalid URI
+ * @tc.size: SMALL
+ * @tc.type: FUNC
+ * @tc.level Level 2
+ */
+HWTEST_F(StorageSpaceManagerProviderTest, GetDataShareService_InvalidUri, TestSize.Level2)
+{
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_GetDataShareService_InvalidUri start";
+
+    ASSERT_NE(provider_, nullptr);
+
+    SystemAbilityOnDemandReason startReason;
+    provider_->OnStart(startReason);
+    provider_->Init();
+
+    std::string uri = "";
+    sptr<IRemoteObject> remoteObject;
+    
+    int32_t ret = provider_->GetDataShareService(uri, remoteObject);
+    
+    EXPECT_NE(ret, E_OK);
+    EXPECT_EQ(remoteObject, nullptr);
+
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_GetDataShareService_InvalidUri end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_Provider_GetDataShareService_0004
+ * @tc.name: GetDataShareService_MultipleCalls
+ * @tc.desc: Test calling GetDataShareService multiple times
+ * @tc.size: MEDIUM
+ * @tc.type: FUNC
+ * @tc.level Level 2
+ */
+HWTEST_F(StorageSpaceManagerProviderTest, GetDataShareService_MultipleCalls, TestSize.Level2)
+{
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_GetDataShareService_MultipleCalls start";
+
+    ASSERT_NE(provider_, nullptr);
+
+    SystemAbilityOnDemandReason startReason;
+    provider_->OnStart(startReason);
+    provider_->Init();
+
+    std::string uri = "datashare://StorageSpaceMgr/SAID=8650/app_cache_clean_record";
+    
+    for (int i = 0; i < 3; i++) {
+        sptr<IRemoteObject> remoteObject;
+        int32_t ret = provider_->GetDataShareService(uri, remoteObject);
+        EXPECT_TRUE(ret == E_OK || ret == E_PERMISSION_DENIED || ret == E_SERVICE_ON_IDLE);
+    }
+
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_GetDataShareService_MultipleCalls end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_Provider_OnExtension_0001
+ * @tc.name: OnExtension_DataShareConnection
+ * @tc.desc: Test OnExtension with datashare_connection extension
+ * @tc.size: SMALL
+ * @tc.type: FUNC
+ * @tc.level Level 1
+ */
+HWTEST_F(StorageSpaceManagerProviderTest, OnExtension_DataShareConnection, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_OnExtension_DataShareConnection start";
+
+    ASSERT_NE(provider_, nullptr);
+
+    MessageParcel data;
+    MessageParcel reply;
+    
+    int32_t ret = provider_->OnExtension("datashare_connection", data, reply);
+    
+    EXPECT_EQ(ret, E_OK);
+
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_OnExtension_DataShareConnection end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_Provider_OnExtension_0002
+ * @tc.name: OnExtension_UnknownExtension
+ * @tc.desc: Test OnExtension with unknown extension type
+ * @tc.size: SMALL
+ * @tc.type: FUNC
+ * @tc.level Level 2
+ */
+HWTEST_F(StorageSpaceManagerProviderTest, OnExtension_UnknownExtension, TestSize.Level2)
+{
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_OnExtension_UnknownExtension start";
+
+    ASSERT_NE(provider_, nullptr);
+
+    MessageParcel data;
+    MessageParcel reply;
+    
+    int32_t ret = provider_->OnExtension("unknown_extension", data, reply);
+    
+    EXPECT_EQ(ret, E_OK);
+
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_OnExtension_UnknownExtension end";
+}
+
+HWTEST_F(StorageSpaceManagerProviderTest, AddSubtractRunningIpcCount, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_AddSubtractRunningIpcCount start";
+    ASSERT_NE(provider_, nullptr);
+    EXPECT_EQ(provider_->runningIpcCount_.load(), 0);
+    provider_->AddRunningIpcCount();
+    EXPECT_EQ(provider_->runningIpcCount_.load(), 1);
+    provider_->AddRunningIpcCount();
+    EXPECT_EQ(provider_->runningIpcCount_.load(), 2);
+    provider_->SubtractRunningIpcCount();
+    EXPECT_EQ(provider_->runningIpcCount_.load(), 1);
+    provider_->SubtractRunningIpcCount();
+    EXPECT_EQ(provider_->runningIpcCount_.load(), 0);
+
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_AddSubtractRunningIpcCount end";
+}
+
+HWTEST_F(StorageSpaceManagerProviderTest, IsReadyIntoIdle_NoIpcRunning, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_IsReadyIntoIdle_NoIpcRunning start";
+    ASSERT_NE(provider_, nullptr);
+    while (provider_->runningIpcCount_.load() > 0) {
+        provider_->SubtractRunningIpcCount();
+    }
+    EXPECT_TRUE(provider_->IsReadyIntoIdle());
+
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_IsReadyIntoIdle_NoIpcRunning end";
+}
+
+HWTEST_F(StorageSpaceManagerProviderTest, IsReadyIntoIdle_IpcRunning, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_IsReadyIntoIdle_IpcRunning start";
+    ASSERT_NE(provider_, nullptr);
+    provider_->AddRunningIpcCount();
+    EXPECT_FALSE(provider_->IsReadyIntoIdle());
+    provider_->SubtractRunningIpcCount();
+
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_IsReadyIntoIdle_IpcRunning end";
+}
+
+HWTEST_F(StorageSpaceManagerProviderTest, CreateDestroyUnloadHandler, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_CreateDestroyUnloadHandler start";
+    ASSERT_NE(provider_, nullptr);
+    provider_->DestroyUnloadHandler();
+    int32_t ret = provider_->CreateUnloadHandler();
+    EXPECT_EQ(ret, E_OK);
+    ret = provider_->CreateUnloadHandler();
+    EXPECT_EQ(ret, E_OK);
+    ret = provider_->DestroyUnloadHandler();
+    EXPECT_EQ(ret, E_OK);
+    ret = provider_->DestroyUnloadHandler();
+    EXPECT_EQ(ret, E_OK);
+
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_CreateDestroyUnloadHandler end";
+}
+
+HWTEST_F(StorageSpaceManagerProviderTest, DelayUnloadTask_NullHandler, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_DelayUnloadTask_NullHandler start";
+    ASSERT_NE(provider_, nullptr);
+    provider_->DestroyUnloadHandler();
+    provider_->DelayUnloadTask();
+
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_DelayUnloadTask_NullHandler end";
+}
+
+HWTEST_F(StorageSpaceManagerProviderTest, DelayUnloadTask_WithHandler, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_DelayUnloadTask_WithHandler start";
+    ASSERT_NE(provider_, nullptr);
+    provider_->CreateUnloadHandler();
+    provider_->DelayUnloadTask();
+    provider_->DelayUnloadTask();
+    provider_->DestroyUnloadHandler();
+
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_DelayUnloadTask_WithHandler end";
+}
+
+HWTEST_F(StorageSpaceManagerProviderTest, OnIdle_ReadyForIdle, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_OnIdle_ReadyForIdle start";
+    ASSERT_NE(provider_, nullptr);
+    while (provider_->runningIpcCount_.load() > 0) {
+        provider_->SubtractRunningIpcCount();
+    }
+    SystemAbilityOnDemandReason idleReason;
+    int32_t ret = provider_->OnIdle(idleReason);
+    EXPECT_TRUE(ret == 0 || ret == -1);
+
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_OnIdle_ReadyForIdle end";
+}
+
+HWTEST_F(StorageSpaceManagerProviderTest, OnIdle_NotReadyForIdle, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_OnIdle_NotReadyForIdle start";
+    ASSERT_NE(provider_, nullptr);
+    provider_->AddRunningIpcCount();
+    SystemAbilityOnDemandReason idleReason;
+    int32_t ret = provider_->OnIdle(idleReason);
+    EXPECT_EQ(ret, -1);
+    provider_->SubtractRunningIpcCount();
+
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_OnIdle_NotReadyForIdle end";
+}
+
+HWTEST_F(StorageSpaceManagerProviderTest, OnActive_Basic, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_OnActive_Basic start";
+    ASSERT_NE(provider_, nullptr);
+    SystemAbilityOnDemandReason activeReason;
+    provider_->OnActive(activeReason);
+
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_OnActive_Basic end";
+}
+
+HWTEST_F(StorageSpaceManagerProviderTest, OnAddSystemAbility_AlreadyReady, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_OnAddSystemAbility_AlreadyReady start";
+    ASSERT_NE(provider_, nullptr);
+    SystemAbilityOnDemandReason startReason;
+    provider_->OnStart(startReason);
+    provider_->Init();
+    EXPECT_TRUE(provider_->serviceReady_.load());
+    provider_->OnAddSystemAbility(BUNDLE_MGR_SERVICE_SYS_ABILITY_ID, "");
+
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_OnAddSystemAbility_AlreadyReady end";
+}
+
+HWTEST_F(StorageSpaceManagerProviderTest, OnAddSystemAbility_NotReady, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_OnAddSystemAbility_NotReady start";
+    ASSERT_NE(provider_, nullptr);
+    provider_->serviceReady_.store(false);
+    provider_->depSaIds_.clear();
+    provider_->OnAddSystemAbility(BUNDLE_MGR_SERVICE_SYS_ABILITY_ID, "");
+
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_OnAddSystemAbility_NotReady end";
+}
+
+HWTEST_F(StorageSpaceManagerProviderTest, ExitIdleState_Basic, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_ExitIdleState_Basic start";
+    ASSERT_NE(provider_, nullptr);
+    bool ret = provider_->ExitIdleState();
+    EXPECT_EQ(ret, true);
+
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_ExitIdleState_Basic end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_Provider_GetDataShareService_0005
+ * @tc.name: GetDataShareService_OnIdleState
+ * @tc.desc: Test GetDataShareService when service is in idle state
+ * @tc.size: SMALL
+ * @tc.type: FUNC
+ * @tc.level Level 2
+ */
+HWTEST_F(StorageSpaceManagerProviderTest, GetDataShareService_OnIdleState, TestSize.Level2)
+{
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_GetDataShareService_OnIdleState start";
+
+    ASSERT_NE(provider_, nullptr);
+
+    SystemAbilityOnDemandReason startReason;
+    provider_->OnStart(startReason);
+    provider_->Init();
+
+    SystemAbilityOnDemandReason idleReason;
+    provider_->OnIdle(idleReason);
+
+    std::string uri = "datashare://StorageSpaceMgr/SAID=8650/app_cache_clean_record";
+    sptr<IRemoteObject> remoteObject;
+    
+    int32_t ret = provider_->GetDataShareService(uri, remoteObject);
+    
+    EXPECT_TRUE(ret == E_OK || ret == E_SERVICE_ON_IDLE);
+
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_GetDataShareService_OnIdleState end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_Provider_GetDataShareService_0006
+ * @tc.name: GetDataShareService_FirstCallCreateInstance
+ * @tc.desc: Test first call to GetDataShareService creates dataShareService_ instance
+ * @tc.size: MEDIUM
+ * @tc.type: FUNC
+ * @tc.level Level 1
+ */
+HWTEST_F(StorageSpaceManagerProviderTest, GetDataShareService_FirstCallCreateInstance, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_GetDataShareService_FirstCallCreateInstance start";
+
+    ASSERT_NE(provider_, nullptr);
+
+    SystemAbilityOnDemandReason startReason;
+    provider_->OnStart(startReason);
+    provider_->Init();
+
+    provider_->dataShareService_ = nullptr;
+
+    std::string uri = "datashare://StorageSpaceMgr/SAID=8650/app_cache_clean_record";
+    sptr<IRemoteObject> remoteObject;
+    
+    int32_t ret = provider_->GetDataShareService(uri, remoteObject);
+    
+    EXPECT_TRUE(ret == E_OK || ret == E_PERMISSION_DENIED);
+    EXPECT_NE(provider_->dataShareService_, nullptr);
+
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_GetDataShareService_FirstCallCreateInstance end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_Provider_GetDataShareService_0007
+ * @tc.name: GetDataShareService_ReuseInstance
+ * @tc.desc: Test GetDataShareService reuses existing dataShareService_ instance
+ * @tc.size: MEDIUM
+ * @tc.type: FUNC
+ * @tc.level Level 1
+ */
+HWTEST_F(StorageSpaceManagerProviderTest, GetDataShareService_ReuseInstance, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_GetDataShareService_ReuseInstance start";
+
+    ASSERT_NE(provider_, nullptr);
+
+    SystemAbilityOnDemandReason startReason;
+    provider_->OnStart(startReason);
+    provider_->Init();
+
+    std::string uri = "datashare://StorageSpaceMgr/SAID=8650/app_cache_clean_record";
+    sptr<IRemoteObject> remoteObject1;
+    provider_->GetDataShareService(uri, remoteObject1);
+    
+    auto firstInstance = provider_->dataShareService_;
+    ASSERT_NE(firstInstance, nullptr);
+
+    sptr<IRemoteObject> remoteObject2;
+    provider_->GetDataShareService(uri, remoteObject2);
+    
+    auto secondInstance = provider_->dataShareService_;
+    EXPECT_EQ(firstInstance, secondInstance);
+
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_GetDataShareService_ReuseInstance end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_Provider_GetDataShareService_0008
+ * @tc.name: GetDataShareService_PermissionDenied
+ * @tc.desc: Test GetDataShareService with permission denied
+ * @tc.size: SMALL
+ * @tc.type: FUNC
+ * @tc.level Level 2
+ */
+HWTEST_F(StorageSpaceManagerProviderTest, GetDataShareService_PermissionDenied, TestSize.Level2)
+{
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_GetDataShareService_PermissionDenied start";
+
+    ASSERT_NE(provider_, nullptr);
+
+    SystemAbilityOnDemandReason startReason;
+    provider_->OnStart(startReason);
+    provider_->Init();
+
+    g_mockVerifyAccessTokenResult = PERMISSION_DENIED;
+
+    std::string uri = "datashare://StorageSpaceMgr/SAID=8650/app_cache_clean_record";
+    sptr<IRemoteObject> remoteObject;
+    
+    int32_t ret = provider_->GetDataShareService(uri, remoteObject);
+    
+    EXPECT_EQ(ret, E_PERMISSION_DENIED);
+    EXPECT_EQ(remoteObject, nullptr);
+
+    g_mockVerifyAccessTokenResult = PERMISSION_GRANTED;
+
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_GetDataShareService_PermissionDenied end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_Provider_GetDataShareService_0009
+ * @tc.name: GetDataShareService_PermissionGranted
+ * @tc.desc: Test GetDataShareService with permission granted
+ * @tc.size: SMALL
+ * @tc.type: FUNC
+ * @tc.level Level 1
+ */
+HWTEST_F(StorageSpaceManagerProviderTest, GetDataShareService_PermissionGranted, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_GetDataShareService_PermissionGranted start";
+
+    ASSERT_NE(provider_, nullptr);
+
+    SystemAbilityOnDemandReason startReason;
+    provider_->OnStart(startReason);
+    provider_->Init();
+
+    g_mockVerifyAccessTokenResult = PERMISSION_GRANTED;
+
+    std::string uri = "datashare://StorageSpaceMgr/SAID=8650/app_cache_clean_record";
+    sptr<IRemoteObject> remoteObject;
+    
+    int32_t ret = provider_->GetDataShareService(uri, remoteObject);
+    
+    EXPECT_EQ(ret, E_OK);
+    EXPECT_NE(remoteObject, nullptr);
+
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_GetDataShareService_PermissionGranted end";
 }
 
 } // namespace StorageSpaceManager

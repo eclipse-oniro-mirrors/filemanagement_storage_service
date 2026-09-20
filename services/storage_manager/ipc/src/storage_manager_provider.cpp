@@ -15,6 +15,8 @@
 
 #include <sys/resource.h>
 #include <sys/syscall.h>
+#include <climits>
+#include <cstdlib>
 
 #include "utils/storage_radar.h"
 #include <nlohmann/json.hpp>
@@ -311,6 +313,7 @@ int32_t StorageManagerProvider::CompleteAddUser(int32_t userId)
 
 int32_t StorageManagerProvider::GetFreeSizeOfVolume(const std::string &volumeUuid, int64_t &freeSize)
 {
+    freeSize = 0;
     if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER)) {
         return E_PERMISSION_DENIED;
     }
@@ -325,12 +328,13 @@ int32_t StorageManagerProvider::GetFreeSizeOfVolume(const std::string &volumeUui
     }
     return err;
 #else
-    return E_OK;
+    return E_NOT_SUPPORT;
 #endif
 }
 
 int32_t StorageManagerProvider::GetTotalSizeOfVolume(const std::string &volumeUuid, int64_t &totalSize)
 {
+    totalSize = 0;
     if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER)) {
         return E_PERMISSION_DENIED;
     }
@@ -345,7 +349,7 @@ int32_t StorageManagerProvider::GetTotalSizeOfVolume(const std::string &volumeUu
     }
     return err;
 #else
-    return E_OK;
+    return E_NOT_SUPPORT;
 #endif
 }
 
@@ -359,6 +363,14 @@ int32_t StorageManagerProvider::GetBundleStats(const std::string &pkgName,
         return E_PERMISSION_DENIED;
     }
 #ifdef STORAGE_STATISTICS_MANAGER
+    if (!CheckPkgNameRange(pkgName)) {
+        LOGE("StorageManagerProvider::GetBundleStats pkgName is out of range");
+        return E_PARAMS_INVALID;
+    }
+    if (!CheckAppIndexRange(appIndex)) {
+        LOGE("StorageManagerProvider::GetBundleStats appIndex is out of range");
+        return E_PARAMS_INVALID;
+    }
     int32_t err = StorageStatusManager::GetInstance().GetBundleStats(pkgName, bundleStats,
         appIndex, statFlag);
     StorageRadar::ReportFucBehavior("GetBundleStats", DEFAULT_USERID, "GetBundleStats End", err);
@@ -393,6 +405,10 @@ int32_t StorageManagerProvider::SetDirEncryptionPolicy(uint32_t userId, const st
         return E_PERMISSION_DENIED;
     }
     if (IsFilePathInvalid(dirPath)) {
+        return E_PARAMS_INVALID;
+    }
+    if (!CheckLevelRange(level)) {
+        LOGE("StorageManagerProvider::SetDirEncryptionPolicy level is out of range");
         return E_PARAMS_INVALID;
     }
 #ifdef USER_CRYPTO_MANAGER
@@ -537,7 +553,8 @@ int32_t StorageManagerProvider::GetUserStorageStats(StorageStats &storageStats)
         return E_PERMISSION_DENIED;
     }
 #ifdef STORAGE_STATISTICS_MANAGER
-    LOGD("StorageManagerProvider::GetUserStorageStats start");
+    std::string bundleName = StorageStatusManager::GetInstance().GetCallingBundleName();
+    LOGE("StorageManagerProvider::GetUserStorageStats start,  %{public}s", bundleName.c_str());
     int32_t err = StorageStatusManager::GetInstance().GetUserStorageStats(storageStats);
     StorageRadar::ReportFucBehavior("GetUserStorageStats", DEFAULT_USERID, "GetUserStorageStats End", err);
     if (err != E_OK) {
@@ -557,7 +574,8 @@ int32_t StorageManagerProvider::GetUserStorageStats(int32_t userId, StorageStats
         return E_PERMISSION_DENIED;
     }
 #ifdef STORAGE_STATISTICS_MANAGER
-    LOGD("StorageManagerProvider::GetUserStorageStats start");
+    std::string bundleName = StorageStatusManager::GetInstance().GetCallingBundleName();
+    LOGE("StorageManagerProvider::GetUserStorageStats start, %{public}d, %{public}s", userId, bundleName.c_str());
     int32_t err = CheckUserIdRange(userId);
     if (err != E_OK) {
         LOGE("User ID out of range");
@@ -571,7 +589,7 @@ int32_t StorageManagerProvider::GetUserStorageStats(int32_t userId, StorageStats
     }
     return err;
 #else
-    return E_OK;
+    return E_NOT_SUPPORT;
 #endif
 }
 
@@ -666,8 +684,8 @@ int32_t StorageManagerProvider::UpdateUseAuthWithRecoveryKey(const std::vector<u
     err = sdCommunication.UpdateUseAuthWithRecoveryKey(authToken, newSecret, secureUid, userId, plainText);
     StorageRadar::ReportFucBehavior("UpdateUseAuthWithRecoveryKey", userId, "UpdateUseAuthWithRecoveryKey End", err);
     return err;
-    #else
-        return E_OK;
+#else
+    return E_NOT_SUPPORT;
 #endif
 }
 
@@ -860,14 +878,13 @@ int32_t StorageManagerProvider::GetLockScreenStatus(uint32_t userId, bool &lockS
 
 int32_t StorageManagerProvider::GenerateAppkey(uint32_t hashId, uint32_t userId, std::string &keyId, bool needReSet)
 {
+    if (!CheckClientPermissionForCrypt(PERMISSION_STORAGE_MANAGER_CRYPT)) {
+        return E_PERMISSION_DENIED;
+    }
     StorageDaemon::IncreaseThreadPriority("storage_manager");
     std::string message = "GenerateAppkey Begin, hashId: " + GetAnonyString(std::to_string(hashId)) +
                           ", keyId: " + GetAnonyString(keyId) + ", needReSet:" + std::to_string(needReSet);
     StorageRadar::ReportFucBehavior("GenerateAppkey", userId, message, E_OK);
-    if (!CheckClientPermissionForCrypt(PERMISSION_STORAGE_MANAGER_CRYPT)) {
-        StorageDaemon::DecreaseThreadPriority("storage_manager");
-        return E_PERMISSION_DENIED;
-    }
 #ifdef USER_CRYPTO_MANAGER
     LOGI("hashId: %{public}u", hashId);
     int32_t err = CheckUserIdRange(userId);
@@ -893,6 +910,10 @@ int32_t StorageManagerProvider::DeleteAppkey(const std::string &keyId)
     StorageRadar::ReportFucBehavior("DeleteAppkey", DEFAULT_USERID, message, E_OK);
     if (!CheckClientPermissionForCrypt(PERMISSION_STORAGE_MANAGER_CRYPT)) {
         return E_PERMISSION_DENIED;
+    }
+    if (keyId.empty()) {
+        LOGE("StorageManagerProvider::DeleteAppkey keyId is empty");
+        return E_PARAMS_INVALID;
     }
 #ifdef USER_CRYPTO_MANAGER
     LOGD("keyId :  %{public}s", GetAnonyString(keyId).c_str());
@@ -1043,11 +1064,15 @@ int32_t StorageManagerProvider::SetBundleQuota(const std::string &bundleName,
                           ", bundleDataDirPath: " + GetAnonyString(bundleDataDirPath) +
                           ", limitSizeMb: " + std::to_string(limitSizeMb);
     StorageRadar::ReportFucBehavior("SetBundleQuota", DEFAULT_USERID, message, E_OK);
-    if (IsFilePathInvalid(bundleDataDirPath)) {
-        return E_PARAMS_INVALID;
-    }
     if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER)) {
         return E_PERMISSION_DENIED;
+    }
+    if (bundleName.empty()) {
+        LOGE("StorageManagerProvider::SetBundleQuota bundleName is empty");
+        return E_PARAMS_INVALID;
+    }
+    if (IsFilePathInvalid(bundleDataDirPath)) {
+        return E_PARAMS_INVALID;
     }
     auto& sdCommunication = StorageDaemonCommunication::GetInstance();
     int32_t err = sdCommunication.SetBundleQuota(uid, bundleDataDirPath, limitSizeMb);
@@ -1065,8 +1090,14 @@ int32_t StorageManagerProvider::GetUserStorageStatsByType(int32_t userId,
         return E_PERMISSION_DENIED;
     }
 #ifdef STORAGE_STATISTICS_MANAGER
-    LOGI("StorageManagerProvider::GetUserStorageStatsByType start");
-    int32_t err = StorageStatusManager::GetInstance().GetUserStorageStatsByType(userId,
+    std::string bundleName = StorageStatusManager::GetInstance().GetCallingBundleName();
+    LOGE("StorageManagerProvider::GetUserStorageStatsByType start,  %{public}s", bundleName.c_str());
+    int32_t err = CheckUserIdRange(userId);
+    if (err != E_OK) {
+        LOGE("StorageManagerProvider::GetUserStorageStatsByType userId is out of range");
+        return err;
+    }
+    err = StorageStatusManager::GetInstance().GetUserStorageStatsByType(userId,
         storageStats, type);
     StorageRadar::ReportFucBehavior("GetUserStorageStatsByType", userId, "GetUserStorageStatsByType End", err);
     if (err != E_OK) {
@@ -1097,6 +1128,14 @@ int32_t StorageManagerProvider::MountDfsDocs(int32_t userId,
     if (IsFilePathInvalid(relativePath)) {
         return E_PARAMS_INVALID;
     }
+    if (!CheckIdRange(networkId)) {
+        LOGE("StorageManagerProvider::MountDfsDocs networkId is empty");
+        return E_PARAMS_INVALID;
+    }
+    if (!CheckIdRange(deviceId)) {
+        LOGE("StorageManagerProvider::MountDfsDocs deviceId is empty");
+        return E_PARAMS_INVALID;
+    }
     // Only for dfs create device dir and bind mount from DFS Docs.
     if (IPCSkeleton::GetCallingUid() != DFS_UID) {
         LOGE("HandleMountDfsDocs permissionCheck error, calling uid now is %{public}d, should be DFS_UID: %{public}d",
@@ -1125,6 +1164,14 @@ int32_t StorageManagerProvider::UMountDfsDocs(int32_t userId,
     }
 
     if (IsFilePathInvalid(relativePath)) {
+        return E_PARAMS_INVALID;
+    }
+    if (!CheckIdRange(networkId)) {
+        LOGE("StorageManagerProvider::MountDfsDocs networkId is empty");
+        return E_PARAMS_INVALID;
+    }
+    if (!CheckIdRange(deviceId)) {
+        LOGE("StorageManagerProvider::MountDfsDocs deviceId is empty");
         return E_PARAMS_INVALID;
     }
     // Only for dfs create device dir and bind mount from DFS Docs.
@@ -1225,15 +1272,24 @@ int32_t StorageManagerProvider::MountFileMgrFuse(int32_t userId, const std::stri
         LOGE("StorageDaemon::MountFileMgrFuse userId %{public}d out of range", userId);
         return err;
     }
-    if (IsFilePathInvalid(path) || !IsPathStartWithFileMgr(userId, path)) {
-        return E_PARAMS_INVALID;
-    }
     if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER) || !IsCalledByFileMgr()) {
         return E_PERMISSION_DENIED;
     }
+    if (IsFilePathInvalid(path)) {
+        return E_PARAMS_INVALID;
+    }
+    char realPath[PATH_MAX] = {0};
+    if (realpath(path.c_str(), realPath) == nullptr) {
+        LOGE("MountFileMgrFuse realpath failed, path: %{public}s", GetAnonyString(path).c_str());
+        return E_PARAMS_INVALID;
+    }
+    std::string resolvedPath(realPath);
+    if (!IsPathStartWithFileMgr(userId, resolvedPath)) {
+        return E_PARAMS_INVALID;
+    }
     fuseFd = -1;
     auto& sdCommunication = StorageDaemonCommunication::GetInstance();
-    err = sdCommunication.MountFileMgrFuse(userId, path, fuseFd);
+    err = sdCommunication.MountFileMgrFuse(userId, resolvedPath, fuseFd);
     StorageRadar::ReportFucBehavior("MountFileMgrFuse", userId, "MountFileMgrFuse End", err);
     return err;
 }
@@ -1247,21 +1303,30 @@ int32_t StorageManagerProvider::UMountFileMgrFuse(int32_t userId, const std::str
         LOGE("StorageDaemon::UMountFileMgrFuse userId %{public}d out of range", userId);
         return err;
     }
-    if (IsFilePathInvalid(path) || !IsPathStartWithFileMgr(userId, path)) {
-        return E_PARAMS_INVALID;
-    }
     if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER) || !IsCalledByFileMgr()) {
         return E_PERMISSION_DENIED;
     }
+    if (IsFilePathInvalid(path)) {
+        return E_PARAMS_INVALID;
+    }
+    char realPath[PATH_MAX] = {0};
+    if (realpath(path.c_str(), realPath) == nullptr) {
+        LOGE("UMountFileMgrFuse realpath failed, path: %{public}s", GetAnonyString(path).c_str());
+        return E_PARAMS_INVALID;
+    }
+    std::string resolvedPath(realPath);
+    if (!IsPathStartWithFileMgr(userId, resolvedPath)) {
+        return E_PARAMS_INVALID;
+    }
     auto& sdCommunication = StorageDaemonCommunication::GetInstance();
-    err = sdCommunication.UMountFileMgrFuse(userId, path);
+    err = sdCommunication.UMountFileMgrFuse(userId, resolvedPath);
     StorageRadar::ReportFucBehavior("UMountFileMgrFuse", userId, "UMountFileMgrFuse End", err);
     return err;
 }
 
 int32_t StorageManagerProvider::MountDlpFuse(const std::string &dstPath, int32_t &fuseFd)
 {
-    std::string message = "MountDlpFuse Begin, dstPath:" + dstPath;
+    std::string message = "MountDlpFuse Begin, dstPath:" + GetAnonyString(dstPath);
     StorageRadar::ReportFucBehavior("MountDlpFuse", DEFAULT_USERID, message, E_OK);
     if (IsFilePathInvalid(dstPath) || !IsPathStartWithDlp(dstPath)) {
         return E_PARAMS_INVALID;
@@ -1321,6 +1386,10 @@ int32_t StorageManagerProvider::IsFileOccupied(const std::string &path,
     if (IsFilePathInvalid(path)) {
         return E_PARAMS_INVALID;
     }
+    if (!CheckInputListRange(inputList)) {
+        LOGE("StorageManagerProvider::IsFileOccupied inputList is out of range");
+        return E_PARAMS_INVALID;
+    }
     isOccupy = false;
     auto& sdCommunication = StorageDaemonCommunication::GetInstance();
     int32_t err = sdCommunication.IsFileOccupied(path, inputList, outputList, isOccupy);
@@ -1371,6 +1440,14 @@ int32_t StorageManagerProvider::MountDisShareFile(int32_t userId, const std::map
         return E_PARAMS_INVALID;
     }
     for (const auto &item : shareFiles) {
+        if (item.first.empty() || item.second.empty()) {
+            LOGE("shareFiles key or value is empty");
+            return E_PARAMS_INVALID;
+        }
+        if (item.first.size() > PATH_MAX || item.second.size() > PATH_MAX) {
+            LOGE("shareFiles key or value exceeds PATH_MAX");
+            return E_PARAMS_INVALID;
+        }
         if (IsFilePathInvalid(item.first) || IsFilePathInvalid(item.second)) {
             LOGE("shareFiles is invalid");
             return E_PARAMS_INVALID;
@@ -1554,8 +1631,12 @@ int32_t StorageManagerProvider::CreateUserDir(const std::string &path, mode_t mo
     auto ret = sdCommunication.CreateUserDir(path, mode, uid, gid);
     LOGW("CreateUserDir end, uid: %{public}d, ret: %{public}d", callingUid, ret);
 
-    std::string extraData = "path=" + path + "callingUid=" + std::to_string(callingUid);
-    StorageRadar::ReportUserManager("CreateUserDir", 0, ret, extraData);
+    std::string extraData = "path=" + path + ", mode=" + std::to_string(mode) +
+        ", uid=" + std::to_string(uid) + ", gid=" + std::to_string(gid) +
+        ", callingUid=" + std::to_string(callingUid);
+    if (ret != E_OK) {
+        StorageRadar::ReportUserManager("CreateUserDir", 0, ret, extraData);
+    }
     return ret;
 }
 
@@ -1602,14 +1683,20 @@ int32_t StorageManagerProvider::SetExtBundleStats(uint32_t userId, const ExtBund
     if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER)) {
         return E_PERMISSION_DENIED;
     }
-    if (userId > TOP_USER_ID || stats.businessSize_ >= INT64_MAX || stats.businessName_.empty()) {
+    int32_t ret = CheckUserIdRange(userId);
+    if (ret != E_OK) {
+        LOGE("StorageManagerProvider::SetExtBundleStats userId %{public}d out of range", userId);
+        return E_PARAMS_INVALID;
+    }
+    if (stats.businessSize_ >= INT64_MAX || stats.businessName_.empty() ||
+        stats.businessName_.size() > PATH_MAX) {
         LOGE("invalid params, userId: %{public}d, size: %{public}lld, name: %{public}s", userId,
             static_cast<long long>(stats.businessSize_), stats.businessName_.c_str());
         return E_PARAMS_INVALID;
     }
 #ifdef STORAGE_STATISTICS_MANAGER
     LOGD("SetExtBundleStats start");
-    int32_t ret = StorageStatusManager::GetInstance().SetExtBundleStats(userId, stats);
+    ret = StorageStatusManager::GetInstance().SetExtBundleStats(userId, stats);
     StorageRadar::ReportFucBehavior("SetExtBundleStats", userId, "SetExtBundleStats End", ret);
     if (ret != E_OK) {
         std::string extraData = "errCode=" + std::to_string(ret);
@@ -1632,13 +1719,18 @@ int32_t StorageManagerProvider::GetExtBundleStats(uint32_t userId, ExtBundleStat
     if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER)) {
         return E_PERMISSION_DENIED;
     }
-    if (userId > TOP_USER_ID || stats.businessName_.empty()) {
+    int32_t ret = CheckUserIdRange(userId);
+    if (ret != E_OK) {
+        LOGE("StorageManagerProvider::GetExtBundleStats userId %{public}d out of range", userId);
+        return E_PARAMS_INVALID;
+    }
+    if (stats.businessName_.empty()) {
         LOGE("invalid params, userId: %{public}d, name: %{public}s", userId, stats.businessName_.c_str());
         return E_PARAMS_INVALID;
     }
 #ifdef STORAGE_STATISTICS_MANAGER
     LOGI("GetExtBundleStats start");
-    int32_t ret = StorageStatusManager::GetInstance().GetExtBundleStats(userId, stats);
+    ret = StorageStatusManager::GetInstance().GetExtBundleStats(userId, stats);
     StorageRadar::ReportFucBehavior("GetExtBundleStats", userId, "GetExtBundleStats End", ret);
     if (ret != E_OK) {
         std::string extraData = "errCode=" + std::to_string(ret);
@@ -1661,13 +1753,14 @@ int32_t StorageManagerProvider::GetAllExtBundleStats(uint32_t userId, std::vecto
     if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER)) {
         return E_PERMISSION_DENIED;
     }
-    if (userId > TOP_USER_ID) {
-        LOGE("invalid params, userId: %{public}d.", userId);
+    int32_t ret = CheckUserIdRange(userId);
+    if (ret != E_OK) {
+        LOGE("StorageManagerProvider::GetAllExtBundleStats userId %{public}d out of range", userId);
         return E_PARAMS_INVALID;
     }
 #ifdef STORAGE_STATISTICS_MANAGER
     LOGI("GetAllExtBundleStats start");
-    int32_t ret = StorageStatusManager::GetInstance().GetAllExtBundleStats(userId, statsVec);
+    ret = StorageStatusManager::GetInstance().GetAllExtBundleStats(userId, statsVec);
     StorageRadar::ReportFucBehavior("GetAllExtBundleStats", userId, "GetAllExtBundleStats Begin", ret);
     if (ret != E_OK) {
         std::string extraData = "errCode=" + std::to_string(ret);
@@ -1687,6 +1780,11 @@ int32_t StorageManagerProvider::NotifyCreateBundleDataDirWithEl(uint32_t userId,
         LOGE("NotifyCreateBundleDataDirWithEl permission denied ! uid: %{public}d", callingUid);
         return E_PERMISSION_DENIED;
     }
+    int32_t ret = CheckUserIdRange(userId);
+    if (ret != E_OK) {
+        LOGE("StorageManagerProvider::NotifyCreateBundleDataDirWithEl userId %{public}d out of range", userId);
+        return ret;
+    }
     LOGI("CreateElxBundleDataDir start: userId %{public}u, elx is %{public}d", userId, elx);
     if (elx == StorageDaemon::EL1_KEY) {
         LOGW("CreateElxBundleDataDir pass: userId %{public}u, elx is %{public}d", userId, elx);
@@ -1697,7 +1795,7 @@ int32_t StorageManagerProvider::NotifyCreateBundleDataDirWithEl(uint32_t userId,
         LOGE("Connect bundle manager sa proxy failed.");
         return E_PERMISSION_DENIED;
     }
-    int32_t ret = bundleMgr->CreateBundleDataDirWithEl(userId, static_cast<OHOS::AppExecFwk::DataDirEl>(elx));
+    ret = bundleMgr->CreateBundleDataDirWithEl(userId, static_cast<OHOS::AppExecFwk::DataDirEl>(elx));
     LOGI("CreateElxBundleDataDir end ret %{public}d", ret);
     return ret;
 }
@@ -1718,6 +1816,11 @@ int32_t StorageManagerProvider::IsOsAccountExists(unsigned int userId, bool &isO
     if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER) || callingUid != ROOT_UID) {
         LOGE("IsOsAccountExists permission denied ! uid: %{public}d", callingUid);
         return E_PERMISSION_DENIED;
+    }
+    int32_t ret = CheckUserIdRange(userId);
+    if (ret != E_OK) {
+        LOGE("StorageManagerProvider::IsOsAccountExists userId %{public}d out of range", userId);
+        return ret;
     }
     return AccountSA::OsAccountManager::IsOsAccountExists(userId, isOsAccountExists);
 }

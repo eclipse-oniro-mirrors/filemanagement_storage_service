@@ -46,10 +46,9 @@ namespace StorageDaemon {
 constexpr int32_t SLEEP_TIME = 1;
 constexpr int32_t MTP_VAL_LEN = 6;
 constexpr int32_t MTP_TRUE_LEN = 5;
-constexpr int32_t DETECT_CNT = 4;
+constexpr int32_t DETECT_CNT = 10;
 constexpr int UPLOAD_RECORD_FALSE_LEN = 5;
 constexpr int UPLOAD_RECORD_TRUE_LEN = 4;
-constexpr int USB_CLASS_IMAGE = 6;
 
 constexpr const char *MTP_ROOT_PATH = "/mnt/data/external/";
 constexpr const char *SYS_PARAM_SERVICE_PERSIST_ENABLE = "persist.edm.mtp_client_disable";
@@ -66,7 +65,7 @@ constexpr int32_t ERROR_CODE_GET_DEVICE_LIST_FAILED = -3;
 constexpr int MIN_VALUE = 0;
 constexpr int MAX_VALUE = 255;
 #endif
-bool g_keepMonitoring = true;
+std::atomic<bool> g_keepMonitoring = true;
 
 MtpDeviceMonitor::MtpDeviceMonitor()
 {
@@ -76,6 +75,7 @@ MtpDeviceMonitor::MtpDeviceMonitor()
 MtpDeviceMonitor::~MtpDeviceMonitor()
 {
     LOGI("[L2:MtpDeviceMonitor] ~MtpDeviceMonitor: >>> ENTER <<<");
+    StopMonitor();
     UmountAllMtpDevice();
 }
 
@@ -86,8 +86,17 @@ void MtpDeviceMonitor::StartMonitor()
         LOGE("[L2:MtpDeviceMonitor] StartMonitor: <<< EXIT FAILED <<< vendor country is hwit/cn");
         return;
     }
-    std::thread([this]() { MonitorDevice(); }).detach();
+    stopMonitor_ = true;
+    monitorThread_ = std::thread([this]() { MonitorDevice(); });
     LOGI("[L2:MtpDeviceMonitor] StartMonitor: <<< EXIT SUCCESS <<<");
+}
+
+void MtpDeviceMonitor::StopMonitor()
+{
+    stopMonitor_ = false;
+    if (monitorThread_.joinable()) {
+        monitorThread_.join();
+    }
 }
 
 bool MtpDeviceMonitor::IsNeedDisableMtp()
@@ -245,28 +254,42 @@ void MtpDeviceMonitor::SetPtpMode(const std::vector<MtpDeviceInfo> &devInfos, bo
     }
 }
 
+bool MtpDeviceMonitor::NeedCameraFallback(const std::vector<MtpDeviceInfo> &detectedMtpDevices) const
+{
+    return detectedMtpDevices.empty();
+}
+
 void MtpDeviceMonitor::MountMtpDeviceByBroadcast(DeviceType deviceType, uint32_t busLocation, uint8_t devNum)
 {
     std::vector<MtpDeviceInfo> devInfos;
+    LOGI("[L2:MtpDeviceMonitor] MountMtpDeviceByBroadcast: >>> ENTER <<< deviceType=%{public}d, "
+        "bus=%{public}u, dev=%{public}u", static_cast<int>(deviceType), busLocation, devNum);
 
     if (deviceType == DeviceType::CAMERA) {
-        MountDeviceByType(DeviceType::CAMERA, devInfos, "camera", busLocation, devNum);
-        return;
-    } else if (deviceType == DeviceType::MOBILE) {
+        int32_t ret = MountDeviceByType(DeviceType::CAMERA, devInfos, "camera", busLocation, devNum);
+        if (ret == E_OK) {
+            return;
+        }
+        LOGI("[L2:MtpDeviceMonitor] MountMtpDeviceByBroadcast: camera failed, fallback to mobile");
+        devInfos.clear();
         MountDeviceByType(DeviceType::MOBILE, devInfos, "mobile", busLocation, devNum);
         return;
-    } else if (deviceType == DeviceType::UNKNOWN) {
+    }
+    if (deviceType == DeviceType::MOBILE || deviceType == DeviceType::UNKNOWN) {
         int32_t ret = MountDeviceByType(DeviceType::MOBILE, devInfos, "mobile", busLocation, devNum);
         if (ret == E_OK) {
             return;
         }
-        devInfos.clear();
+        if (!NeedCameraFallback(devInfos)) {
+            LOGW("[L2:MtpDeviceMonitor] MountMtpDeviceByBroadcast: MTP detected, skip camera fallback");
+            return;
+        }
+        LOGI("[L2:MtpDeviceMonitor] MountMtpDeviceByBroadcast: mobile not detected, fallback to camera");
         MountDeviceByType(DeviceType::CAMERA, devInfos, "camera", busLocation, devNum);
         return;
     }
 
     LOGE("[L2:MtpDeviceMonitor] MountMtpDeviceByBroadcast:Invalid device type");
-    return;
 }
 
 void MtpDeviceMonitor::MonitorDevice()
@@ -275,22 +298,24 @@ void MtpDeviceMonitor::MonitorDevice()
     int32_t cnt = DETECT_CNT;
     while (cnt > 0) {
         bool hasMtp = false;
-        if (HasMTPDevice(hasMtp) != E_OK) {
+        DeviceType deviceType = DeviceType::UNKNOWN;
+        int32_t ret = HasMTPDevice(hasMtp, deviceType);
+        if (ret != E_OK) {
             cnt--;
-            sleep(SLEEP_TIME);
+            if (cnt > 0) {
+                sleep(SLEEP_TIME);
+            }
             continue;
         }
         if (hasMtp) {
-            MountMtpDeviceByBroadcast(DeviceType::UNKNOWN, 0, 0);
-            break;
+            MountMtpDeviceByBroadcast(deviceType, 0, 0);
         }
-        cnt--;
-        sleep(SLEEP_TIME);
+        break;
     }
     RegisterMTPParamListener();
-    while (g_keepMonitoring) {
-        sleep(SLEEP_TIME);
+    while (stopMonitor_ && g_keepMonitoring) {
         UsbEventSubscriber::SubscribeCommonEvent();
+        sleep(SLEEP_TIME);
     }
     RemoveMTPParamListener();
     LOGI("[L2:MtpDeviceMonitor] MonitorDevice: <<< EXIT SUCCESS <<< monitor thread ended");
@@ -550,7 +575,7 @@ void MtpDeviceMonitor::OnEnterpriseParamChange(const char *key, const  char *val
     LOGI("[L2:MtpDeviceMonitor] OnEnterpriseParamChange: <<< EXIT SUCCESS <<<");
 }
 
-int32_t MtpDeviceMonitor::HasMTPDevice(bool &hasMtp)
+int32_t MtpDeviceMonitor::HasMTPDevice(bool &hasMtp, DeviceType &deviceType)
 {
     LOGD("[L2:MtpDeviceMonitor] HasMTPDevice: >>> ENTER <<<");
     auto &usbSrvClient = OHOS::USB::UsbSrvClient::GetInstance();
@@ -560,14 +585,10 @@ int32_t MtpDeviceMonitor::HasMTPDevice(bool &hasMtp)
         LOGE("[L2:MtpDeviceMonitor] HasMTPDevice: <<< EXIT FAILED <<< GetDevices failed, err=%{public}d", ret);
         return ret;
     }
+    deviceType = DeviceType::UNKNOWN;
     for (UsbDevice &dev : deviceList) {
-        uint8_t deviceClass = static_cast<uint8_t>(dev.GetClass());
-        uint16_t idVendor = static_cast<uint16_t>(dev.GetVendorId());
-        uint16_t idProduct = static_cast<uint16_t>(dev.GetProductId());
-        LOGI("[L2:MtpDeviceMonitor] HasMTPDevice: deviceClass=%{public}u, vendorId=%{public}u, productId=%{public}u",
-             deviceClass, idVendor, idProduct);
-        DeviceType deviceType = GetDeviceType(deviceClass, idVendor, idProduct);
-        if (deviceType == DeviceType::CAMERA || deviceType == DeviceType::MOBILE || deviceClass == USB_CLASS_IMAGE) {
+        std::string usbInfo = dev.getJsonString();
+        if (UsbEventSubscriber::ShouldHandleMtpDevice(usbInfo, deviceType)) {
             hasMtp = true;
             LOGD("[L2:MtpDeviceMonitor] HasMTPDevice: <<< EXIT SUCCESS <<< hasMtp=true");
             return E_OK;

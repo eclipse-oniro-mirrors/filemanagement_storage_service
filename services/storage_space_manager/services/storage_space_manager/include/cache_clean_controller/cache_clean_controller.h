@@ -75,8 +75,8 @@ struct CleanResources {
 struct CleanStats {
     int32_t totalCleanedCount = 0;
     int32_t failedCount = 0;
-    int64_t cleanBefore = 0;
-    int64_t cleanAfter = 0;
+    uint64_t cleanBefore = 0;
+    uint64_t cleanAfter = 0;
 };
 
 /**
@@ -379,7 +379,6 @@ private:
     std::shared_ptr<IQuotaCalculator> quotaCalculator_;
     std::mutex loadQuotaMutex_;
     std::atomic<bool> stopCleanCacheFlag_{false};  // Stop clean cache flag
-    std::atomic<bool> isCleanRunning_{false};       // Scan running flag
     std::ostringstream extraData_;
 };
 

@@ -42,20 +42,19 @@ SystemMountManager &SystemMountManager::GetInstance()
 
 int32_t SystemMountManager::MountCloudByUserId(int32_t userId)
 {
-    mountMutex_.lock();
+    std::lock_guard<std::mutex> lock(mountMutex_);
     auto ret = CloudTwiceMount(userId);
     if (ret == E_OK) {
         fuseMountedUsers_.push_back(userId);
     } else {
         fuseToMountUsers_.push_back(userId);
     }
-    mountMutex_.unlock();
     return ret;
 }
 
 int32_t SystemMountManager::UMountCloudByUserId(int32_t userId)
 {
-    mountMutex_.lock();
+    std::lock_guard<std::mutex> lock(mountMutex_);
     auto ret = CloudTwiceUMount(userId);
     auto it = std::find(fuseMountedUsers_.begin(), fuseMountedUsers_.end(), userId);
     if (it != fuseMountedUsers_.end()) {
@@ -65,21 +64,19 @@ int32_t SystemMountManager::UMountCloudByUserId(int32_t userId)
     if (it2 != fuseToMountUsers_.end()) {
         fuseToMountUsers_.erase(it2);
     }
-    mountMutex_.unlock();
     return ret;
 }
 
 void SystemMountManager::SetCloudState(bool active)
 {
     LOGI("set cloud state start, active is %{public}d", active);
-    mountMutex_.lock();
+    std::lock_guard<std::mutex> lock(mountMutex_);
     cloudReady_ = active;
     if (cloudReady_) {
         MountCloudForUsers();
     } else {
         UMountCloudForUsers();
     }
-    mountMutex_.unlock();
     LOGI("set cloud state end");
 }
 
@@ -121,7 +118,7 @@ int32_t SystemMountManager::CloudTwiceMount(int32_t userId)
         LOGI("path has mounted, %{public}s", cloudPath.c_str());
     } else {
         mountRet = CloudMount(userId, cloudPath);
-        if (mountRet != E_OK && mountRet != E_CLOUD_NOT_READY) {
+        if (mountRet != E_OK) {
             std::string extraData = "dstPath=" + cloudPath + ",kernelCode=" + to_string(mountRet);
             StorageRadar::ReportUserManager("CloudTwiceMount", userId, E_MOUNT_CLOUD_FUSE, extraData);
             ret = E_MOUNT_CLOUD_FUSE;
@@ -132,7 +129,7 @@ int32_t SystemMountManager::CloudTwiceMount(int32_t userId)
         LOGI("path has mounted, %{public}s", cloudMediaPath.c_str());
     } else {
         mountRet = CloudMount(userId, cloudMediaPath);
-        if (mountRet != E_OK && mountRet != E_CLOUD_NOT_READY) {
+        if (mountRet != E_OK) {
             std::string extraData = "dstPath=" + cloudMediaPath + ",kernelCode=" + to_string(mountRet);
             StorageRadar::ReportUserManager("CloudTwiceMount", userId, E_MOUNT_CLOUD, extraData);
             ret = E_MOUNT_CLOUD;
@@ -232,4 +229,4 @@ int32_t SystemMountManager::CloudMount(int32_t userId, const string &path)
 #endif
 }
 } // namespace StorageDaemon
-} // namespace OHOS
+} // namespace OHOS

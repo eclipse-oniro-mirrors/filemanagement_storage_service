@@ -13,10 +13,13 @@
  * limitations under the License.
  */
 
+#include <algorithm>
+#include <charconv>
 #include <climits>
 #include <cinttypes>
 #include <cstdlib>
 #include <cstring>
+#include <dirent.h>
 #include <fstream>
 #include <future>
 #include <libgen.h>
@@ -41,9 +44,11 @@
 #include "utils/file_utils.h"
 #include "utils/storage_radar.h"
 #include "utils/string_utils.h"
+#include "utils/volume_op_diag.h"
 
 namespace OHOS {
 namespace StorageDaemon {
+
 
 constexpr int32_t MTP_QUERY_RESULT_LEN = 10;
 constexpr const char *MTP_PATH_PREFIX = "/mnt/data/external/mtp";
@@ -82,6 +87,8 @@ constexpr uint8_t BLOCK_SIZE_BYTE_1 = 5;
 constexpr uint8_t BLOCK_SIZE_BYTE_2 = 6;
 constexpr uint8_t BLOCK_SIZE_BYTE_3 = 7;
 constexpr int32_t FORMAT_PARTITION_TIMEOUT_S = 5 * 60;
+constexpr int32_t PARTITION_HMFS_VALID = 2;
+constexpr const char *VOL_TMP_PERCENT_PATH = "/data/local/vol_tmp/percent";
 
 const std::map<std::string, std::string> formatTypeMap_ = {
     {"exfat", "mkfs.exfat"},
@@ -133,7 +140,7 @@ static bool ParseKeyValuePair(const std::string &key, const std::string &value, 
         char *endPtr = nullptr;
         errno = 0;
         double speed = strtod(value.c_str(), &endPtr);
-        if (errno != 0 || endPtr == value.c_str() || *endPtr != '\0' || speed < 0) {
+        if (errno != 0 || endPtr == nullptr || endPtr == value.c_str() || *endPtr != '\0' || speed < 0) {
             LOGE("[L3:DiskUtils] ParseBurnOptions: invalid burnSpeed: %{public}s", value.c_str());
             return false;
         }
@@ -217,6 +224,11 @@ static bool IsValidBlockDevicePath(const std::string& devPath)
             return false;
         }
     } else {
+        std::string resolvedPath(realPath);
+        if (resolvedPath.find(BLOCK_DEVICE_PREFIX) != 0) {
+            LOGE("Invalid device path: resolved path escapes /dev/block/");
+            return false;
+        }
         struct stat st;
         if (stat(devPath.c_str(), &st) == 0 && !S_ISBLK(st.st_mode)) {
             LOGE("Invalid device path: not a block device");
@@ -406,13 +418,15 @@ int32_t DiskUtils::CreatePartition(const std::string &devPath, int32_t partition
     }
     std::promise<int32_t> promise;
     std::future<int32_t> future = promise.get_future();
-    std::thread partitionThread([devPath, partitionNum, startSector, endSector, typeCode,
+    const VolumeOpDiagContext diagCtx = VolumeOpDiagCaptureContext();
+    std::thread partitionThread([devPath, partitionNum, startSector, endSector, typeCode, diagCtx,
                                  p = std::move(promise)]() mutable {
+        VolumeOpDiagAttachContext(diagCtx);
         LOGI("[L3:DiskUtils] exec create partition");
         std::string partNum = std::to_string(partitionNum);
         std::string sector = partNum + ":" + std::to_string(startSector) + ":" + std::to_string(endSector);
         std::string code = partNum + ":" + typeCode;
-        std::vector<std::string> cmd = {SGDISK_PATH, "-n", sector, "-t", code, devPath};
+        std::vector<std::string> cmd = {SGDISK_PATH, "-n", sector, "-t", code, "-W", "always", devPath};
         std::vector<std::string> output;
         int32_t ret = ForkExec(cmd, &output);
         for (auto str : output) {
@@ -441,12 +455,18 @@ int32_t DiskUtils::DeletePartitionInfo(const std::string &devPath, const std::st
         LOGE("DiskUtils::DeletePartitionInfo invalid devPath");
         return E_PARAMS_INVALID;
     }
+    if (!IsValidBlockDevicePath(std::string(BLOCK_DEVICE_PREFIX) + diskId)) {
+        LOGE("DiskUtils::DeletePartitionInfo invalid diskId");
+        return E_PARAMS_INVALID;
+    }
     LOGI("damage partition start");
     ExecAsyncDamagePartition(devPath, partitionNum);
     LOGI("damage partition end, delete partition start");
     std::promise<int32_t> promise;
     std::future<int32_t> future = promise.get_future();
-    std::thread partitionThread([diskId, partitionNum, p = std::move(promise)]() mutable {
+    const VolumeOpDiagContext diagCtx = VolumeOpDiagCaptureContext();
+    std::thread partitionThread([diskId, partitionNum, diagCtx, p = std::move(promise)]() mutable {
+        VolumeOpDiagAttachContext(diagCtx);
         LOGI("[L3:DiskUtils] exec delete partition");
         std::vector<std::string> cmd = {SGDISK_PATH, "-d", std::to_string(partitionNum), "/dev/block/" + diskId};
         std::vector<std::string> output;
@@ -475,7 +495,9 @@ int32_t DiskUtils::ExecAsyncDamagePartition(const std::string &devPath, int32_t 
 {
     std::promise<int32_t> promise;
     std::future<int32_t> future = promise.get_future();
-    std::thread partitionThread([devPath, partitionNum, p = std::move(promise)]() mutable {
+    const VolumeOpDiagContext diagCtx = VolumeOpDiagCaptureContext();
+    std::thread partitionThread([devPath, partitionNum, diagCtx, p = std::move(promise)]() mutable {
+        VolumeOpDiagAttachContext(diagCtx);
         LOGI("[L3:DiskUtils] exec damage partition");
         std::string of = "of=" + devPath + std::to_string(partitionNum);
         std::vector<std::string> cmd = {"dd", "if=/dev/zero", of, "bs=1M", "count=1"};
@@ -505,13 +527,22 @@ int32_t DiskUtils::ExecAsyncGetPartitionTableInfo(const std::string &devPath, st
 {
     std::promise<std::pair<int32_t, std::vector<std::string>>> promise;
     std::future<std::pair<int32_t, std::vector<std::string>>> future = promise.get_future();
-    std::thread partitionThread([devPath, p = std::move(promise)]() mutable {
+    const VolumeOpDiagContext diagCtx = VolumeOpDiagCaptureContext();
+    std::thread partitionThread([devPath, diagCtx, p = std::move(promise)]() mutable {
+        VolumeOpDiagAttachContext(diagCtx);
         LOGI("[L3:DiskUtils] exec get partition");
         std::vector<std::string> temp;
         std::vector<std::string> cmd = {"sgdisk", "-p", devPath};
         int32_t res = ForkExec(cmd, &temp);
-        for (auto str : temp) {
+        std::string errorMsg;
+        for (const auto& str : temp) {
+            if (str.find("ERROR") != std::string::npos) {
+                errorMsg += str;
+            }
             LOGI("get partition output: %{public}s", str.c_str());
+        }
+        if (!errorMsg.empty()) {
+            StorageService::StorageRadar::ReportUserManager("GetPartition", 0, E_GET_PARTITION_ERROR, errorMsg);
         }
         p.set_value({res, std::move(temp)});
     });
@@ -532,6 +563,13 @@ int32_t DiskUtils::ExecAsyncGetPartitionTableInfo(const std::string &devPath, st
     return E_OK;
 }
 
+namespace {
+struct FormatPartitionThreadResult {
+    int32_t ret = 0;
+    std::vector<VolumeOpDiagToolEntry> toolEntries;
+};
+} // namespace
+
 int32_t DiskUtils::FormatPartition(const std::string &devPath, const std::string &fsType,
                                    const std::string &volumeName, bool quickFormat)
 {
@@ -543,29 +581,35 @@ int32_t DiskUtils::FormatPartition(const std::string &devPath, const std::string
         LOGE("DiskUtils::FormatPartitionInfo unsupported fsType=%{public}s", fsType.c_str());
         return E_FORMAT_PARTITION_NOT_SUPPORT;
     }
-    std::promise<int32_t> promise;
-    std::future<int32_t> future = promise.get_future();
-    std::thread formatThread([devPath, fsType, volumeName, p = std::move(promise)]() mutable {
+    std::promise<FormatPartitionThreadResult> promise;
+    std::future<FormatPartitionThreadResult> future = promise.get_future();
+    const VolumeOpDiagContext diagCtx = VolumeOpDiagCaptureContext();
+    std::thread formatThread([devPath, fsType, volumeName, diagCtx, p = std::move(promise)]() mutable {
+        VolumeOpDiagAttachContext(diagCtx);
+        FormatPartitionThreadResult result;
         LOGI("[L3:DiskUtils] exec format partition");
-        std::vector<std::string> cmd = GetFormatCMD(fsType, devPath, volumeName);
+        std::vector<std::string> cmd = DiskUtils::GetFormatCMD(fsType, devPath, volumeName);
         if (!cmd.empty()) {
             std::vector<std::string> output;
-            int32_t ret = ForkExec(cmd, &output);
+            result.ret = ForkExec(cmd, &output);
             for (auto str : output) {
                 LOGI("format partition output: %{public}s", str.c_str());
             }
-            p.set_value(ret);
         } else {
-            p.set_value(E_FORMAT_PARTITION_ERROR);
+            result.ret = E_FORMAT_PARTITION_ERROR;
         }
+        result.toolEntries = VolumeOpDiagTakeToolEntries();
+        p.set_value(std::move(result));
     });
     if (future.wait_for(std::chrono::seconds(FORMAT_PARTITION_TIMEOUT_S)) == std::future_status::timeout) {
         LOGE("[L3:DiskUtils] exec format partition: <<< EXIT FAILED <<< timed out");
         formatThread.detach();
         return E_FORMAT_PARTITION_TIMEOUT;
     }
-    int32_t ret = future.get();
+    FormatPartitionThreadResult formatResult = future.get();
     formatThread.join();
+    VolumeOpDiagMergeToolEntries(formatResult.toolEntries);
+    int32_t ret = formatResult.ret;
     if (ret != E_OK) {
         LOGE("[L3:DiskUtils] FormatPartitionInfo: <<< EXIT FAILED <<< format partition failed, err=%{public}d", ret);
         return E_FORMAT_PARTITION_ERROR;
@@ -719,28 +763,27 @@ int IsCDExist(const std::string &diskPath, bool &isCDExist)
     return E_OK;
 }
 
-int IsCDBlank(const std::string &diskPath, bool &isCDBlank)
+bool IsCDBlank(const std::string &diskPath)
 {
-    isCDBlank = false;
     uint8_t buf[MAX_BUF];
-    
+    std::string diskType = GetCDType(diskPath);
     if (ReadCDDiscInfo(diskPath, READ_DISC_INFO_OPCODE, buf, sizeof(buf)) != E_OK) {
         LOGE("IsCDBlank: Unable to read disc information.");
-        return E_ERR;
-    }
-
-    uint8_t discStatus = buf[DISC_STATUS_BYTE_INDEX] & DISC_STATUS_MASK;
-    std::string diskType = GetCDType(diskPath);
-    if (discStatus == 0) {
-        isCDBlank = true;
-    } else if (diskType == "DVD+RW" || diskType == "DVD-RW" || diskType == "BD-RE") {
         std::string fsType = GetBlkidData(diskPath, "TYPE");
-        isCDBlank = fsType.empty();
+        LOGI("IsCDBlank: %{public}s has filesystem=%{public}s", diskType.c_str(), fsType.c_str());
+        return fsType.empty();
+    }
+    uint8_t discStatus = buf[DISC_STATUS_BYTE_INDEX] & DISC_STATUS_MASK;
+    bool isBlank = false;
+    if (discStatus == 0) {
+        isBlank = true;
+    } else {
+        std::string fsType = GetBlkidData(diskPath, "TYPE");
+        isBlank = fsType.empty();
         LOGI("IsCDBlank: %{public}s has filesystem=%{public}s", diskType.c_str(), fsType.c_str());
     }
-    
-    LOGI("IsCDBlank: <<< EXIT SUCCESS <<< isBlank=%{public}d", isCDBlank);
-    return E_OK;
+    LOGI("IsCDBlank: <<< EXIT SUCCESS <<< isBlank=%{public}d", isBlank);
+    return isBlank;
 }
 
 int32_t DiskUtils::QueryCDStatus(const std::string &devPath, int32_t &status)
@@ -761,12 +804,7 @@ int32_t DiskUtils::QueryCDStatus(const std::string &devPath, int32_t &status)
         return E_OK;
     }
 
-    bool isCDBlank = false;
-    int blankRet = IsCDBlank(devPath, isCDBlank);
-    if (blankRet != E_OK) {
-        LOGE("QueryCDStatus: IsCDBlank failed, ret=%{public}d", blankRet);
-        return E_ERR;
-    }
+    bool isCDBlank = IsCDBlank(devPath);
 
     status = (isCDExist ? 1 : 0) | ((isCDBlank ? 1 : 0) << 1);
     LOGI("QueryCDStatus: <<< EXIT SUCCESS <<< status = %{public}d", status);
@@ -776,6 +814,10 @@ int32_t DiskUtils::QueryCDStatus(const std::string &devPath, int32_t &status)
 int32_t DiskUtils::EjectCD(const std::string &devPath)
 {
     LOGI("EjectCD: >>> ENTER <<< devPath=%{public}s", devPath.c_str());
+    std::string driveNode = GetOpticalDriveNode(devPath);
+    if (!driveNode.empty()) {
+        return Eject(driveNode);
+    }
     std::vector<std::string> output;
     std::vector<std::string> cmd = {
         "eject",
@@ -793,6 +835,7 @@ int32_t DiskUtils::EjectCD(const std::string &devPath)
     LOGI("EjectCD: <<< EXIT SUCCESS <<<");
     return E_OK;
 }
+
 int32_t DiskUtils::PartitionHmfs(const std::string& diskPath)
 {
     std::vector<std::string> clearCmd = {
@@ -801,13 +844,19 @@ int32_t DiskUtils::PartitionHmfs(const std::string& diskPath)
         diskPath
     };
     std::vector<std::string> output;
-    int32_t ret = ForkExec(clearCmd, &output);
+    int exitStatus = 0;
+    int32_t ret = ForkExec(clearCmd, &output, &exitStatus);
     for (auto &str : output) {
         LOGI("DiskUtils::PartitionHmfs clear: %{public}s", str.c_str());
     }
     if (ret != E_OK) {
-        LOGE("DiskUtils::PartitionHmfs sgdisk clear failed, ret=%{public}d", ret);
-        return ret;
+        if (exitStatus == PARTITION_HMFS_VALID) {
+            LOGI("DiskUtils::PartitionHmfs sgdisk clear exitStatus=2, treat as success");
+        } else {
+            LOGE("DiskUtils::PartitionHmfs sgdisk clear failed, ret=%{public}d, errno=%{public}d,"
+                 "exitStatus=%{public}d", ret, errno, exitStatus);
+            return ret;
+        }
     }
 
     output.clear();
@@ -868,6 +917,10 @@ int32_t DiskUtils::Erase(const std::string &devPath)
 int32_t DiskUtils::Eject(const std::string &devName)
 {
     LOGI("Eject: >>> ENTER <<< devName=%{public}s", devName.c_str());
+    if (devName.empty() || IsFilePathInvalid(devName)) {
+        LOGE("Eject: Invalid devName, contains path traversal or empty");
+        return E_PARAMS_INVALID;
+    }
     std::string deviceLinkPath = "/sys/block/" + devName;
 
     char linkTarget[PATH_MAX] = {0};
@@ -914,6 +967,10 @@ int32_t ValidateBurnOptions(const BurnOptions &options)
          options.diskName.c_str(), options.burnPath.c_str(), options.fsType.c_str());
     if (options.diskName.empty()) {
         LOGE("[L3:DiskUtils] ValidateBurnOptions: diskName is empty");
+        return E_PARAMS_INVALID;
+    }
+    if (options.burnPath.empty() || IsFilePathInvalid(options.burnPath)) {
+        LOGE("[L3:DiskUtils] ValidateBurnOptions: invalid burnPath");
         return E_PARAMS_INVALID;
     }
     struct stat st;
@@ -992,6 +1049,76 @@ int32_t GetIncBurnAddr(const std::string &devPath, std::string &incBurnAddr)
     return err;
 }
 
+int32_t RefreshCDRomMediaNode(const std::string &devPath)
+{
+    LOGI("RefreshCDRomMediaNode: >>> ENTER <<< devPath=%{public}s", devPath.c_str());
+    std::string blockDev = GetOpticalDriveNode(devPath);
+    if (blockDev.empty()) {
+        LOGE("RefreshCDRomMediaNode: get block device name failed for devPath: %{public}s", devPath.c_str());
+        return E_ERR;
+    }
+
+    std::string sysPath = "/sys/block/" + blockDev + "/device/force_media_change";
+    std::string errMsg;
+    const uint8_t data[] = {'1'};
+    if (!WriteFileSync(sysPath.c_str(), data, sizeof(data), errMsg)) {
+        LOGE("RefreshCDRomMedia: write %{public}s failed, errMsg=%{public}s, errno=%{public}d",
+            sysPath.c_str(), errMsg.c_str(), errno);
+        return E_ERR;
+    }
+    LOGI("RefreshCDRomMediaNode: <<< EXIT SUCCESS <<<");
+    return E_OK;
+}
+
+std::string GetOpticalDriveNode(const std::string &devPath)
+{
+    LOGI("GetOpticalDriveNode: >>> ENTER <<< devPath=%{public}s", devPath.c_str());
+    size_t slashPos = devPath.find_last_of('/');
+    if (slashPos == std::string::npos || slashPos + 1 >= devPath.size()) {
+        LOGE("GetOpticalDriveNode: invalid devPath=%{public}s (no slash or empty name)", devPath.c_str());
+        return "";
+    }
+    std::string volName = devPath.substr(slashPos + 1);
+    size_t dashPos = volName.find('-');
+    if (dashPos == std::string::npos || dashPos + 1 >= volName.size()) {
+        LOGI("GetOpticalDriveNode: no dash in volName=%{public}s, return empty", volName.c_str());
+        return "";
+    }
+    std::string majorMinor = volName.substr(dashPos + 1);
+    std::replace(majorMinor.begin(), majorMinor.end(), '-', ':');
+    LOGI("GetOpticalDriveNode: devPath=%{public}s, majorMinor=%{public}s", devPath.c_str(), majorMinor.c_str());
+ 
+    std::string result;
+    DIR *dir = opendir("/sys/block");
+    if (dir == nullptr) {
+        LOGE("GetOpticalDriveNode: opendir /sys/block failed, errno=%{public}d", errno);
+        return result;
+    }
+    struct dirent *entry = nullptr;
+    while ((entry = readdir(dir)) != nullptr) {
+        if (entry->d_name[0] == '.') {
+            continue;
+        }
+        std::string devFile = std::string("/sys/block/") + entry->d_name + "/dev";
+        std::ifstream ifs(devFile);
+        if (!ifs.is_open()) {
+            continue;
+        }
+        std::string content;
+        std::getline(ifs, content);
+        ifs.close();
+        content.erase(std::remove_if(content.begin(), content.end(),
+            [](char c) { return std::isspace(static_cast<unsigned char>(c)); }), content.end());
+        if (content == majorMinor) {
+            result = entry->d_name;
+            break;
+        }
+    }
+    closedir(dir);
+    LOGI("GetOpticalDriveNode: blockDev=%{public}s", result.c_str());
+    return result;
+}
+
 static int32_t GetLatestProgressFromFile(const char* filePath, int32_t &progress)
 {
     progress = 0;
@@ -1028,7 +1155,7 @@ int32_t DiskUtils::GetVolumeOpProcess(const std::string &volId, int32_t &progres
     int32_t err = 0;
 
     std::string filePath;
-    if (!GetRealPath("/data/local/vol_tmp/percent", filePath)) {
+    if (!GetRealPath(VOL_TMP_PERCENT_PATH, filePath)) {
         LOGE("GetVolumeOpProcess:<<< EXIT FAILED <<< volId: %{public}s",
             volId.c_str());
         return E_PARAMS_INVALID;
@@ -1049,6 +1176,20 @@ int32_t DiskUtils::GetVolumeOpProcess(const std::string &volId, int32_t &progres
     LOGI("GetVolumeOpProcess:<<< EXIT SUCCESS <<< volId=%{public}s, progressPct=%{public}d",
         volId.c_str(), progressPct);
     return err;
+}
+
+int32_t DiskUtils::WriteBurnProgress(int32_t progress)
+{
+    LOGI("WriteBurnProgress: >>> ENTER <<< progress=%{public}d", progress);
+    std::string errMsg;
+    std::string data = std::to_string(progress);
+    if (!SaveStringToFileSync(VOL_TMP_PERCENT_PATH, data, errMsg)) {
+        LOGE("WriteBurnProgress: <<< EXIT FAILED <<< write %{public}s failed, errMsg=%{public}s",
+            VOL_TMP_PERCENT_PATH, errMsg.c_str());
+        return E_ERR;
+    }
+    LOGI("WriteBurnProgress: <<< EXIT SUCCESS <<< progress=%{public}d", progress);
+    return E_OK;
 }
 
 int32_t DiskUtils::VerifyBurnData(const std::string &devPath, int32_t verifyType)
@@ -1082,7 +1223,8 @@ static int32_t GetDvdPlusRwTotalCapacity(int fd, int64_t &dvdTotalCapacity)
     cmdBuf[0] = GPCMD_READ_CDVD_CAPACITY;
     cmdBuf[CDB_ALLOCATION_LENGTH_HIGH] = (dataLen >> BYTE_SHIFT_8) & BYTE_MASK;
     cmdBuf[CDB_ALLOCATION_LENGTH_LOW] = dataLen & BYTE_MASK;
-    ret = SendScsiCmd(fd, cmdBuf, cmdLen, dataBuf, dataLen);
+    ScsiCmdInfo cmdInfo = { cmdBuf, cmdLen, dataBuf, dataLen };
+    ret = SendScsiCmd(fd, cmdInfo);
     if (ret != 0) {
         LOGE("GetDvdPlusRwTotalCapacity SendScsiCmd failed, ret val is %{public}d", ret);
         return E_ERR;
@@ -1102,43 +1244,35 @@ static int32_t GetDvdPlusRwTotalCapacity(int fd, int64_t &dvdTotalCapacity)
     return E_OK;
 }
 
-int32_t DiskUtils::GetDiscCapacity(int cmdFd, const std::string& discType,
-                                   int64_t &totalSize, int64_t &usedSize)
+int64_t DiskUtils::GetDiscCapacity(int cmdFd, const std::string& discType)
 {
-    int err1 = E_OK;
-    if (discType == "DVD-R"  || discType == "DVD+R") {
-        err1 = GetDvdTotalCapacity(cmdFd, totalSize);
+    int64_t totalSize = 0;
+    int ret = E_OK;
+    if (discType == "DVD-ROM" || discType == "DVD-R" || discType == "DVD+R") {
+        ret = GetDvdTotalCapacity(cmdFd, totalSize);
     } else if (discType == "DVD+RW" || discType == "DVD-RW") {
-        err1 = GetDvdPlusRwTotalCapacity(cmdFd, totalSize);
-    } else if (discType == "CD-ROM" || discType == "CD-RW" || discType == "CD-R") {
-        err1 = GetCdTotalCapacity(cmdFd, totalSize);
-    } else if (discType == "BD-R" || discType == "BD-RE") {
-        err1 = GetBdTotalCapacity(cmdFd, totalSize);
-    } else if (discType == "BD-ROM") {
-        err1 = GetBdTotalCapacity(cmdFd, totalSize);
-    } else {
-        totalSize = 0;
-        usedSize = 0;
+        ret = GetDvdPlusRwTotalCapacity(cmdFd, totalSize);
+    } else if (discType.find("CD") == 0) {
+        ret = GetCdTotalCapacity(cmdFd, totalSize);
+    } else if (discType.find("BD") == 0) {
+        ret = GetBdTotalCapacity(cmdFd, totalSize);
     }
-    usedSize = totalSize;
-    if (err1 != E_OK) {
-        LOGI("GetDiscCapacity failed, err1=%{public}d", err1);
-        return E_ERR;
+    if (ret != E_OK) {
+        LOGI("GetDiscCapacity failed, ret=%{public}d", ret);
+        return 0;
     }
-    return E_OK;
+    return totalSize;
 }
 
 void DiskUtils::AdjustBlankDiscCapacity(const std::string& devPath, const std::string& discType,
                                         int64_t &totalSize, int64_t &usedSize)
 {
-    bool isBlankDisc = false;
-    int blankRet = IsCDBlank(devPath, isBlankDisc);
-    if (blankRet != E_OK || !isBlankDisc) {
+    if (!IsCDBlank(devPath)) {
         return;
     }
     
     usedSize = 0;
-    if (discType != "DVD+RW" && discType != "DVD-RW" && discType != "BD-R" && discType != "BD-RE") {
+    if (discType.find("DVD") != 0 && discType.find("BD") != 0) {
         return;
     }
     
@@ -1154,14 +1288,40 @@ void DiskUtils::AdjustBlankDiscCapacity(const std::string& devPath, const std::s
     for (const auto& line : output) {
         std::smatch match;
         if (std::regex_search(line, match, pattern)) {
-            int64_t mediaInfoCapacity = std::stoll(match[1].str());
-            if (mediaInfoCapacity > 0) {
+            std::string subStr = match[1].str();
+            const char *ptr = subStr.c_str();
+            const char *end = ptr + subStr.size();
+            int64_t mediaInfoCapacity = 0;
+            auto result = std::from_chars(ptr, end, mediaInfoCapacity);
+            if (result.ec == std::errc() && result.ptr == end && mediaInfoCapacity > 0) {
                 totalSize = mediaInfoCapacity;
                 LOGI("AdjustBlankDiscCapacity: DVD+RW capacity from mediainfo=%{public}" PRId64, totalSize);
             }
             return;
         }
     }
+}
+
+int64_t DiskUtils::GetUsedSizeFromSysfs(const std::string &devPath)
+{
+    std::string driveNode = GetOpticalDriveNode(devPath);
+    if (driveNode.empty()) {
+        LOGE("GetUsedSizeFromSysfs: GetOpticalDriveNode failed for devPath=%{public}s", devPath.c_str());
+        return -1;
+    }
+    std::string sizePath = "/sys/block/" + driveNode + "/size";
+    std::ifstream ifs(sizePath);
+    if (!ifs.is_open()) {
+        LOGE("GetUsedSizeFromSysfs: open %{public}s failed, errno=%{public}d", sizePath.c_str(), errno);
+        return -1;
+    }
+    int64_t sectorCount = 0;
+    ifs >> sectorCount;
+    ifs.close();
+    int64_t usedSize = sectorCount * 512;
+    LOGI("GetUsedSizeFromSysfs: sizePath=%{public}s, sectorCount=%{public}" PRId64
+         ", usedSize=%{public}" PRId64, sizePath.c_str(), sectorCount, usedSize);
+    return usedSize;
 }
 
 int32_t DiskUtils::GetCapacity(const std::string& devPath, int64_t &totalSize, int64_t &freeSize)
@@ -1174,17 +1334,25 @@ int32_t DiskUtils::GetCapacity(const std::string& devPath, int64_t &totalSize, i
     }
     std::string discType = GetCDType(devPath);
     LOGI("label is %{public}s", discType.c_str());
-    int64_t usedSize = 0;
-    int32_t ret = GetDiscCapacity(cmdFd, discType, totalSize, usedSize);
+    totalSize = GetDiscCapacity(cmdFd, discType);
+    int64_t usedSize = -1;
+    if (discType.find("CD") == 0) {
+        int ret = GetCdUsedCapacity(cmdFd, usedSize);
+        if (ret != E_OK) {
+            LOGE("GetCapacity: GetCdUsedCapacity failed, ret=%{public}d", ret);
+            usedSize = -1;
+        }
+    }
     close(cmdFd);
-
+    if (usedSize < 0) {
+        usedSize = GetUsedSizeFromSysfs(devPath);
+    }
+    if (usedSize < 0) {
+        usedSize = totalSize;
+    }
     AdjustBlankDiscCapacity(devPath, discType, totalSize, usedSize);
     LOGI("GetCapacity totalsize is %{public}" PRId64 ", usedsize is %{public}" PRId64, totalSize, usedSize);
     freeSize = (usedSize > totalSize) ? 0 : totalSize - usedSize;
-
-    if (ret != E_OK) {
-        LOGI("GetCapacity: <<< EXIT FAILED <<<");
-    }
     return E_OK;
 }
 
@@ -1260,14 +1428,15 @@ int32_t DiskUtils::QueryUsbIsInUse(const std::string &diskPath, bool &isInUse)
 int32_t DiskUtils::CleanTempDirectory()
 {
     LOGI("CleanTempDirectory: >>> ENTER <<<");
-    std::vector<std::string> cmd = {"rm", "-rf", "/data/local/vol_tmp/percent"};
+    std::vector<std::string> cmd = {"rm", "-rf", VOL_TMP_PERCENT_PATH};
     std::vector<std::string> output;
     int32_t err = ForkExec(cmd, &output);
     if (err != E_OK) {
         for (const auto& s : output) {
             LOGI("CleanTempDirectory: output=%{public}s", s.c_str());
         }
-        LOGE("CleanTempDirectory: <<< EXIT FAILED <<< rm -rf /data/local/vol_tmp/percent failed, err=%{public}d", err);
+        LOGE("CleanTempDirectory: <<< EXIT FAILED <<< rm -rf %{public}s failed, err=%{public}d",
+            VOL_TMP_PERCENT_PATH, err);
         return err;
     }
     LOGI("CleanTempDirectory: <<< EXIT SUCCESS <<<");

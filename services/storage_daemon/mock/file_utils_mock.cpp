@@ -109,10 +109,10 @@ int ForkExec(std::vector<std::string> &cmd, std::vector<std::string> *output, in
     return IFileUtilMoc::fileUtilMoc->ForkExec(cmd, output, exitStatus);
 }
 
-int ForkExecInteractive(std::vector<std::string> &cmd, std::vector<std::string> *output,
-                        std::vector<std::string> *input)
+int ForkExecToFile(std::vector<std::string> &cmd, const std::string &outputFilePath,
+                   std::vector<std::string> *output)
 {
-    return IFileUtilMoc::fileUtilMoc->ForkExecInteractive(cmd, output, input);
+    return IFileUtilMoc::fileUtilMoc->ForkExecToFile(cmd, outputFilePath, output);
 }
 
 void TraverseDirUevent(const std::string &path, bool flag)
@@ -154,9 +154,19 @@ bool IsFilePathInvalid(const std::string &filePath)
     return IFileUtilMoc::fileUtilMoc->IsFilePathInvalid(filePath);
 }
 
-int ForkExecWithExit(std::vector<std::string> &cmd, int *exitStatus)
+int ForkExecWithExit(std::vector<std::string> &cmd, int *exitStatus, std::vector<std::string> *output)
 {
-    return IFileUtilMoc::fileUtilMoc->ForkExec(cmd, nullptr, exitStatus);
+    return IFileUtilMoc::fileUtilMoc->ForkExec(cmd, output, exitStatus);
+}
+
+void CheckAndReportOverLoop(const std::string &funcName, uint32_t &loopCount)
+{
+    loopCount++;
+}
+
+void CheckAndReportOverLoop(const std::string &funcName, uint32_t &loopCount, uint32_t maxCount)
+{
+    loopCount++;
 }
 } // namespace StorageDaemon
 } // namespace OHOS

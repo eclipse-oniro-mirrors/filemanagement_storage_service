@@ -27,7 +27,7 @@ using namespace OHOS::AAFwk;
 using namespace OHOS::StorageService;
 namespace OHOS {
 namespace StorageManager {
-static constexpr int CONNECT_TIME = 10;
+static constexpr int CONNECT_TIME = 20;
 static std::mutex mediaMutex_;
 static std::mutex userRecordMutex_;
 static const int32_t SLEEP_TIME_INTERVAL_1MS = 1000;
@@ -41,7 +41,7 @@ AccountSubscriber &AccountSubscriber::GetInstance()
     return instance;
 }
 
-void AccountSubscriber::SendSecondMountedEvent(int32_t userId)
+bool AccountSubscriber::SendSecondMountedEvent(int32_t userId)
 {
     AAFwk::Want want;
     AAFwk::WantParams wantParams;
@@ -49,8 +49,7 @@ void AccountSubscriber::SendSecondMountedEvent(int32_t userId)
     want.SetAction("usual.event.SECOND_MOUNTED");
     want.SetParams(wantParams);
     EventFwk::CommonEventData commonData { want };
-    EventFwk::CommonEventManager::PublishCommonEvent(commonData);
-    LOGI("Send usual.event.SECOND_MOUNTED event success, userId=%{public}d", userId);
+    return EventFwk::CommonEventManager::PublishCommonEvent(commonData);
 }
 
 int32_t AccountSubscriber::SendUserLockStatusToAppSpawn(int32_t userId, bool lockStatus, uint32_t timeSec)
@@ -78,16 +77,21 @@ int32_t AccountSubscriber::MountCryptoPathAgain(int32_t userId)
         "MountCryptoPathAgain Begin", E_OK);
     int32_t err = SendUserLockStatusToAppSpawn(userId, DECRYPTED, MOUNT_MAX_WAIT_TIME);
     if (err != E_OK && err != APPSPAWN_TIMEOUT) {
-        LOGI("MountCryptoPathAgain failed, userId:%{public}d, err:%{public}d", userId, err);
-        StorageRadar::ReportUserManager("AccountSubscriber::MountCryptoPathAgain",
-            userId, err, "SendUserLockStatusToAppSpawn called failed");
-        return err;
+        LOGE("MountCryptoPathAgain failed, userId:%{public}d, err:%{public}d", userId, err);
+        StorageRadar::ReportUserManager("AccountSubscriber::MountCryptoPathAgain", userId, E_APPSPAWN_SECOND_MOUNT,
+            "SendUserLockStatusToAppSpawn called failed, appspawn ret:" + std::to_string(err));
+        return E_APPSPAWN_SECOND_MOUNT;
     }
-    SendSecondMountedEvent(userId);
+    bool publishRet = SendSecondMountedEvent(userId);
+    if (!publishRet) {
+        LOGE("Send usual.event.SECOND_MOUNTED event failed, userId=%{public}d", userId);
+        StorageRadar::ReportUserManager("AccountSubscriber::MountCryptoPathAgain",
+            userId, E_PUBLISH_COMM_EVENT, "Publish Common event SECOND_MOUNTED failed");
+        return E_PUBLISH_COMM_EVENT;
+    }
     LOGI("MountCryptoPathAgain success, userId=%{public}d, err=%{public}d", userId, err);
-    StorageService::StorageRadar::ReportFucBehavior("MountCryptoPathAgain", userId,
-        "MountCryptoPathAgain End", E_OK);
-    return err;
+    StorageService::StorageRadar::ReportFucBehavior("MountCryptoPathAgain", userId, "MountCryptoPathAgain End", E_OK);
+    return E_OK;
 }
 
 void AccountSubscriber::ResetUserEventRecord(int32_t userId)
@@ -131,7 +135,7 @@ void AccountSubscriber::NotifyUserChangedEvent(uint32_t userId, StorageService::
         userRecord_.erase(userId);
     }
     lock.unlock();
-    std::thread mediaThread(&AccountSubscriber::GetSystemAbility, this);
+    std::thread mediaThread(&AccountSubscriber::GetSystemAbility, this, userId);
     mediaThread.detach();
 }
 
@@ -165,10 +169,10 @@ uint32_t AccountSubscriber::HandleUserSwitchedEvent(uint32_t userStatus)
     return userStatus;
 }
 
-void AccountSubscriber::GetSystemAbility()
+void AccountSubscriber::GetSystemAbility(int32_t userId)
 {
     std::lock_guard<std::mutex> lockMedia(mediaMutex_);
-    LOGI("connect %{public}d media library", userId_);
+    LOGI("connect %{public}d media library", userId);
     auto sam = SystemAbilityManagerClient::GetInstance().GetSystemAbilityManager();
     if (sam == nullptr) {
         LOGE("GetSystemAbilityManager sam == nullptr");
@@ -184,7 +188,7 @@ void AccountSubscriber::GetSystemAbility()
             DataShare::DataShareHelper::Creator(remoteObj, "datashare:///media");
         if (mediaShare != nullptr) {
             LOGI("connect media success.");
-            mediaShareMap_[userId_] = mediaShare;
+            mediaShareMap_[userId] = mediaShare;
             break;
         }
         LOGE("try to connect media again, retry count: %{public}d/%{public}d", i + 1, CONNECT_TIME);
