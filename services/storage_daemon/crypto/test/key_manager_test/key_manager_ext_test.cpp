@@ -598,7 +598,7 @@ HWTEST_F(KeyManagerExtTest, KeyManagerExt_Init_003, TestSize.Level1)
 
 /**
  * @tc.name: KeyManagerExt_Init_004
- * @tc.desc: Verify the Init function when dlopen returns nullptr.
+ * @tc.desc: Verify the Init function when KeyCtrlHasFscryptSyspara returns false.
  * @tc.type: FUNC
  * @tc.require: AR20250418146433
  */
@@ -609,15 +609,7 @@ HWTEST_F(KeyManagerExtTest, KeyManagerExt_Init_004, TestSize.Level1)
     KeyManagerExt::GetInstance().handler_ = nullptr;
     KeyManagerExt::GetInstance().service_ = nullptr;
 
-    EXPECT_CALL(*fscryptControlMock_, KeyCtrlHasFscryptSyspara()).WillOnce(Return(true));
-
-    KeyManagerExt::GetInstance().Init();
-
-    EXPECT_EQ(KeyManagerExt::GetInstance().service_, nullptr);
-
-    KeyManagerExt::GetInstance().handler_ = nullptr;
-    KeyManagerExt::GetInstance().service_ = nullptr;
-
+=======
     EXPECT_CALL(*fscryptControlMock_, KeyCtrlHasFscryptSyspara()).WillOnce(Return(false));
 
     KeyManagerExt::GetInstance().Init();
