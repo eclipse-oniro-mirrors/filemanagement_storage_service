@@ -371,7 +371,7 @@ int KeyManagerExt::UpdateUserPublicDirPolicy(uint32_t userId)
 
 void KeyManagerExt::CallPcEncExtGenerateUserFileKeys(int32_t userId)
 {
-#ifdef DISK_MANAGER
+#ifdef PC_ENCRYPTION_EXTENSION
     void *handle = dlopen("libpc_encryption_ext_volume_user_api.z.so", RTLD_LAZY);
     if (handle == nullptr) {
         LOGE("[L1:StorageDaemon] CallPcEncExtGenerateUserFileKeys: dlopen failed, "
@@ -402,7 +402,7 @@ void KeyManagerExt::CallPcEncExtGenerateUserFileKeys(int32_t userId)
 void KeyManagerExt::CallPcEncExtActiveUserFileKey(int32_t userId, const std::vector<uint8_t> &token,
                                     const std::vector<uint8_t> &secret)
 {
-#ifdef DISK_MANAGER
+#ifdef PC_ENCRYPTION_EXTENSION
     void *handle = dlopen("libpc_encryption_ext_volume_user_api.z.so", RTLD_LAZY);
     if (handle == nullptr) {
         LOGE("[L1:StorageDaemon] CallPcEncExtActiveUserFileKey: dlopen failed, "
@@ -437,7 +437,7 @@ void KeyManagerExt::CallPcEncExtUpdateUserFileKeyAuth(int32_t userId, const std:
                                         const std::vector<uint8_t> &oldSecret,
                                         const std::vector<uint8_t> &newSecret)
 {
-#ifdef DISK_MANAGER
+#ifdef PC_ENCRYPTION_EXTENSION
     void *handle = dlopen("libpc_encryption_ext_volume_user_api.z.so", RTLD_LAZY);
     if (handle == nullptr) {
         LOGE("[L1:StorageDaemon] CallPcEncExtUpdateUserFileKeyAuth: dlopen failed, "

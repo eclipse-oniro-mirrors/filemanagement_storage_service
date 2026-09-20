@@ -31,11 +31,7 @@ public:
         const std::vector<uint8_t> &secret) = 0;
     virtual int InActiveUserKey(uint32_t user) = 0;
     virtual int UpdateUserPublicDirPolicy(uint32_t user) = 0;
-    virtual void CallPcEncExtGenerateUserFileKeys(int32_t userId) = 0;
-    virtual void CallPcEncExtActiveUserFileKey(int32_t userId, const std::vector<uint8_t> &token,
-        const std::vector<uint8_t> &secret) = 0;
-    virtual void CallPcEncExtUpdateUserFileKeyAuth(int32_t userId, const std::vector<uint8_t> &token,
-        const std::vector<uint8_t> &oldSecret, const std::vector<uint8_t> &newSecret) = 0;
+
 public:
     static inline std::shared_ptr<IKeyManagerExtMock> iKeyManagerExtMock_ = nullptr;
 };
@@ -47,11 +43,6 @@ public:
     MOCK_METHOD(int, ActiveUserKey, (uint32_t, const std::vector<uint8_t> &, const std::vector<uint8_t> &));
     MOCK_METHOD(int, InActiveUserKey, (uint32_t));
     MOCK_METHOD(int, UpdateUserPublicDirPolicy, (uint32_t));
-    MOCK_METHOD(void, CallPcEncExtGenerateUserFileKeys, (int32_t));
-    MOCK_METHOD(void, CallPcEncExtActiveUserFileKey, (int32_t, const std::vector<uint8_t> &,
-        const std::vector<uint8_t> &));
-    MOCK_METHOD(void, CallPcEncExtUpdateUserFileKeyAuth, (int32_t, const std::vector<uint8_t> &,
-        const std::vector<uint8_t> &, const std::vector<uint8_t> &));
 };
 }
 }

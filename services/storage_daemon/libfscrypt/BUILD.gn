@@ -145,7 +145,7 @@ ohos_static_library("libfscryptutils_static") {
     "hilog:libhilog",
     "hisysevent:libhisysevent",
     "init:libbegetutil",
-   ]
+  ]
 
   subsystem_name = "filemanagement"
   part_name = "storage_service"

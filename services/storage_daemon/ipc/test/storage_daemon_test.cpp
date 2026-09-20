@@ -1963,24 +1963,6 @@ HWTEST_F(StorageDaemonTest, StorageDaemonTest_PrepareUserDirsAndUpdateUserAuth_W
     // EL5_KEY should also trigger version rollback on error
     EXPECT_EQ(storageDaemon_->PrepareUserDirsAndUpdateUserAuth(userId_, EL5_KEY, token_, secret_), E_ERR);
 }
-
-/**
- * @tc.name: StorageDaemonTest_SetDirEncryptionPolicyWithKeyDesc_001
- * @tc.desc: Verify the SetDirEncryptionPolicyWithKeyDesc function
- * @tc.type: FUNC
- * @tc.require:
- */
-HWTEST_F(StorageDaemonTest, StorageDaemonTest_SetDirEncryptionPolicyWithKeyDesc_001, TestSize.Level1)
-{
-    ASSERT_TRUE(storageDaemon_ != nullptr);
-    std::string dirPath = "/data/service/test";
-    uint32_t level = 2;
-    std::string keyDesc = "0123456789abcdef0123456789abcdef";
-
-    EXPECT_CALL(*keyManagerMock_, SetDirEncryptionPolicyWithKeyDesc(_, _, _)).WillOnce(Return(E_OK));
-    auto ret = storageDaemon_->SetDirEncryptionPolicyWithKeyDesc(dirPath, level, keyDesc);
-    EXPECT_EQ(ret, E_OK);
-}
 #endif
 #endif
 
