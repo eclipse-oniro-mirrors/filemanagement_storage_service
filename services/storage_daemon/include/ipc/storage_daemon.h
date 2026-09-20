@@ -70,10 +70,8 @@ public:
     int32_t SetRecoverKey(const std::vector<uint8_t> &key);
     int32_t ResetSecretWithRecoveryKey(uint32_t userId, uint32_t rkType, const std::vector<uint8_t> &key);
     int32_t SetDirEncryptionPolicy(uint32_t userId, const std::string &dirPath, uint32_t level);
-#ifdef USER_CRYPTO_MANAGER
     int32_t SetDirEncryptionPolicyWithKeyDesc(const std::string &dirPath, uint32_t level,
                                               const std::string &keyDesc);
-#endif
 
     // app file share api
     int32_t GetFileEncryptStatus(uint32_t userId, bool &isEncrypted, bool needCheckDirMount = false);

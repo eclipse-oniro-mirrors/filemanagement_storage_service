@@ -123,9 +123,7 @@ public:
     std::shared_ptr<BaseKey> GetUserElKey(unsigned int user, KeyType type, bool isSave = true);
     friend class KeyManagerExt;
     int32_t SetDirEncryptionPolicy(uint32_t userId, const std::string &dirPath, StorageService::EncryptionLevel level);
-#ifdef USER_CRYPTO_MANAGER
     int32_t SetDirEncryptionPolicyWithKeyDesc(const std::string &dirPath, uint32_t level, const std::string &keyDesc);
-#endif
     bool IsDirRecursivelyEmpty(const char* dirPath);
     bool GetSecureUid(uint32_t userId, uint64_t &secureUid);
     int UpdateUserAuthByKeyType(unsigned int user, struct UserTokenSecret &userTokenSecret,

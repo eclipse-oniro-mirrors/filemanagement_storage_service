@@ -369,7 +369,7 @@ int KeyManagerExt::UpdateUserPublicDirPolicy(uint32_t userId)
     return ret;
 }
 
-void CallPcEncExtGenerateUserFileKeys(int32_t userId)
+void KeyManagerExt::CallPcEncExtGenerateUserFileKeys(int32_t userId)
 {
 #ifdef DISK_MANAGER
     void *handle = dlopen("libpc_encryption_ext_volume_user_api.z.so", RTLD_LAZY);
@@ -399,7 +399,7 @@ void CallPcEncExtGenerateUserFileKeys(int32_t userId)
 #endif
 }
 
-void CallPcEncExtActiveUserFileKey(int32_t userId, const std::vector<uint8_t> &token, 
+void KeyManagerExt::CallPcEncExtActiveUserFileKey(int32_t userId, const std::vector<uint8_t> &token,
                                     const std::vector<uint8_t> &secret)
 {
 #ifdef DISK_MANAGER
@@ -433,7 +433,7 @@ void CallPcEncExtActiveUserFileKey(int32_t userId, const std::vector<uint8_t> &t
 #endif
 }
 
-void CallPcEncExtUpdateUserFileKeyAuth(int32_t userId, const std::vector<uint8_t> &token,
+void KeyManagerExt::CallPcEncExtUpdateUserFileKeyAuth(int32_t userId, const std::vector<uint8_t> &token,
                                         const std::vector<uint8_t> &oldSecret,
                                         const std::vector<uint8_t> &newSecret)
 {

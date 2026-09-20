@@ -161,6 +161,10 @@ ohos_unittest("storage_daemon_provider_test") {
     defines += [ "DISK_MANAGER" ]
   }
 
+  if (enable_pc_encryption_extension) {
+    defines += [ "PC_ENCRYPTION_EXTENSION" ]
+  }
+
   include_dirs = [
     "${storage_daemon_path}/include",
     "${storage_daemon_path}/utils",

@@ -990,6 +990,9 @@ HWTEST_F(StorageDaemonCommunicationTest, Daemon_communication_SetDirEncryptionPo
         EXPECT_EQ(result, E_NOT_SUPPORT);
     }
     GTEST_LOG_(INFO) << "StorageDaemonCommunicationTest-end SetDirEncryptionPolicyWithKeyDesc_0000 SUCCESS";
+}
+
+/**
  * @tc.number: SUB_STORAGE_Daemon_communication_UpdateUseAuthWithRecoveryKey_001
  * @tc.name: Daemon_communication_UpdateUseAuthWithRecoveryKey_001
  * @tc.desc: Test function of UpdateUseAuthWithRecoveryKey interface for SUCCESS.

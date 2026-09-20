@@ -65,9 +65,6 @@ namespace StorageDaemon {
 using namespace OHOS::FileManagement::CloudFile;
 #endif
 
-namespace {
-} // namespace
-
 StorageDaemon &StorageDaemon::GetInstance(void)
 {
     static StorageDaemon instance;
@@ -333,7 +330,9 @@ int32_t StorageDaemon::PrepareUserDirs(int32_t userId, uint32_t flags)
 // 异步调用 PC 拓展加密服务
 #ifdef DISK_MANAGER
 if (prepareRet == E_OK) {
-    CallPcEncExtGenerateUserFileKeys(userId);
+    std::thread([userId]() {
+        KeyManagerExt::GetInstance().CallPcEncExtGenerateUserFileKeys(userId);
+    }).detach();
 }
 #endif
 if (prepareRet == E_OK) {
@@ -577,7 +576,10 @@ int32_t StorageDaemon::UpdateUserAuth(uint32_t userId, uint64_t secureUid,
     }
     // 异步调用 PC 拓展加密服务
 #ifdef DISK_MANAGER
-    CallPcEncExtUpdateUserFileKeyAuth(static_cast<int32_t>(userId), token, oldSecret, newSecret);
+    std::thread([userId, token, oldSecret, newSecret]() {
+        KeyManagerExt::GetInstance().CallPcEncExtUpdateUserFileKeyAuth(
+            static_cast<int32_t>(userId), token, oldSecret, newSecret);
+    }).detach();
 #endif
 LOGI("[L1:StorageDaemon] UpdateUserAuth: <<< EXIT SUCCESS <<< userId=%{public}u", userId);
     return ret;
@@ -1091,7 +1093,10 @@ int32_t StorageDaemon::ActiveUserKey(uint32_t userId, const std::vector<uint8_t>
 #endif
 // 异步调用 PC 拓展加密服务
 #ifdef DISK_MANAGER
-CallPcEncExtActiveUserFileKey(static_cast<int32_t>(userId), token, secret);
+std::thread([userId, token, secret]() {
+    KeyManagerExt::GetInstance().CallPcEncExtActiveUserFileKey(
+        static_cast<int32_t>(userId), token, secret);
+}).detach();
 #endif
 LOGI("[L1:StorageDaemon] ActiveUserKey: <<< EXIT SUCCESS <<< userId=%{public}d", userId);
     MemoryReclaimManager::ScheduleReclaimCurrentProcess(ACTIVE_USER_KEY_DELAY_SECOND);
