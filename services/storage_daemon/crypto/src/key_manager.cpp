@@ -62,6 +62,10 @@ constexpr uint8_t FIRST_CREATE_KEY = 0x6c;
 constexpr uint8_t USER_LOGOUT = 0x0;
 constexpr uint32_t USER_ADD_AUTH = 0x0;
 constexpr uint32_t USER_CHANGE_AUTH = 0x1;
+constexpr uint8_t HEX_CHARS_PER_BYTE = 2;
+constexpr uint8_t HEX_BASE_VALUE = 10;
+constexpr uint8_t HEX_CHAR_TO_BYTE_SHIFT = 4;
+constexpr uint8_t HEX_INVALID_CHAR_VALUE = 255;
 
 constexpr uint32_t FILE_ENCRY_ERROR_UECE_AUTH_STATUS_WRONG = 0xFBE30034;
 
@@ -3094,12 +3098,6 @@ bool KeyManager::GetSecureUid(uint32_t userId, uint64_t &secureUid)
     return false;
 }
 
-#ifdef USER_CRYPTO_MANAGER
-constexpr uint8_t HEX_CHARS_PER_BYTE = 2;
-constexpr uint8_t HEX_BASE_VALUE = 10;
-constexpr uint8_t HEX_CHAR_TO_BYTE_SHIFT = 4;
-constexpr uint8_t HEX_INVALID_CHAR_VALUE = 255;
-
 static unsigned char HexCharToValue(char c)
 {
     if (c >= '0' && c <= '9') {
@@ -3157,7 +3155,6 @@ int32_t KeyManager::SetDirEncryptionPolicyWithKeyDesc(const std::string &dirPath
     LOGI("[L3:KeyManager] SetDirEncryptionPolicyWithKeyDesc: <<< EXIT SUCCESS <<<");
     return E_OK;
 }
-#endif
 
 } // namespace StorageDaemon
 } // namespace OHOS
