@@ -389,7 +389,7 @@ void KeyManagerExt::CallPcEncExtGenerateUserFileKeys(int32_t userId)
     
     int32_t ret = func(userId);
     if (ret != E_OK) {
-        LOGE("[L1:StorageDaemon] CallPcEncExtGenerateUserFileKeys: failed, userId=%{public}d, ret=%{public}d", 
+        LOGE("[L1:StorageDaemon] CallPcEncExtGenerateUserFileKeys: failed, userId=%{public}d, ret=%{public}d",
              userId, ret);
     } else {
         LOGI("[L1:StorageDaemon] CallPcEncExtGenerateUserFileKeys: success, userId=%{public}d", userId);
@@ -423,7 +423,7 @@ void KeyManagerExt::CallPcEncExtActiveUserFileKey(int32_t userId, const std::vec
     std::vector<uint8_t> secretCopy = secret;
     int32_t ret = func(userId, tokenCopy, secretCopy);
     if (ret != E_OK) {
-        LOGE("[L1:StorageDaemon] CallPcEncExtActiveUserFileKey: failed, userId=%{public}d, ret=%{public}d", 
+        LOGE("[L1:StorageDaemon] CallPcEncExtActiveUserFileKey: failed, userId=%{public}d, ret=%{public}d",
              userId, ret);
     } else {
         LOGI("[L1:StorageDaemon] CallPcEncExtActiveUserFileKey: success, userId=%{public}d", userId);
@@ -434,8 +434,7 @@ void KeyManagerExt::CallPcEncExtActiveUserFileKey(int32_t userId, const std::vec
 }
 
 void KeyManagerExt::CallPcEncExtUpdateUserFileKeyAuth(int32_t userId, const std::vector<uint8_t> &token,
-                                        const std::vector<uint8_t> &oldSecret,
-                                        const std::vector<uint8_t> &newSecret)
+    const std::vector<uint8_t> &oldSecret, const std::vector<uint8_t> &newSecret)
 {
 #ifdef PC_ENCRYPTION_EXTENSION
     void *handle = dlopen("libpc_encryption_ext_volume_user_api.z.so", RTLD_LAZY);
@@ -459,7 +458,7 @@ void KeyManagerExt::CallPcEncExtUpdateUserFileKeyAuth(int32_t userId, const std:
     std::vector<uint8_t> newSecretCopy = newSecret;
     int32_t ret = func(userId, tokenCopy, oldSecretCopy, newSecretCopy);
     if (ret != E_OK) {
-        LOGE("[L1:StorageDaemon] CallPcEncExtUpdateUserFileKeyAuth: failed, userId=%{public}d, ret=%{public}d", 
+        LOGE("[L1:StorageDaemon] CallPcEncExtUpdateUserFileKeyAuth: failed, userId=%{public}d, ret=%{public}d",
              userId, ret);
     } else {
         LOGI("[L1:StorageDaemon] CallPcEncExtUpdateUserFileKeyAuth: success, userId=%{public}d", userId);

@@ -542,7 +542,7 @@ HWTEST_F(StorageDaemonCommunicationTest, Daemon_communication_CompleteAddUser_00
  * @tc.size: MEDIUM
  * @tc.type: FUNC
  * @tc.level Level 1
- * @tc.require:
+ * @tc.require: 
  */
 HWTEST_F(StorageDaemonCommunicationTest, Daemon_communication_EraseAllUserEncryptedKeys_0000, TestSize.Level1)
 {
@@ -922,7 +922,7 @@ HWTEST_F(StorageDaemonCommunicationTest, Daemon_communication_IsFileOccupied_000
  * @tc.size: MEDIUM
  * @tc.type: FUNC
  * @tc.level Level 1
- * @tc.require:
+ * @tc.require: 
  */
 HWTEST_F(StorageDaemonCommunicationTest, Daemon_communication_GetDataSizeByPath_0000, testing::ext::TestSize.Level1)
 {

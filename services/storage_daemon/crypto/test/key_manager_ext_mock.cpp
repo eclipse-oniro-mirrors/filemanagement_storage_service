@@ -73,8 +73,7 @@ void KeyManagerExt::CallPcEncExtActiveUserFileKey(int32_t userId, const std::vec
                                                     const std::vector<uint8_t> &secret) {}
 
 void KeyManagerExt::CallPcEncExtUpdateUserFileKeyAuth(int32_t userId, const std::vector<uint8_t> &token,
-                                                       const std::vector<uint8_t> &oldSecret,
-                                                       const std::vector<uint8_t> &newSecret) {}
+    const std::vector<uint8_t> &oldSecret, const std::vector<uint8_t> &newSecret) {}
 
 KeyManagerExt::KeyManagerExt() {}
 
