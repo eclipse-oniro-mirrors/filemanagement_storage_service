@@ -922,7 +922,7 @@ HWTEST_F(StorageDaemonCommunicationTest, Daemon_communication_IsFileOccupied_000
  * @tc.size: MEDIUM
  * @tc.type: FUNC
  * @tc.level Level 1
- * @tc.require: 
+ * @tc.require: issueI9G5A0
  */
 HWTEST_F(StorageDaemonCommunicationTest, Daemon_communication_GetDataSizeByPath_0000, testing::ext::TestSize.Level1)
 {
