@@ -332,6 +332,7 @@ int32_t StorageDaemon::PrepareUserDirs(int32_t userId, uint32_t flags)
         std::thread([userId]() { KeyManagerExt::GetInstance().CallPcEncExtGenerateUserFileKeys(userId); }).detach();
     }
 #endif
+    if (prepareRet == E_OK) {
         LOGI("[L1:StorageDaemon] PrepareUserDirs: <<< EXIT SUCCESS <<< userId=%{public}d, flags=%{public}u",
             userId, flags);
     } else {
@@ -576,6 +577,7 @@ int32_t StorageDaemon::UpdateUserAuth(uint32_t userId, uint64_t secureUid,
             static_cast<int32_t>(userId), token, oldSecret, newSecret);
     }).detach();
 #endif
+    LOGI("[L1:StorageDaemon] UpdateUserAuth: <<< EXIT SUCCESS <<< userId=%{public}u", userId);
     return ret;
 #else
     LOGI("[L1:StorageDaemon] UpdateUserAuth: <<< EXIT SUCCESS <<< not supported");
@@ -1090,6 +1092,7 @@ int32_t StorageDaemon::ActiveUserKey(uint32_t userId, const std::vector<uint8_t>
         KeyManagerExt::GetInstance().CallPcEncExtActiveUserFileKey(static_cast<int32_t>(userId), token, secret);
     }).detach();
 #endif
+    LOGI("[L1:StorageDaemon] ActiveUserKey: <<< EXIT SUCCESS <<< userId=%{public}d", userId);
     MemoryReclaimManager::ScheduleReclaimCurrentProcess(ACTIVE_USER_KEY_DELAY_SECOND);
     return ret;
 }
