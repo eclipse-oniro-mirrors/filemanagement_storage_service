@@ -2605,7 +2605,7 @@ HWTEST_F(KeyManagerTest, KeyManager_DeleteGlobalDeviceKey_003, TestSize.Level1)
  * @tc.name: KeyManager_SetDirEncryptionPolicyWithKeyDesc_001
  * @tc.desc: Verify SetDirEncryptionPolicyWithKeyDesc when fscrypt not enabled.
  * @tc.type: FUNC
- * @tc.require: 
+ * @tc.require: AR000H09L6
  */
 HWTEST_F(KeyManagerTest, KeyManager_SetDirEncryptionPolicyWithKeyDesc_001, TestSize.Level1)
 {
@@ -2625,7 +2625,7 @@ HWTEST_F(KeyManagerTest, KeyManager_SetDirEncryptionPolicyWithKeyDesc_001, TestS
  * @tc.name: KeyManager_SetDirEncryptionPolicyWithKeyDesc_002
  * @tc.desc: Verify SetDirEncryptionPolicyWithKeyDesc with invalid level parameter.
  * @tc.type: FUNC
- * @tc.require: 
+ * @tc.require: AR000H09L6
  */
 HWTEST_F(KeyManagerTest, KeyManager_SetDirEncryptionPolicyWithKeyDesc_002, TestSize.Level1)
 {
@@ -2681,7 +2681,7 @@ HWTEST_F(KeyManagerTest, KeyManager_SetDirEncryptionPolicyWithKeyDesc_003, TestS
  * @tc.name: KeyManager_SetDirEncryptionPolicyWithKeyDesc_004
  * @tc.desc: Verify SetDirEncryptionPolicyWithKeyDesc when KeyCtrlSetPolicy failed.
  * @tc.type: FUNC
- * @tc.require: 
+ * @tc.require: AR000H09L6
  */
 HWTEST_F(KeyManagerTest, KeyManager_SetDirEncryptionPolicyWithKeyDesc_004, TestSize.Level1)
 {
@@ -2703,7 +2703,7 @@ HWTEST_F(KeyManagerTest, KeyManager_SetDirEncryptionPolicyWithKeyDesc_004, TestS
  * @tc.name: KeyManager_SetDirEncryptionPolicyWithKeyDesc_005
  * @tc.desc: Verify SetDirEncryptionPolicyWithKeyDesc success.
  * @tc.type: FUNC
- * @tc.require: 
+ * @tc.require: AR000H09L6
  */
 HWTEST_F(KeyManagerTest, KeyManager_SetDirEncryptionPolicyWithKeyDesc_005, TestSize.Level1)
 {
@@ -2719,4 +2719,26 @@ HWTEST_F(KeyManagerTest, KeyManager_SetDirEncryptionPolicyWithKeyDesc_005, TestS
               E_OK);
 
     GTEST_LOG_(INFO) << "KeyManager_SetDirEncryptionPolicyWithKeyDesc_005 end";
+}
+
+/**
+ * @tc.name: KeyManager_SetDirEncryptionPolicyWithKeyDesc_006
+ * @tc.desc: Verify SetDirEncryptionPolicyWithKeyDesc when IsEncryption returns false.
+ * @tc.type: FUNC
+ * @tc.require: AR000H09L6
+ */
+HWTEST_F(KeyManagerTest, KeyManager_SetDirEncryptionPolicyWithKeyDesc_006, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "KeyManager_SetDirEncryptionPolicyWithKeyDesc_006 Start";
+    std::string dirPath = "/data/service/test";
+    uint32_t level = EL2_USER_KEY;
+    std::string keyDesc = "0123456789abcdef0123456789abcdef";
+
+    EXPECT_CALL(*fscryptControlMock_, KeyCtrlHasFscryptSyspara()).WillOnce(Return(true));
+    EXPECT_CALL(*fscryptControlMock_, IsEncryption()).WillOnce(Return(false));
+    EXPECT_EQ(KeyManager::GetInstance().SetDirEncryptionPolicyWithKeyDesc(dirPath, level, keyDesc),
+              E_NOT_SUPPORT);
+
+    GTEST_LOG_(INFO) << "KeyManager_SetDirEncryptionPolicyWithKeyDesc_006 end";
+}
 }
