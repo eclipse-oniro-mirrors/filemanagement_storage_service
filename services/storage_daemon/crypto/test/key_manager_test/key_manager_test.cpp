@@ -2650,7 +2650,7 @@ HWTEST_F(KeyManagerTest, KeyManager_SetDirEncryptionPolicyWithKeyDesc_002, TestS
  * @tc.name: KeyManager_SetDirEncryptionPolicyWithKeyDesc_003
  * @tc.desc: Verify SetDirEncryptionPolicyWithKeyDesc with invalid keyDesc length.
  * @tc.type: FUNC
- * @tc.require: 
+ * @tc.require: AR000H09L6
  */
 HWTEST_F(KeyManagerTest, KeyManager_SetDirEncryptionPolicyWithKeyDesc_003, TestSize.Level1)
 {
