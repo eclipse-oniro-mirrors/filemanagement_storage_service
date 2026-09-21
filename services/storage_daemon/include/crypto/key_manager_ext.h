@@ -56,7 +56,7 @@ public:
     int SetRecoverKey(uint32_t userId, uint32_t keyType, const KeyBlob& ivBlob);
     void CallPcEncExtGenerateUserFileKeys(int32_t userId);
     void CallPcEncExtActiveUserFileKey(int32_t userId, const std::vector<uint8_t> &token,
-                                       const std::vector<uint8_t> &secret);
+        const std::vector<uint8_t> &secret);
     void CallPcEncExtUpdateUserFileKeyAuth(int32_t userId, const std::vector<uint8_t> &token,
         const std::vector<uint8_t> &oldSecret, const std::vector<uint8_t> &newSecret);
 

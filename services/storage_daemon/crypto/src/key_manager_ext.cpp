@@ -400,7 +400,7 @@ void KeyManagerExt::CallPcEncExtGenerateUserFileKeys(int32_t userId)
 }
 
 void KeyManagerExt::CallPcEncExtActiveUserFileKey(int32_t userId, const std::vector<uint8_t> &token,
-                                    const std::vector<uint8_t> &secret)
+    const std::vector<uint8_t> &secret)
 {
 #ifdef PC_ENCRYPTION_EXTENSION
     void *handle = dlopen("libpc_encryption_ext_volume_user_api.z.so", RTLD_LAZY);

@@ -70,7 +70,7 @@ int KeyManagerExt::UpdateUserPublicDirPolicy(uint32_t user)
 void KeyManagerExt::CallPcEncExtGenerateUserFileKeys(int32_t userId) {}
 
 void KeyManagerExt::CallPcEncExtActiveUserFileKey(int32_t userId, const std::vector<uint8_t> &token,
-                                                    const std::vector<uint8_t> &secret) {}
+    const std::vector<uint8_t> &secret) {}
 
 void KeyManagerExt::CallPcEncExtUpdateUserFileKeyAuth(int32_t userId, const std::vector<uint8_t> &token,
     const std::vector<uint8_t> &oldSecret, const std::vector<uint8_t> &newSecret) {}
