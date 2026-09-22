@@ -2611,7 +2611,7 @@ HWTEST_F(KeyManagerTest, KeyManager_SetDirEncryptionPolicyWithKeyDesc_001, TestS
 {
     GTEST_LOG_(INFO) << "KeyManager_SetDirEncryptionPolicyWithKeyDesc_001 Start";
     std::string dirPath = "/data/service/test";
-    uint32_t level = EL2_USER_KEY;
+    uint32_t level = StorageService::EL2_USER_KEY;
     std::string keyDesc = "0123456789abcdef0123456789abcdef";
 
     EXPECT_CALL(*fscryptControlMock_, KeyCtrlHasFscryptSyspara()).WillOnce(Return(false));
@@ -2635,12 +2635,12 @@ HWTEST_F(KeyManagerTest, KeyManager_SetDirEncryptionPolicyWithKeyDesc_002, TestS
 
     EXPECT_CALL(*fscryptControlMock_, KeyCtrlHasFscryptSyspara()).WillOnce(Return(true));
     EXPECT_CALL(*fscryptControlMock_, IsEncryption()).WillOnce(Return(true));
-    EXPECT_EQ(KeyManager::GetInstance().SetDirEncryptionPolicyWithKeyDesc(dirPath, EL1_USER_KEY, keyDesc),
+    EXPECT_EQ(KeyManager::GetInstance().SetDirEncryptionPolicyWithKeyDesc(dirPath, StorageService::EL1_USER_KEY, keyDesc),
               E_PARAMS_INVALID);
 
     EXPECT_CALL(*fscryptControlMock_, KeyCtrlHasFscryptSyspara()).WillOnce(Return(true));
     EXPECT_CALL(*fscryptControlMock_, IsEncryption()).WillOnce(Return(true));
-    EXPECT_EQ(KeyManager::GetInstance().SetDirEncryptionPolicyWithKeyDesc(dirPath, EL3_USER_KEY, keyDesc),
+    EXPECT_EQ(KeyManager::GetInstance().SetDirEncryptionPolicyWithKeyDesc(dirPath, StorageService::EL3_USER_KEY, keyDesc),
               E_PARAMS_INVALID);
 
     GTEST_LOG_(INFO) << "KeyManager_SetDirEncryptionPolicyWithKeyDesc_002 end";
@@ -2656,7 +2656,7 @@ HWTEST_F(KeyManagerTest, KeyManager_SetDirEncryptionPolicyWithKeyDesc_003, TestS
 {
     GTEST_LOG_(INFO) << "KeyManager_SetDirEncryptionPolicyWithKeyDesc_003 Start";
     std::string dirPath = "/data/service/test";
-    uint32_t level = EL2_USER_KEY;
+    uint32_t level = StorageService::EL2_USER_KEY;
 
     EXPECT_CALL(*fscryptControlMock_, KeyCtrlHasFscryptSyspara()).WillOnce(Return(true));
     EXPECT_CALL(*fscryptControlMock_, IsEncryption()).WillOnce(Return(true));
@@ -2687,7 +2687,7 @@ HWTEST_F(KeyManagerTest, KeyManager_SetDirEncryptionPolicyWithKeyDesc_004, TestS
 {
     GTEST_LOG_(INFO) << "KeyManager_SetDirEncryptionPolicyWithKeyDesc_004 Start";
     std::string dirPath = "/data/service/test";
-    uint32_t level = EL2_USER_KEY;
+    uint32_t level = StorageService::EL2_USER_KEY;
     std::string keyDesc = "0123456789abcdef0123456789abcdef";
 
     EXPECT_CALL(*fscryptControlMock_, KeyCtrlHasFscryptSyspara()).WillOnce(Return(true));
@@ -2709,7 +2709,7 @@ HWTEST_F(KeyManagerTest, KeyManager_SetDirEncryptionPolicyWithKeyDesc_005, TestS
 {
     GTEST_LOG_(INFO) << "KeyManager_SetDirEncryptionPolicyWithKeyDesc_005 Start";
     std::string dirPath = "/data/service/test";
-    uint32_t level = EL2_USER_KEY;
+    uint32_t level = StorageService::EL2_USER_KEY;
     std::string keyDesc = "0123456789abcdef0123456789abcdef";
 
     EXPECT_CALL(*fscryptControlMock_, KeyCtrlHasFscryptSyspara()).WillOnce(Return(true));
@@ -2731,7 +2731,7 @@ HWTEST_F(KeyManagerTest, KeyManager_SetDirEncryptionPolicyWithKeyDesc_006, TestS
 {
     GTEST_LOG_(INFO) << "KeyManager_SetDirEncryptionPolicyWithKeyDesc_006 Start";
     std::string dirPath = "/data/service/test";
-    uint32_t level = EL2_USER_KEY;
+    uint32_t level = StorageService::EL2_USER_KEY;
     std::string keyDesc = "0123456789abcdef0123456789abcdef";
 
     EXPECT_CALL(*fscryptControlMock_, KeyCtrlHasFscryptSyspara()).WillOnce(Return(true));
