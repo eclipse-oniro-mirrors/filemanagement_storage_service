@@ -2635,13 +2635,13 @@ HWTEST_F(KeyManagerTest, KeyManager_SetDirEncryptionPolicyWithKeyDesc_002, TestS
 
     EXPECT_CALL(*fscryptControlMock_, KeyCtrlHasFscryptSyspara()).WillOnce(Return(true));
     EXPECT_CALL(*fscryptControlMock_, IsEncryption()).WillOnce(Return(true));
-    EXPECT_EQ(KeyManager::GetInstance().SetDirEncryptionPolicyWithKeyDesc(dirPath, StorageService::EL1_USER_KEY, keyDesc),
-              E_PARAMS_INVALID);
+    EXPECT_EQ(KeyManager::GetInstance().SetDirEncryptionPolicyWithKeyDesc(dirPath,
+        StorageService::EL1_USER_KEY, keyDesc), E_PARAMS_INVALID);
 
     EXPECT_CALL(*fscryptControlMock_, KeyCtrlHasFscryptSyspara()).WillOnce(Return(true));
     EXPECT_CALL(*fscryptControlMock_, IsEncryption()).WillOnce(Return(true));
-    EXPECT_EQ(KeyManager::GetInstance().SetDirEncryptionPolicyWithKeyDesc(dirPath, StorageService::EL3_USER_KEY, keyDesc),
-              E_PARAMS_INVALID);
+    EXPECT_EQ(KeyManager::GetInstance().SetDirEncryptionPolicyWithKeyDesc(dirPath,
+        StorageService::EL3_USER_KEY, keyDesc), E_PARAMS_INVALID);
 
     GTEST_LOG_(INFO) << "KeyManager_SetDirEncryptionPolicyWithKeyDesc_002 end";
 }
