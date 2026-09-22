@@ -64,11 +64,11 @@ constexpr pid_t BACKUP_SA_UID = 1089;
 constexpr pid_t FOUNDATION_UID = 5523;
 constexpr pid_t DFS_UID = 1009;
 constexpr pid_t AOCO_UID = 7558;
-constexpr pid_t ENCRYPTION_EXTENSION_UID = 7075;
 constexpr pid_t ROOT_UID = 0;
 constexpr pid_t SPACE_ABILITY_SERVICE_UID = 7014;
 constexpr pid_t UPDATE_SERVICE_UID = 6666;
 constexpr pid_t DLP_UID = 3553;
+constexpr pid_t CLOUD_DISK_UID = 6161;
 constexpr bool ENCRYPTED = true;
 constexpr uint32_t MOUNT_MAX_WAIT_TIME = 2;
 const std::string MEDIALIBRARY_BUNDLE_NAME = "com.ohos.medialibrary.medialibrarydata";
@@ -1373,6 +1373,60 @@ int32_t StorageManagerProvider::UMountDlpFuse(const std::string &dstPath)
     return E_NOT_SUPPORT;
 }
 
+int32_t StorageManagerProvider::MountCloudDiskFuse(int32_t userId, const std::string &path, int32_t &fuseFd)
+{
+    std::string message =
+        "MountCloudDiskFuse Begin, path:" + GetAnonyString(path) + ", fuseFd: " + std::to_string(fuseFd);
+    StorageRadar::ReportFucBehavior("MountCloudDiskFuse", userId, message, E_OK);
+    int32_t err = CheckUserIdRange(userId);
+    if (err != E_OK) {
+        LOGE("StorageManagerProvider::MountCloudDiskFuse userId %{public}d out of range", userId);
+        return err;
+    }
+    if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER) || IPCSkeleton::GetCallingUid() != CLOUD_DISK_UID) {
+        LOGE("MountCloudDiskFuse permissionCheck error, calling uid now is %{public}d",
+             IPCSkeleton::GetCallingUid());
+        return E_PERMISSION_DENIED;
+    }
+    if (IsFilePathInvalid(path)) {
+        return E_PARAMS_INVALID;
+    }
+    if (!IsPathStartWithCloudDisk(userId, path)) {
+        return E_PARAMS_INVALID;
+    }
+    fuseFd = -1;
+    auto& sdCommunication = StorageDaemonCommunication::GetInstance();
+    err = sdCommunication.MountCloudDiskFuse(userId, path, fuseFd);
+    StorageRadar::ReportFucBehavior("MountCloudDiskFuse", userId, "MountCloudDiskFuse End", err);
+    return err;
+}
+
+int32_t StorageManagerProvider::UMountCloudDiskFuse(int32_t userId, const std::string &path)
+{
+    std::string message = "UMountCloudDiskFuse Begin, path:" + GetAnonyString(path);
+    StorageRadar::ReportFucBehavior("UMountCloudDiskFuse", userId, message, E_OK);
+    int32_t err = CheckUserIdRange(userId);
+    if (err != E_OK) {
+        LOGE("StorageManagerProvider::UMountCloudDiskFuse userId %{public}d out of range", userId);
+        return err;
+    }
+    if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER) || IPCSkeleton::GetCallingUid() != CLOUD_DISK_UID) {
+        LOGE("UMountCloudDiskFuse permissionCheck error, calling uid now is %{public}d",
+             IPCSkeleton::GetCallingUid());
+        return E_PERMISSION_DENIED;
+    }
+    if (IsFilePathInvalid(path)) {
+        return E_PARAMS_INVALID;
+    }
+    if (!IsPathStartWithCloudDisk(userId, path)) {
+        return E_PARAMS_INVALID;
+    }
+    auto& sdCommunication = StorageDaemonCommunication::GetInstance();
+    err = sdCommunication.UMountCloudDiskFuse(userId, path);
+    StorageRadar::ReportFucBehavior("UMountCloudDiskFuse", userId, "UMountCloudDiskFuse End", err);
+    return err;
+}
+
 int32_t StorageManagerProvider::IsFileOccupied(const std::string &path,
                                                const std::vector<std::string> &inputList,
                                                std::vector<std::string> &outputList,
@@ -1615,7 +1669,7 @@ int32_t StorageManagerProvider::CreateUserDir(const std::string &path, mode_t mo
     }
 
     auto callingUid = IPCSkeleton::GetCallingUid();
-    if (callingUid != AOCO_UID && callingUid != ENCRYPTION_EXTENSION_UID) {
+    if (callingUid != AOCO_UID) {
         LOGE("Permission check failed, the UID is not in the trustlist, uid: %{public}d", callingUid);
         StorageRadar::ReportCommonResult("CreateUserDir", E_PERMISSION_DENIED, 0, "callingUid not in trustlist");
         return E_PERMISSION_DENIED;
@@ -1843,27 +1897,6 @@ bool StorageManagerProvider::IsCalledByFileMgr()
         return false;
     }
     return true;
-}
-
-int32_t StorageManagerProvider::SetDirEncryptionPolicyWithKeyDesc(const std::string &dirPath,
-    uint32_t level, const std::string &keyDesc)
-{
-    std::string message = "SetDirEncryptionPolicyWithKeyDesc Begin, dirPath: " + GetAnonyString(dirPath);
-    StorageRadar::ReportFucBehavior("SetDirEncryptionPolicyWithKeyDesc", 0, message, E_OK);
-    if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER_CRYPT)) {
-        return E_PERMISSION_DENIED;
-    }
-    if (IsFilePathInvalid(dirPath)) {
-        return E_PARAMS_INVALID;
-    }
-#ifdef USER_CRYPTO_MANAGER
-    auto& sdCommunication = StorageDaemonCommunication::GetInstance();
-    int32_t err = sdCommunication.SetDirEncryptionPolicyWithKeyDesc(dirPath, level, keyDesc);
-    StorageRadar::ReportFucBehavior("SetDirEncryptionPolicyWithKeyDesc", 0, "End", err);
-    return err;
-#else
-    return E_OK;
-#endif
 }
 
 } // namespace StorageManager
