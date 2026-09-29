@@ -149,6 +149,8 @@ int32_t FscryptKeyV1::InstallKeyForAppKeyToKeyring(KeyBlob &appKey)
         key_serial_t ks = KeyCtrlAddAppAsdpKey("logon", keyref.c_str(), &fskey, krid);
         if (ks < 0) {
             // Addkey failed, need to process the error
+            std::string extraData = "keyref=" + keyref + ", errno=" + std::to_string(errno);
+            StorageRadar::ReportKeyRingResult("InstallKeyForAppKeyToKeyring::KeyCtrlAddAppAsdpKey", ks, extraData);
             LOGE("[L5:FscryptKeyV1] InstallKeyForAppKeyToKeyring: Failed to AddKey, errno %{public}d", errno);
         }
     }
@@ -188,7 +190,7 @@ int32_t FscryptKeyV1::UninstallKeyForAppKeyToKeyring(const std::string keyId)
         std::string keyref = prefix + ":" + keyId;
         key_serial_t ks = KeyCtrlSearch(krid, "logon", keyref.c_str(), 0);
         if (KeyCtrlUnlink(ks, krid) != 0) {
-            LOGE("[L5:FscryptKeyV1] UninstallKeyForAppKeyToKeyring: Failed to unlink key");
+            LOGE("[L5:FscryptKeyV1] UninstallKeyForAppKeyToKeyring: Failed to unlink key, errno=%{public}d", errno);
         }
     }
     LOGI("[L5:FscryptKeyV1] UninstallKeyForAppKeyToKeyring: <<< EXIT SUCCESS <<<");
@@ -645,7 +647,7 @@ int32_t FscryptKeyV1::UninstallKeyToKeyring()
         std::string keyref = prefix + ":" + keyInfo_.keyDesc.ToString();
         key_serial_t ks = KeyCtrlSearch(krid, "logon", keyref.c_str(), 0);
         if (KeyCtrlUnlink(ks, krid) != 0) {
-            LOGE("[L5:FscryptKeyV1] UninstallKeyToKeyring: Failed to unlink key");
+            LOGE("[L5:FscryptKeyV1] UninstallKeyToKeyring: Failed to unlink key, errno=%{public}d", errno);
         }
     }
 

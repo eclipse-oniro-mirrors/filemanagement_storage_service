@@ -582,7 +582,7 @@ bool ReadFile(const std::string &path, std::string *str)
     std::string rpath(PATH_MAX + 1, '\0');
     if ((path.length() > PATH_MAX) || (realpath(path.c_str(), rpath.data()) == nullptr)) {
         LOGE("[L8:FileUtils] ReadFile: <<< EXIT FAILED <<< realpath failed, "
-            "path=%{public}s", path.c_str());
+            "path=%{public}s, errno=%{public}d", path.c_str(), errno);
         return false;
     }
 
@@ -1605,7 +1605,7 @@ bool GetRealPath(const std::string &path, std::string &realPath)
 {
     char resolvedPath[PATH_MAX] = { 0 };
     if (path.size() >= PATH_MAX || !realpath(path.c_str(), resolvedPath)) {
-        LOGE("[L8:FileUtils] GetRealPath: %{public}s realpath failed", path.c_str());
+        LOGE("[L8:FileUtils] GetRealPath: %{public}s realpath failed, errno=%{public}d", path.c_str(), errno);
         return false;
     }
     realPath = std::string(resolvedPath);

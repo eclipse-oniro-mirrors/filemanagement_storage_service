@@ -47,7 +47,8 @@ void KeyBackup::CreateBackup(const std::string &from, const std::string &to, boo
     LOGD("[L4:KeyBackup] CreateBackup: >>> ENTER <<< from=%{public}s, to=%{public}s, removeOld=%{public}d",
         from.c_str(), to.c_str(), removeOld ? 1 : 0);
     if (access(from.c_str(), 0) != 0) {
-        LOGE("[L4:KeyBackup] CreateBackup: <<< EXIT FAILED <<< from path not exist, path=%{public}s", from.c_str());
+        LOGE("[L4:KeyBackup] CreateBackup: <<< EXIT FAILED <<< from path not exist, path=%{public}s, errno=%{public}d",
+            from.c_str(), errno);
         return;
     }
 
@@ -93,7 +94,8 @@ int32_t KeyBackup::RemoveNode(const std::string &pathName)
 
     DIR *dir = opendir(pathName.c_str());
     if (dir == nullptr) {
-        LOGE("[L4:KeyBackup] RemoveNode: <<< EXIT FAILED <<< opendir failed, pathName=%{public}s", pathName.c_str());
+        LOGE("[L4:KeyBackup] RemoveNode: <<< EXIT FAILED <<< opendir failed, pathName=%{public}s, errno=%{public}d",
+            pathName.c_str(), errno);
         return -1;
     }
 
@@ -114,13 +116,14 @@ int32_t KeyBackup::RemoveNode(const std::string &pathName)
 
     if (errno < 0 || rmSubNodeFail) {
         closedir(dir);
-        LOGE("[L4:KeyBackup] RemoveNode: <<< EXIT FAILED <<< remove subnode failed, pathName=%{public}s",
-             pathName.c_str());
+        LOGE("[L4:KeyBackup] RemoveNode: <<< EXIT FAILED <<< remove subnode failed, pathName=%{public}s, errno=%{public}d",
+            pathName.c_str(), errno);
         return -1;
     }
 
     if (closedir(dir) < 0) {
-        LOGE("[L4:KeyBackup] RemoveNode: <<< EXIT FAILED <<< closedir failed, pathName=%{public}s", pathName.c_str());
+        LOGE("[L4:KeyBackup] RemoveNode: <<< EXIT FAILED <<< closedir failed, pathName=%{public}s, errno=%{public}d",
+            pathName.c_str(), errno);
         return -1;
     }
     int32_t ret = rmdir(pathName.c_str());
@@ -236,7 +239,7 @@ void KeyBackup::ListAndCheckDir(std::string &origDir)
              origDir.c_str(), backupDir.c_str());
         ret = MkdirParent(origDir, DEFAULT_DIR_PERM);
         if (ret != 0) {
-            LOGE("[L4:KeyBackup] ListAndCheckDir: <<< EXIT FAILED <<< MkdirParent failed");
+            LOGE("[L4:KeyBackup] ListAndCheckDir: <<< EXIT FAILED <<< MkdirParent failed, errno=%{public}d", errno);
             return;
         }
         HiAudit::GetInstance().WriteStart("KeyBackup::ListAndCheckDir CheckAndCopyFiles while");
@@ -318,7 +321,8 @@ int32_t KeyBackup::GetFileList(const std::string &origDir, const std::string &ba
          origDir.c_str(), backDir.c_str());
     DIR *dir = opendir(origDir.c_str());
     if (dir == nullptr) {
-        LOGE("[L4:KeyBackup] GetFileList: <<< EXIT FAILED <<< fail to open origDir=%{public}s", origDir.c_str());
+        LOGE("[L4:KeyBackup] GetFileList: <<< EXIT FAILED <<< fail to open origDir=%{public}s, errno=%{public}d",
+            origDir.c_str(), errno);
         return -1;
     }
     struct dirent *de = nullptr;
@@ -333,7 +337,8 @@ int32_t KeyBackup::GetFileList(const std::string &origDir, const std::string &ba
     HiAudit::GetInstance().WriteEnd("KeyBackup::GetFileList First while", E_OK);
     dir = opendir(backDir.c_str());
     if (dir == nullptr) {
-        LOGE("[L4:KeyBackup] GetFileList: <<< EXIT FAILED <<< fail to open backDir=%{public}s", backDir.c_str());
+        LOGE("[L4:KeyBackup] GetFileList: <<< EXIT FAILED <<< fail to open backDir=%{public}s, errno=%{public}d",
+            backDir.c_str(), errno);
         return -1;
     }
     uint32_t loopCount2 = 0;
@@ -355,7 +360,7 @@ bool KeyBackup::IsRegFile(const std::string &filePath)
 {
     struct stat st;
     if (lstat(filePath.c_str(), &st) < 0) {
-        LOGE("[L4:KeyBackup] IsRegFile: lstat failed %{public}s", filePath.c_str());
+        LOGE("[L4:KeyBackup] IsRegFile: lstat failed %{public}s, errno=%{public}d", filePath.c_str(), errno);
         return false;
     }
 
@@ -533,13 +538,14 @@ void KeyBackup::FsyncFile(const std::string &dirName)
     LOGI("[L4:KeyBackup] FsyncFile: >>> ENTER <<< dirName=%{public}s", dirName.c_str());
     std::string realPath;
     if (!GetRealPath(dirName, realPath)) {
-        LOGI("[L4:KeyBackup] FsyncFile: <<< EXIT FAILED <<< GetRealPath failed");
+        LOGE("[L4:KeyBackup] FsyncFile: <<< EXIT FAILED <<< GetRealPath failed");
         return;
     }
 
     UniqueFd fd(open(realPath.c_str(), O_RDONLY | O_CLOEXEC));
     if (fd < 0) {
-        LOGE("[L4:KeyBackup] FsyncFile: <<< EXIT FAILED <<< failed to open %{public}s", realPath.c_str());
+        LOGE("[L4:KeyBackup] FsyncFile: <<< EXIT FAILED <<< failed to open %{public}s, errno=%{public}d",
+            realPath.c_str(), errno);
         return;
     }
 
@@ -591,8 +597,8 @@ int32_t KeyBackup::MkdirParent(const std::string &pathName, mode_t mode)
         std::string dirName = pathName.substr(0, pos);
         if (access(dirName.c_str(), F_OK) != 0) {
             if (mkdir(dirName.c_str(), mode) < 0) {
-                LOGE("[L4:KeyBackup] MkdirParent: <<< EXIT FAILED <<< mkdir dir failed, dirName=%{public}s",
-                     dirName.c_str());
+                LOGE("[L4:KeyBackup] MkdirParent: <<< EXIT FAILED <<< mkdir dir failed, dirName=%{public}s,"
+                    "errno=%{public}d", dirName.c_str(), errno);
                 return -1;
             }
         }
@@ -609,12 +615,13 @@ void KeyBackup::CleanFile(const std::string &path)
     LOGD("[L4:KeyBackup] CleanFile: >>> ENTER <<< path=%{public}s", path.c_str());
     std::string realPath;
     if (!GetRealPath(path, realPath)) {
-        LOGI("[L4:KeyBackup] CleanFile: <<< EXIT FAILED <<< GetRealPath failed");
+        LOGE("[L4:KeyBackup] CleanFile: <<< EXIT FAILED <<< GetRealPath failed");
         return;
     }
     FILE *f = fopen(realPath.c_str(), "w");
     if (f == nullptr) {
-        LOGE("[L4:KeyBackup] CleanFile: <<< EXIT FAILED <<< open failed, path=%{public}s", realPath.c_str());
+        LOGE("[L4:KeyBackup] CleanFile: <<< EXIT FAILED <<< open failed, path=%{public}s, errno=%{public}d",
+            realPath.c_str(), errno);
         return;
     }
     int fd = fileno(f);
@@ -629,10 +636,12 @@ void KeyBackup::CleanFile(const std::string &path)
 
     lseek(fd, 0, SEEK_SET);
     if (write(fd, data.c_str(), data.size()) < 0) {
-        LOGE("[L4:KeyBackup] CleanFile: <<< EXIT FAILED <<< failed to write file, path=%{public}s", realPath.c_str());
+        LOGE("[L4:KeyBackup] CleanFile: <<< EXIT FAILED <<< failed to write file, path=%{public}s, errno=%{public}d",
+            realPath.c_str(), errno);
     }
     if (fsync(fd) == -1) {
-        LOGE("[L4:KeyBackup] CleanFile: <<< EXIT FAILED <<< failed to sync file, path=%{public}s", realPath.c_str());
+        LOGE("[L4:KeyBackup] CleanFile: <<< EXIT FAILED <<< failed to sync file, path=%{public}s, errno=%{public}d",
+            realPath.c_str(), errno);
     }
     (void)fclose(f);
     LOGI("[L4:KeyBackup] CleanFile: <<< EXIT SUCCESS <<<");
@@ -643,7 +652,8 @@ void KeyBackup::CheckAndCopyFiles(const std::string &from, const std::string &to
     LOGD("[L4:KeyBackup] CheckAndCopyFiles: >>> ENTER <<< from=%{public}s, to=%{public}s", from.c_str(), to.c_str());
     struct stat st;
     if (lstat(from.c_str(), &st) < 0) {
-        LOGE("[L4:KeyBackup] CheckAndCopyFiles: <<< EXIT FAILED <<< lstat file failed, from=%{public}s", from.c_str());
+        LOGE("[L4:KeyBackup] CheckAndCopyFiles: <<< EXIT FAILED <<< lstat file failed, from=%{public}s, errno=%{public}d",
+            from.c_str(), errno);
         return;
     }
 
@@ -671,7 +681,8 @@ void KeyBackup::CheckAndCopyFiles(const std::string &from, const std::string &to
     }
     DIR *dir = opendir(from.c_str());
     if (dir == nullptr) {
-        LOGE("[L4:KeyBackup] CheckAndCopyFiles: <<< EXIT FAILED <<< open dir failed, from=%{public}s", from.c_str());
+        LOGE("[L4:KeyBackup] CheckAndCopyFiles: <<< EXIT FAILED <<< open dir failed, from=%{public}s, errno=%{public}d",
+            from.c_str(), errno);
         return;
     }
 
@@ -686,7 +697,8 @@ void KeyBackup::CheckAndCopyFiles(const std::string &from, const std::string &to
     }
 
     if (closedir(dir) < 0) {
-        LOGE("[L4:KeyBackup] CheckAndCopyFiles: close dir failed, from=%{public}s", from.c_str());
+        LOGE("[L4:KeyBackup] CheckAndCopyFiles: close dir failed, from=%{public}s, errno=%{public}d",
+            from.c_str(), errno);
     }
     LOGD("[L4:KeyBackup] CheckAndCopyFiles: <<< EXIT SUCCESS <<<");
 }
@@ -696,7 +708,8 @@ int32_t KeyBackup::HandleCopyDir(const std::string &from, const std::string &to)
     struct FileAttr attr;
     int32_t ret = mkdir(to.c_str(), DEFAULT_DIR_PERM);
     if (ret && errno != EEXIST) {
-        LOGE("[L4:KeyBackup] HandleCopyDir: <<< EXIT FAILED <<< mkdir dir failed, to=%{public}s", to.c_str());
+        LOGE("[L4:KeyBackup] HandleCopyDir: <<< EXIT FAILED <<< mkdir dir failed, to=%{public}s, errno=%{public}d",
+            to.c_str(), errno);
         return -1;
     }
 
@@ -754,7 +767,7 @@ bool KeyBackup::GetRealPath(const std::string &path, std::string &realPath)
 {
     char resolvedPath[PATH_MAX] = { 0 };
     if (path.size() >= PATH_MAX || !realpath(path.c_str(), resolvedPath)) {
-        LOGE("[L4:KeyBackup] GetRealPath: %{public}s realpath failed", path.c_str());
+        LOGE("[L4:KeyBackup] GetRealPath: %{public}s realpath failed, errno=%{public}d", path.c_str(), errno);
         return false;
     }
     realPath = std::string(resolvedPath);

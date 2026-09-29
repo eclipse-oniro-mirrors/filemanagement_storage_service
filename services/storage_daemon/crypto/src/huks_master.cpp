@@ -127,7 +127,7 @@ int32_t HuksMaster::HdiModuleInit()
     LOGE("[L8:HuksMaster] HdiModuleInit: HuksHdiModuleInit end, retryRet %{public}d", retryRet);
     if (retryRet != HKS_SUCCESS) {
         StorageRadar::ReportHuksResult("HuksHdiModuleInit_Retry", retryRet);
-        LOGI("[L8:HuksMaster] HdiModuleInit: <<< EXIT FAILED <<<");
+        LOGE("[L8:HuksMaster] HdiModuleInit: <<< EXIT FAILED <<<");
     } else {
         LOGI("[L8:HuksMaster] HdiModuleInit: <<< EXIT SUCCESS <<<");
     }
@@ -219,7 +219,7 @@ int32_t HuksMaster::HdiGenerateKey(const HuksBlob &keyAlias, const HksParamSet *
     LOGE("[L8:HuksMaster] HdiGenerateKey: HuksHdiGenerateKey end, retryRet %{public}d", retryRet);
     if (retryRet != HKS_SUCCESS) {
         StorageRadar::ReportHuksResult("HuksHdi GenerateKey_Retry", retryRet);
-        LOGI("[L8:HuksMaster] HdiGenerateKey: <<< EXIT FAILED <<<");
+        LOGE("[L8:HuksMaster] HdiGenerateKey: <<< EXIT FAILED <<<");
     } else {
         LOGI("[L8:HuksMaster] HdiGenerateKey: <<< EXIT SUCCESS <<<");
     }
@@ -309,7 +309,7 @@ int32_t HuksMaster::HdiAccessFinish(const HuksBlob &handle, const HksParamSet *p
     LOGE("[L8:HuksMaster] HdiAccessFinish: HuksHdiFinish end, retryRet %{public}d", retryRet);
     if (retryRet != HKS_SUCCESS) {
         StorageRadar::ReportHuksResult("HuksHdiFinish_Retry", retryRet);
-        LOGI("[L8:HuksMaster] HdiAccessFinish: <<< EXIT FAILED <<<");
+        LOGE("[L8:HuksMaster] HdiAccessFinish: <<< EXIT FAILED <<<");
     } else {
         LOGI("[L8:HuksMaster] HdiAccessFinish: <<< EXIT SUCCESS <<<");
     }
@@ -355,7 +355,7 @@ int32_t HuksMaster::HdiAccessUpgradeKey(const HuksBlob &oldKey, const HksParamSe
     LOGE("[L8:HuksMaster] HdiAccessUpgradeKey: HuksHdiUpgradeKey end, retryRet %{public}d", retryRet);
     if (retryRet != HKS_SUCCESS) {
         StorageRadar::ReportHuksResult("HuksHdi UpgradeKey_Retry", retryRet);
-        LOGI("[L8:HuksMaster] HdiAccessUpgradeKey: <<< EXIT FAILED <<<");
+        LOGE("[L8:HuksMaster] HdiAccessUpgradeKey: <<< EXIT FAILED <<<");
     } else {
         LOGI("[L8:HuksMaster] HdiAccessUpgradeKey: <<< EXIT SUCCESS <<<");
     }
@@ -747,7 +747,7 @@ KeyBlob HuksMaster::GenerateRandomKey(uint32_t keyLen)
     LOGI("[L8:HuksMaster] GenerateRandomKey: >>> ENTER <<< size %{public}d", keyLen);
     KeyBlob out(keyLen);
     if (out.IsEmpty()) {
-        LOGI("[L8:HuksMaster] GenerateRandomKey: <<< EXIT FAILED <<< out is empty");
+        LOGE("[L8:HuksMaster] GenerateRandomKey: <<< EXIT FAILED <<< out is empty");
         StorageRadar::ReportUserKeyResult("GenerateRandomKey", 0, E_KEY_BLOB_ERROR, "",
             "KeyBlob alloc failed, keyLen=" + std::to_string(keyLen));
         return out;
@@ -789,7 +789,7 @@ bool HuksMaster::GetHuksVersion(uint32_t &majorVer, uint32_t &minorVer)
          majorVer, minorVer);
     return true;
 #endif
-    LOGI("[L8:HuksMaster] GetHuksVersion: <<< EXIT FAILED <<< HUKS_IDL_ENVIRONMENT not defined");
+    LOGE("[L8:HuksMaster] GetHuksVersion: <<< EXIT FAILED <<< HUKS_IDL_ENVIRONMENT not defined");
     return false;
 }
 

@@ -85,7 +85,7 @@ static int FsIoctl(const char *mnt, unsigned long cmd, void *arg)
 {
     char *realPath = realpath(mnt, NULL);
     if (realPath == NULL) {
-        LOGE("realpath failed");
+        LOGE("realpath failed, errno=%{public}d", errno);
         return FSCRYPT_INVALID_REALPATH;
     }
 
@@ -156,7 +156,7 @@ static uint8_t CheckKernelFscrypt(const char *mnt)
 {
     char *realPath = realpath(mnt, NULL);
     if (realPath == NULL) {
-        LOGE("realpath failed");
+        LOGE("realpath failed, errno=%{public}d", errno);
         return FSCRYPT_INVALID_REALPATH;
     }
 
