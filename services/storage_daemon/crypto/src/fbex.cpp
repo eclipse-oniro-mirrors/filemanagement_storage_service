@@ -748,7 +748,7 @@ int FBEX::ReadESecretToKernel(UserIdToFbeStr &userIdToFbe, uint32_t status, KeyB
     (void)memset_s(&ops, sizeof(ops), 0, sizeof(ops));
     delay = StorageService::StorageRadar::ReportDuration("FBEX: READ SECRET TO KERNEL",
         startTime, StorageService::DEFAULT_DELAY_TIME_THRESH, userIdToFbe.userIds[SINGLE_ID_INDEX]);
-    LOGI("[L7:FBEX] ReadESecretToKernel: <<< EXIT SUCCESS <<< delay time=%{public}s",delay.c_str());
+    LOGI("[L7:FBEX] ReadESecretToKernel: <<< EXIT SUCCESS <<< delay time=%{public}s", delay.c_str());
     return 0;
 }
 

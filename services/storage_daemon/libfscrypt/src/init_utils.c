@@ -30,8 +30,8 @@ char *ReadFileToBuf(const char *configFile)
     do {
         if (stat(configFile, &fileStat) != 0 ||
             fileStat.st_size <= 0 || fileStat.st_size > MAX_FILE_LEN) {
-            LOGE("Unexpected config file \" %{public}s \", check if it exist. if exist, check file size, errno=%{public}d",
-                configFile, errno);
+            LOGE("Unexpected config file \" %{public}s \", check if it exist. if exist, check file size, "
+                "errno=%{public}d", configFile, errno);
             break;
         }
         fd = fopen(configFile, "r");

@@ -116,8 +116,8 @@ int32_t KeyBackup::RemoveNode(const std::string &pathName)
 
     if (errno < 0 || rmSubNodeFail) {
         closedir(dir);
-        LOGE("[L4:KeyBackup] RemoveNode: <<< EXIT FAILED <<< remove subnode failed, pathName=%{public}s, errno=%{public}d",
-            pathName.c_str(), errno);
+        LOGE("[L4:KeyBackup] RemoveNode: <<< EXIT FAILED <<< remove subnode failed, pathName=%{public}s, "
+            "errno=%{public}d", pathName.c_str(), errno);
         return -1;
     }
 
@@ -652,8 +652,8 @@ void KeyBackup::CheckAndCopyFiles(const std::string &from, const std::string &to
     LOGD("[L4:KeyBackup] CheckAndCopyFiles: >>> ENTER <<< from=%{public}s, to=%{public}s", from.c_str(), to.c_str());
     struct stat st;
     if (lstat(from.c_str(), &st) < 0) {
-        LOGE("[L4:KeyBackup] CheckAndCopyFiles: <<< EXIT FAILED <<< lstat file failed, from=%{public}s, errno=%{public}d",
-            from.c_str(), errno);
+        LOGE("[L4:KeyBackup] CheckAndCopyFiles: <<< EXIT FAILED <<< lstat file failed, from=%{public}s, "
+            "errno=%{public}d", from.c_str(), errno);
         return;
     }
 
