@@ -86,6 +86,7 @@ constexpr uint8_t BLOCK_SIZE_BYTE_0 = 4;
 constexpr uint8_t BLOCK_SIZE_BYTE_1 = 5;
 constexpr uint8_t BLOCK_SIZE_BYTE_2 = 6;
 constexpr uint8_t BLOCK_SIZE_BYTE_3 = 7;
+constexpr int DVD_RW_PROFILE_RESTRICTED_OVERWRITE = 0x13;
 constexpr int32_t FORMAT_PARTITION_TIMEOUT_S = 5 * 60;
 constexpr int32_t PARTITION_HMFS_VALID = 2;
 constexpr const char *VOL_TMP_PERCENT_PATH = "/data/local/vol_tmp/percent";
@@ -1246,13 +1247,33 @@ static int32_t GetDvdPlusRwTotalCapacity(int fd, int64_t &dvdTotalCapacity)
     return E_OK;
 }
 
+bool DiskUtils::IsDvdRwRestrictedOverwrite(int cmdFd)
+{
+    int dvdMedia = 0;
+    int ret = GetDvdConfiguration(cmdFd, dvdMedia);
+    if (ret != E_OK) {
+        LOGI("IsDvdRwRestrictedOverwrite: GetDvdConfiguration failed, treat as sequential");
+        return false;
+    }
+    LOGI("IsDvdRwRestrictedOverwrite: dvdMedia=0x%{public}x", dvdMedia);
+    return dvdMedia == DVD_RW_PROFILE_RESTRICTED_OVERWRITE;
+}
+
 int64_t DiskUtils::GetDiscCapacity(int cmdFd, const std::string& discType)
 {
     int64_t totalSize = 0;
     int ret = E_OK;
     if (discType == "DVD-ROM" || discType == "DVD-R" || discType == "DVD+R") {
         ret = GetDvdTotalCapacity(cmdFd, totalSize);
-    } else if (discType == "DVD+RW" || discType == "DVD-RW") {
+    } else if (discType == "DVD-RW") {
+        bool isRestricted = IsDvdRwRestrictedOverwrite(cmdFd);
+        LOGI("DVD-RW: isRestrictedOverwrite=%{public}d", isRestricted);
+        if (isRestricted) {
+            ret = GetDvdPlusRwTotalCapacity(cmdFd, totalSize);
+        } else {
+            ret = GetDvdTotalCapacity(cmdFd, totalSize);
+        }
+    } else if (discType == "DVD+RW") {
         ret = GetDvdPlusRwTotalCapacity(cmdFd, totalSize);
     } else if (discType.find("CD") == 0) {
         ret = GetCdTotalCapacity(cmdFd, totalSize);

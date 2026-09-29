@@ -1362,6 +1362,120 @@ HWTEST_F(ExtDiskUtilsTest, GetDiscCapacity_CapacityCallFailed, TestSize.Level1)
 }
 
 /**
+ * @tc.name: IsDvdRwRestrictedOverwrite_RestrictedMode
+ * @tc.desc: Verify IsDvdRwRestrictedOverwrite returns true when profile is 0x13 (restricted overwrite).
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, IsDvdRwRestrictedOverwrite_RestrictedMode, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "IsDvdRwRestrictedOverwrite_RestrictedMode start";
+    EXPECT_CALL(*diskUtilMoc_, GetDvdConfiguration(_, _))
+        .WillOnce(Invoke([](int, int &media) { media = 0x13; return E_OK; }));
+    EXPECT_TRUE(DiskUtils::IsDvdRwRestrictedOverwrite(0));
+    GTEST_LOG_(INFO) << "IsDvdRwRestrictedOverwrite_RestrictedMode end";
+}
+
+/**
+ * @tc.name: IsDvdRwRestrictedOverwrite_SequentialMode
+ * @tc.desc: Verify IsDvdRwRestrictedOverwrite returns false when profile is 0x14 (sequential).
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, IsDvdRwRestrictedOverwrite_SequentialMode, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "IsDvdRwRestrictedOverwrite_SequentialMode start";
+    EXPECT_CALL(*diskUtilMoc_, GetDvdConfiguration(_, _))
+        .WillOnce(Invoke([](int, int &media) { media = 0x14; return E_OK; }));
+    EXPECT_FALSE(DiskUtils::IsDvdRwRestrictedOverwrite(0));
+    GTEST_LOG_(INFO) << "IsDvdRwRestrictedOverwrite_SequentialMode end";
+}
+
+/**
+ * @tc.name: IsDvdRwRestrictedOverwrite_ConfigFailed
+ * @tc.desc: Verify IsDvdRwRestrictedOverwrite returns false when GetDvdConfiguration fails.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, IsDvdRwRestrictedOverwrite_ConfigFailed, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "IsDvdRwRestrictedOverwrite_ConfigFailed start";
+    EXPECT_CALL(*diskUtilMoc_, GetDvdConfiguration(_, _))
+        .WillOnce(Invoke([](int, int &) { return E_ERR; }));
+    EXPECT_FALSE(DiskUtils::IsDvdRwRestrictedOverwrite(0));
+    GTEST_LOG_(INFO) << "IsDvdRwRestrictedOverwrite_ConfigFailed end";
+}
+
+/**
+ * @tc.name: GetDiscCapacity_DvdRwSequentialMode
+ * @tc.desc: Verify GetDiscCapacity uses GetDvdTotalCapacity for DVD-RW in sequential mode.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, GetDiscCapacity_DvdRwSequentialMode, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetDiscCapacity_DvdRwSequentialMode start";
+    // GetDvdConfiguration returns 0x14 (sequential) -> IsDvdRwRestrictedOverwrite returns false
+    // -> GetDvdTotalCapacity is called (external linkage, mockable)
+    EXPECT_CALL(*diskUtilMoc_, GetDvdConfiguration(_, _))
+        .WillOnce(Invoke([](int, int &media) { media = 0x14; return E_OK; }));
+    EXPECT_CALL(*diskUtilMoc_, GetDvdTotalCapacity(_, _))
+        .WillOnce(Invoke([](int, int64_t &cap) { cap = 4700372992L; return E_OK; }));
+    EXPECT_EQ(DiskUtils::GetDiscCapacity(0, "DVD-RW"), 4700372992L);
+    GTEST_LOG_(INFO) << "GetDiscCapacity_DvdRwSequentialMode end";
+}
+
+/**
+ * @tc.name: GetDiscCapacity_DvdRwRestrictedOverwriteMode
+ * @tc.desc: Verify GetDiscCapacity uses GetDvdPlusRwTotalCapacity for DVD-RW in restricted overwrite mode.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, GetDiscCapacity_DvdRwRestrictedOverwriteMode, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetDiscCapacity_DvdRwRestrictedOverwriteMode start";
+    // GetDvdConfiguration returns 0x13 (restricted overwrite)
+    // -> GetDvdPlusRwTotalCapacity is called (static, not mockable, uses real ioctl)
+    // With g_ioctlRet=0, ioctl succeeds but dataBuf is all zeros
+    // -> blkCnt=0, blkSize=0 -> dvdTotalCapacity = (0+1)*0 = 0
+    EXPECT_CALL(*diskUtilMoc_, GetDvdConfiguration(_, _))
+        .WillOnce(Invoke([](int, int &media) { media = 0x13; return E_OK; }));
+    g_ioctlRet = 0;
+    g_ioctlInfo = 0;
+    EXPECT_EQ(DiskUtils::GetDiscCapacity(0, "DVD-RW"), 0);
+    GTEST_LOG_(INFO) << "GetDiscCapacity_DvdRwRestrictedOverwriteMode end";
+}
+
+/**
+ * @tc.name: GetDiscCapacity_DvdRwConfigFailed
+ * @tc.desc: Verify GetDiscCapacity uses GetDvdTotalCapacity when GetDvdConfiguration fails (fallback to sequential).
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, GetDiscCapacity_DvdRwConfigFailed, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetDiscCapacity_DvdRwConfigFailed start";
+    // GetDvdConfiguration fails -> IsDvdRwRestrictedOverwrite returns false (treat as sequential)
+    // -> GetDvdTotalCapacity is called (external linkage, mockable)
+    EXPECT_CALL(*diskUtilMoc_, GetDvdConfiguration(_, _))
+        .WillOnce(Invoke([](int, int &) { return E_ERR; }));
+    EXPECT_CALL(*diskUtilMoc_, GetDvdTotalCapacity(_, _))
+        .WillOnce(Invoke([](int, int64_t &cap) { cap = 4700372992L; return E_OK; }));
+    EXPECT_EQ(DiskUtils::GetDiscCapacity(0, "DVD-RW"), 4700372992L);
+    GTEST_LOG_(INFO) << "GetDiscCapacity_DvdRwConfigFailed end";
+}
+
+/**
+ * @tc.name: GetDiscCapacity_DvdRwSequentialCapacityFailed
+ * @tc.desc: Verify GetDiscCapacity returns 0 when GetDvdTotalCapacity fails for DVD-RW sequential mode.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, GetDiscCapacity_DvdRwSequentialCapacityFailed, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetDiscCapacity_DvdRwSequentialCapacityFailed start";
+    EXPECT_CALL(*diskUtilMoc_, GetDvdConfiguration(_, _))
+        .WillOnce(Invoke([](int, int &media) { media = 0x14; return E_OK; }));
+    EXPECT_CALL(*diskUtilMoc_, GetDvdTotalCapacity(_, _))
+        .WillOnce(Invoke([](int, int64_t &) { return E_ERR; }));
+    EXPECT_EQ(DiskUtils::GetDiscCapacity(0, "DVD-RW"), 0);
+    GTEST_LOG_(INFO) << "GetDiscCapacity_DvdRwSequentialCapacityFailed end";
+}
+
+/**
  * @tc.name: AdjustBlankDiscCapacity_NotBlankDisc
  * @tc.desc: Verify AdjustBlankDiscCapacity does nothing when disc is not blank.
  * @tc.type: FUNC
