@@ -149,8 +149,6 @@ int32_t FscryptKeyV1::InstallKeyForAppKeyToKeyring(KeyBlob &appKey)
         key_serial_t ks = KeyCtrlAddAppAsdpKey("logon", keyref.c_str(), &fskey, krid);
         if (ks < 0) {
             // Addkey failed, need to process the error
-            std::string extraData = "keyref=" + keyref + ", errno=" + std::to_string(errno);
-            StorageRadar::ReportKeyRingResult("InstallKeyForAppKeyToKeyring::KeyCtrlAddAppAsdpKey", ks, extraData);
             LOGE("[L5:FscryptKeyV1] InstallKeyForAppKeyToKeyring: Failed to AddKey, errno %{public}d", errno);
         }
     }

@@ -1708,7 +1708,7 @@ int32_t StorageDaemonProvider::MountDlpFuse(const std::string &dstPath, int32_t 
     LOGI("[L1:StorageDaemonProvider] MountDlpFuse: <<< EXIT SUCCESS <<< fuseFd=%{public}d", fuseFd);
     return E_OK;
 #endif
-    LOGE("[L1:StorageDaemonProvider] MountDlpFuse: <<< EXIT FAILED <<< not supported");
+    LOGI("[L1:StorageDaemonProvider] MountDlpFuse: <<< EXIT FAILED <<< not supported");
     return E_NOT_SUPPORT;
 }
 
@@ -1734,7 +1734,7 @@ int32_t StorageDaemonProvider::UMountDlpFuse(const std::string &dstPath)
     LOGI("[L1:StorageDaemonProvider] UMountDlpFuse: <<< EXIT SUCCESS <<<");
     return E_OK;
 #endif
-    LOGE("[L1:StorageDaemonProvider] UMountDlpFuse: <<< EXIT FAILED <<< not supported");
+    LOGI("[L1:StorageDaemonProvider] UMountDlpFuse: <<< EXIT FAILED <<< not supported");
     return E_NOT_SUPPORT;
 }
 
