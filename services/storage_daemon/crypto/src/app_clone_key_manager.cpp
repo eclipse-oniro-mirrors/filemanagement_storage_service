@@ -70,12 +70,12 @@ int AppCloneKeyManager::ActiveAppCloneUserKey(unsigned int &failedUserId)
             return ret;
         }
         LOGI("[L4:AppCloneKeyManager] ActiveAppCloneUserKey: <<< EXIT SUCCESS <<< userId=%{public}u", userId);
-        HiAudit::GetInstance().WriteStart("AppCloneKeyManager::ActiveAppCloneUserKey end", E_OK);
+        HiAudit::GetInstance().WriteEnd("AppCloneKeyManager::ActiveAppCloneUserKey end", E_OK);
         return E_OK;
     }
     LOGE("[L4:AppCloneKeyManager] ActiveAppCloneUserKey: <<< EXIT FAILED <<< Did not find app clone userId in valid"
          "range = {219 ~ 239}");
-    HiAudit::GetInstance().WriteStart("AppCloneKeyManager::ActiveAppCloneUserKey failed", E_NOT_SUPPORT);
+    HiAudit::GetInstance().WriteEnd("AppCloneKeyManager::ActiveAppCloneUserKey failed", E_NOT_SUPPORT);
     return E_NOT_SUPPORT;
 }
 } // namespace StorageDaemon
