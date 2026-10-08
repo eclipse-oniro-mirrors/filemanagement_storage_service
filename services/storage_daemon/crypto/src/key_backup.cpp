@@ -239,7 +239,7 @@ void KeyBackup::ListAndCheckDir(std::string &origDir)
              origDir.c_str(), backupDir.c_str());
         ret = MkdirParent(origDir, DEFAULT_DIR_PERM);
         if (ret != 0) {
-            LOGE("[L4:KeyBackup] ListAndCheckDir: <<< EXIT FAILED <<< MkdirParent failed, errno=%{public}d", errno);
+            LOGE("[L4:KeyBackup] ListAndCheckDir: <<< EXIT FAILED <<< MkdirParent failed");
             return;
         }
         HiAudit::GetInstance().WriteStart("KeyBackup::ListAndCheckDir CheckAndCopyFiles while");
