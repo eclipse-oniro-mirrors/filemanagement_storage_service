@@ -76,6 +76,7 @@ public:
     static int32_t VerifyBurnData(const std::string &devPath, int32_t verifyType);
     static int32_t GetCapacity(const std::string& devPath, int64_t &totalSize, int64_t &freeSize);
     static int64_t GetDiscCapacity(int cmdFd, const std::string& discType);
+    static bool IsDvdRwRestrictedOverwrite(int cmdFd);
     static int64_t GetUsedSizeFromSysfs(const std::string &devPath);
     static void AdjustBlankDiscCapacity(const std::string& devPath, const std::string& discType,
                                         int64_t &totalSize, int64_t &usedSize);

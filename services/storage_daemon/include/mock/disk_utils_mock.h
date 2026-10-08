@@ -68,6 +68,7 @@ public:
     virtual int32_t GetIncBurnAddr(const std::string &devPath, std::string &incBurnAddr) = 0;
     virtual std::string GetOpticalDriveNode(const std::string &devPath) = 0;
     virtual int64_t GetDiscCapacity(int cmdFd, const std::string &discType) = 0;
+    virtual bool IsDvdRwRestrictedOverwrite(int cmdFd) = 0;
     virtual void AdjustBlankDiscCapacity(const std::string &devPath, const std::string &discType,
                                          int64_t &totalSize, int64_t &usedSize) = 0;
     virtual int64_t GetUsedSizeFromSysfs(const std::string &devPath) = 0;
@@ -119,6 +120,7 @@ public:
     MOCK_METHOD2(GetIncBurnAddr, int32_t(const std::string &devPath, std::string &incBurnAddr));
     MOCK_METHOD1(GetOpticalDriveNode, std::string(const std::string &devPath));
     MOCK_METHOD2(GetDiscCapacity, int64_t(int cmdFd, const std::string &discType));
+    MOCK_METHOD1(IsDvdRwRestrictedOverwrite, bool(int cmdFd));
     MOCK_METHOD4(AdjustBlankDiscCapacity, void(const std::string &devPath, const std::string &discType,
                                                int64_t &totalSize, int64_t &usedSize));
     MOCK_METHOD1(GetUsedSizeFromSysfs, int64_t(const std::string &devPath));
