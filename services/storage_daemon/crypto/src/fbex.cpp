@@ -847,7 +847,6 @@ int FBEX::WriteESecretToKernel(UserIdToFbeStr &userIdToFbe, uint32_t status, uin
         startTime, StorageService::DEFAULT_DELAY_TIME_THRESH, userIdToFbe.userIds[SINGLE_ID_INDEX]);
     LOGI("SD_DURATION: FBEX: WRITE SECRET TO KERNEL: userId=%{public}d, delay time=%{public}s",
         userIdToFbe.userIds[SINGLE_ID_INDEX], delay.c_str());
-    LOGD("[L7:FBEX] WriteESecretToKernel: <<< EXIT SUCCESS <<< delay time=%{public}s", delay.c_str());
     return 0;
 }
 } // namespace StorageDaemon
