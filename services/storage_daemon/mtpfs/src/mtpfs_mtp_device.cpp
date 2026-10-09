@@ -1087,7 +1087,7 @@ int MtpFsDevice::FilePushAsync(const std::string src, const std::string dst)
     LOGI("FilePushAsync enter");
     MtpFileSystem& mtpFs = MtpFileSystem::GetInstance();
     MtpFsTmpFilesPool* filesPool = mtpFs.GetTempFilesPool();
-    pushThread_ = std::thread([this, src, dst, filesPool]() {
+    std::thread([this, src, dst, filesPool]() {
         LOGI("Start async push to mtp device.");
         int ret = FilePush(src, dst);
         SetUploadRecord(dst, (ret == E_OK) ? "success" : "fail");
@@ -1096,7 +1096,7 @@ int MtpFsDevice::FilePushAsync(const std::string src, const std::string dst)
         if (unlinkRet != E_OK) {
             LOGE("MtpFileSystem: FilePushAsync unlink error, errno=%{public}d", unlinkRet);
         }
-    });
+    }).detach();
 
     return E_OK;
 }
