@@ -282,7 +282,7 @@ static int ReadKeyFile(const char *path, char *buf, size_t len)
     }
     struct stat st = {0};
     if (stat(path, &st) != 0) {
-        LOGE("stat file failed");
+        LOGE("stat file failed, errno=%{public}d", errno);
         return -EFAULT;
     }
     if ((size_t)st.st_size != len) {
@@ -291,19 +291,19 @@ static int ReadKeyFile(const char *path, char *buf, size_t len)
     }
     char *realPath = realpath(path, NULL);
     if (realPath == NULL) {
-        LOGE("realpath failed");
+        LOGE("realpath failed, errno=%{public}d", errno);
         return -ENOENT;
     }
 
     int fd = open(realPath, O_RDONLY);
     free(realPath);
     if (fd < 0) {
-        LOGE("key file read open failed");
+        LOGE("key file read open failed, errno=%{public}d", errno);
         return -EFAULT;
     }
     fdsan_exchange_owner_tag(fd, 0, NEW_TAG_LOG);
     if (read(fd, buf, len) != (ssize_t)len) {
-        LOGE("bad file content");
+        LOGE("bad file content, errno=%{public}d", errno);
         fdsan_close_with_tag(fd, NEW_TAG_LOG);
         return -EBADF;
     }

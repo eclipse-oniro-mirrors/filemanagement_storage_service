@@ -687,7 +687,7 @@ int ReadCDDiscInfo(const std::string &diskPath, int32_t cmdIndex, uint8_t *buf, 
     LOGI("ReadCDDiscInfo: >>> ENTER <<< diskPath=%{public}s, len=%{public}d", diskPath.c_str(), len);
     char realPath[PATH_MAX] = { 0 };
     if (realpath(diskPath.c_str(), realPath) == nullptr) {
-        LOGE("ReadCDDiscInfo: <<< EXIT FAILED <<< realpath failed");
+        LOGE("ReadCDDiscInfo: <<< EXIT FAILED <<< realpath failed, errno=%{public}d", errno);
         return E_ERR;
     }
     FILE* file = fopen(realPath, "rb");
@@ -721,7 +721,7 @@ int GetCDDiskStatus(const char *device, int &status)
 {
     char realPath[PATH_MAX] = { 0 };
     if (realpath(device, realPath) == nullptr) {
-        LOGE("realpath failed.");
+        LOGE("realpath failed, errno=%{public}d", errno);
         return E_FILE_PATH_INVALID;
     }
     FILE* file = fopen(realPath, "rb");

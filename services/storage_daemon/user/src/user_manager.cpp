@@ -110,6 +110,9 @@ int32_t UserManager::PrepareUserDirsForUpdate(int32_t userId, uint32_t flags)
             return ret;
         }
         if (SetElDirFscryptPolicy(userId, dirInfo.path)) {
+            std::string extraData = "dirPath=" + dirInfo.path + ",userId=" + std::to_string(userId);
+            StorageRadar::ReportUserManager("PrepareUserDirsForUpdate::SetElDirFscryptPolicy", userId,
+                E_PREPARE_DIR, extraData);
             LOGE("[L2:UserManager] PrepareUserDirsForUpdate: SetElDirFscryptPolicy %{public}s failed",
                 dirInfo.path.c_str());
         }

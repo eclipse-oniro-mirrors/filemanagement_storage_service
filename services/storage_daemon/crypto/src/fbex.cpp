@@ -212,6 +212,7 @@ int FBEX::InstallEL5KeyToKernel(uint32_t userIdSingle, uint32_t userIdDouble, ui
                                 bool &isSupport, bool &isNeedEncryptClassE)
 {
     LOGI("[L7:FBEX] InstallEL5KeyToKernel: >>> ENTER <<< userId: %{public}d, flag: %{public}u", userIdDouble, flag);
+    auto startTime = StorageService::StorageRadar::RecordCurrentTime();
     int fd = open(FBEX_UECE_PATH, O_RDWR);
     if (fd < 0) {
         int tmpErrno = errno;
@@ -226,7 +227,11 @@ int FBEX::InstallEL5KeyToKernel(uint32_t userIdSingle, uint32_t userIdDouble, ui
         return -tmpErrno;
     }
     fdsan_exchange_owner_tag(fd, 0, NEW_TAG);
-
+    auto delay = StorageService::StorageRadar::ReportDuration("FBEX: INSTALL EL5 KEY FILE OPS",
+        startTime, StorageService::DEFAULT_DELAY_TIME_THRESH, userIdSingle);
+    LOGI("SD_DURATION: FBEX: INSTALL EL5 KEY FILE OPS: userId=%{public}d, delay time=%{public}s",
+        userIdSingle, delay.c_str());
+    startTime = StorageService::StorageRadar::RecordCurrentTime();
     FbeOptsE ops{ .userIdDouble = userIdDouble, .userIdSingle = userIdSingle };
     auto fbeRet = ioctl(fd, FBEX_ADD_CLASS_E, &ops);
     int tmpErrno = errno;
@@ -248,7 +253,10 @@ int FBEX::InstallEL5KeyToKernel(uint32_t userIdSingle, uint32_t userIdDouble, ui
         ret = -tmpErrno;
     }
     fdsan_close_with_tag(fd, NEW_TAG);
-    LOGI("[L7:FBEX] InstallEL5KeyToKernel: <<< EXIT %s <<<", ret == 0 ? "SUCCESS" : "FAILED");
+    delay = StorageService::StorageRadar::ReportDuration("FBEX: INSTALL EL5 KEY TO KERNEL",
+        startTime, StorageService::DEFAULT_DELAY_TIME_THRESH, userIdSingle);
+    LOGI("[L7:FBEX] InstallEL5KeyToKernel: <<< EXIT %s <<< delay time=%{public}s", ret == 0 ? "SUCCESS" : "FAILED",
+        delay.c_str());
     return ret;
 }
 
@@ -318,6 +326,7 @@ int FBEX::InstallDoubleDeKeyToKernel(UserIdToFbeStr &userIdToFbe, KeyBlob &iv, u
     LOGI("[L7:FBEX] InstallDoubleDeKeyToKernel: >>> ENTER <<< id-single: %{public}d, id-double: %{public}d, flag:"
         "%{public}u",
         userIdToFbe.userIds[SINGLE_ID_INDEX], userIdToFbe.userIds[DOUBLE_ID_INDEX], flag);
+    auto startTime = StorageService::StorageRadar::RecordCurrentTime();
     if (iv.IsEmpty() || !CheckIvValid(iv.data.get(), iv.size)) {
         std::string extraData = "size = " + std::to_string(iv.size);
         StorageRadar::ReportFbexResult("InstallDoubleDeKeyToKernel", 0, -EINVAL, "", extraData);
@@ -335,7 +344,11 @@ int FBEX::InstallDoubleDeKeyToKernel(UserIdToFbeStr &userIdToFbe, KeyBlob &iv, u
         return -tmpErrno;
     }
     fdsan_exchange_owner_tag(fd, 0, NEW_TAG);
-
+    auto delay = StorageService::StorageRadar::ReportDuration("FBEX: INSTALL DOUBLE DE KEY FILE OPS",
+        startTime, StorageService::DEFAULT_DELAY_TIME_THRESH, userIdToFbe.userIds[SINGLE_ID_INDEX]);
+    LOGI("SD_DURATION: FBEX: INSTALL DOUBLE DE KEY FILE OPS: userId=%{public}d, delay time=%{public}s",
+        userIdToFbe.userIds[SINGLE_ID_INDEX], delay.c_str());
+    startTime = StorageService::StorageRadar::RecordCurrentTime();
     FbeOptsEV1 ops{ .userIdDouble = userIdToFbe.userIds[DOUBLE_ID_INDEX],
                     .userIdSingle = userIdToFbe.userIds[SINGLE_ID_INDEX],
                     .status = flag, .length = iv.size, .authTokenSize = authToken.size };
@@ -370,7 +383,9 @@ int FBEX::InstallDoubleDeKeyToKernel(UserIdToFbeStr &userIdToFbe, KeyBlob &iv, u
         return -errops;
     }
     (void)memset_s(&ops, sizeof(ops), 0, sizeof(ops));
-    LOGI("[L7:FBEX] InstallDoubleDeKeyToKernel: <<< EXIT SUCCESS <<<");
+    delay = StorageService::StorageRadar::ReportDuration("FBEX: INSTALL DOUBLE DE KEY TO KERNEL",
+        startTime, StorageService::DEFAULT_DELAY_TIME_THRESH, userIdToFbe.userIds[SINGLE_ID_INDEX]);
+    LOGI("[L7:FBEX] InstallDoubleDeKeyToKernel: <<< EXIT SUCCESS <<< delay time=%{public}s", delay.c_str());
     return ret;
 }
 
@@ -641,7 +656,7 @@ int FBEX::UnlockScreenToKernel(uint32_t userId, uint32_t type, uint8_t *iv, uint
     if (memcpyRet != EOK) {
         StorageRadar::ReportFbexResult("UnlockScreenToKernel::MemcpyFbeOptsV1", userId, memcpyRet,
             std::to_string(type), "");
-        LOGI("[L7:FBEX] UnlockScreenToKernel: <<< EXIT FAILED <<< MemcpyFbeOptsV1 failed, errno: %{public}d",
+        LOGE("[L7:FBEX] UnlockScreenToKernel: <<< EXIT FAILED <<< MemcpyFbeOptsV1 failed, errno: %{public}d",
              memcpyRet);
         fdsan_close_with_tag(fd, NEW_TAG);
         (void)memset_s(&ops, sizeof(ops), 0, sizeof(ops));
@@ -689,6 +704,7 @@ int FBEX::ReadESecretToKernel(UserIdToFbeStr &userIdToFbe, uint32_t status, KeyB
 {
     LOGD("[L7:FBEX] ReadESecretToKernel: >>> ENTER <<< userId: %{public}d, status: %{public}u",
         userIdToFbe.userIds[DOUBLE_ID_INDEX], status);
+    auto startTime = StorageService::StorageRadar::RecordCurrentTime();
     if (eBuffer.IsEmpty() || !CheckReadBuffValid(eBuffer.data.get(), eBuffer.size, status)) {
         std::string extraData = "status = " + std::to_string(status) + ", size = " + std::to_string(eBuffer.size);
         StorageRadar::ReportFbexResult("ReadESecretToKernel", userIdToFbe.userIds[SINGLE_ID_INDEX], -EINVAL,
@@ -710,6 +726,11 @@ int FBEX::ReadESecretToKernel(UserIdToFbeStr &userIdToFbe, uint32_t status, KeyB
         return -errno;
     }
     fdsan_exchange_owner_tag(fd, 0, NEW_TAG);
+    auto delay = StorageService::StorageRadar::ReportDuration("FBEX: READ SECRET FILE OPS",
+        startTime, StorageService::DEFAULT_DELAY_TIME_THRESH, userIdToFbe.userIds[SINGLE_ID_INDEX]);
+    LOGI("SD_DURATION: FBEX: READ SECRET FILE OPS: userId=%{public}d, delay time=%{public}s",
+        userIdToFbe.userIds[SINGLE_ID_INDEX], delay.c_str());
+    startTime = StorageService::StorageRadar::RecordCurrentTime();
     uint32_t bufferSize = AES_256_HASH_RANDOM_SIZE + GCM_MAC_BYTES + GCM_NONCE_BYTES;
     FbeOptsEV1 ops{ .userIdDouble = userIdToFbe.userIds[DOUBLE_ID_INDEX],
                     .userIdSingle = userIdToFbe.userIds[SINGLE_ID_INDEX],
@@ -718,7 +739,7 @@ int FBEX::ReadESecretToKernel(UserIdToFbeStr &userIdToFbe, uint32_t status, KeyB
     if (memcpyRet != EOK) {
         fdsan_close_with_tag(fd, NEW_TAG);
         (void)memset_s(&ops, sizeof(ops), 0, sizeof(ops));
-        LOGI("[L7:FBEX] ReadESecretToKernel: <<< EXIT FAILED <<<");
+        LOGE("[L7:FBEX] ReadESecretToKernel: <<< EXIT FAILED <<<");
         return memcpyRet;
     }
     auto ret = ioctl(fd, FBEX_READ_CLASS_E, &ops);
@@ -727,7 +748,7 @@ int FBEX::ReadESecretToKernel(UserIdToFbeStr &userIdToFbe, uint32_t status, KeyB
                          !authToken.IsEmpty() || !IamClient::GetInstance().HasPinProtect(ops.userIdSingle));
         fdsan_close_with_tag(fd, NEW_TAG);
         (void)memset_s(&ops, sizeof(ops), 0, sizeof(ops));
-        LOGI("[L7:FBEX] ReadESecretToKernel: <<< EXIT FAILED <<<");
+        LOGE("[L7:FBEX] ReadESecretToKernel: <<< EXIT FAILED <<<");
         return (static_cast<uint32_t>(ret) == FILE_ENCRY_ERROR_UECE_AUTH_STATUS_WRONG) ? ret : -errno;
     }
     fdsan_close_with_tag(fd, NEW_TAG);
@@ -739,7 +760,9 @@ int FBEX::ReadESecretToKernel(UserIdToFbeStr &userIdToFbe, uint32_t status, KeyB
     }
     UnlockSendSecret(status, bufferSize, eBuffer.size, eBuffer.data, ops.eBuffer);
     (void)memset_s(&ops, sizeof(ops), 0, sizeof(ops));
-    LOGD("[L7:FBEX] ReadESecretToKernel: <<< EXIT SUCCESS <<<");
+    delay = StorageService::StorageRadar::ReportDuration("FBEX: READ SECRET TO KERNEL",
+        startTime, StorageService::DEFAULT_DELAY_TIME_THRESH, userIdToFbe.userIds[SINGLE_ID_INDEX]);
+    LOGI("[L7:FBEX] ReadESecretToKernel: <<< EXIT SUCCESS <<< delay time=%{public}s", delay.c_str());
     return 0;
 }
 
@@ -765,6 +788,7 @@ int FBEX::WriteESecretToKernel(UserIdToFbeStr &userIdToFbe, uint32_t status, uin
 {
     LOGD("[L7:FBEX] WriteESecretToKernel: >>> ENTER <<< userId: %{public}d, status: %{public}u",
         userIdToFbe.userIds[DOUBLE_ID_INDEX], status);
+    auto startTime = StorageService::StorageRadar::RecordCurrentTime();
     if (!CheckWriteBuffValid(eBuffer, length, status)) {
         LOGE("[L7:FBEX] WriteESecretToKernel: <<< EXIT FAILED <<< write e secret param invalid");
         std::string extraData = "status = " + std::to_string(status) + ", size = " + std::to_string(length);
@@ -788,6 +812,11 @@ int FBEX::WriteESecretToKernel(UserIdToFbeStr &userIdToFbe, uint32_t status, uin
         return -tmpErrno;
     }
     fdsan_exchange_owner_tag(fd, 0, NEW_TAG);
+    auto delay = StorageService::StorageRadar::ReportDuration("FBEX: WRITE SECRET FILE OPS",
+        startTime, StorageService::DEFAULT_DELAY_TIME_THRESH, userIdToFbe.userIds[SINGLE_ID_INDEX]);
+    LOGI("SD_DURATION: FBEX: WRITE SECRET FILE OPS: userId=%{public}d, delay time=%{public}s",
+        userIdToFbe.userIds[SINGLE_ID_INDEX], delay.c_str());
+    startTime = StorageService::StorageRadar::RecordCurrentTime();
     uint32_t bufferSize = AES_256_HASH_RANDOM_SIZE + GCM_MAC_BYTES + GCM_NONCE_BYTES;
     FbeOptsE ops{ .userIdDouble = userIdToFbe.userIds[DOUBLE_ID_INDEX],
                   .userIdSingle = userIdToFbe.userIds[SINGLE_ID_INDEX],
@@ -814,7 +843,10 @@ int FBEX::WriteESecretToKernel(UserIdToFbeStr &userIdToFbe, uint32_t status, uin
     }
     fdsan_close_with_tag(fd, NEW_TAG);
     (void)memset_s(&ops, sizeof(ops), 0, sizeof(ops));
-    LOGD("[L7:FBEX] WriteESecretToKernel: <<< EXIT SUCCESS <<<");
+    delay = StorageService::StorageRadar::ReportDuration("FBEX: WRITE SECRET TO KERNEL",
+        startTime, StorageService::DEFAULT_DELAY_TIME_THRESH, userIdToFbe.userIds[SINGLE_ID_INDEX]);
+    LOGI("SD_DURATION: FBEX: WRITE SECRET TO KERNEL: userId=%{public}d, delay time=%{public}s",
+        userIdToFbe.userIds[SINGLE_ID_INDEX], delay.c_str());
     return 0;
 }
 } // namespace StorageDaemon
