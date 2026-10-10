@@ -1521,7 +1521,7 @@ void MtpFileSystem::EnqueueEvent(MtpEventType type, uint32_t handleId)
         eventQueue_.push(MtpEvent{type, handleId});
         queueSize = eventQueue_.size();
     }
-    eventQueueCv_.notify_all();
+    eventQueueCv_.notify_one();
     LOGD("EnqueueEvent type=%{public}d handleId=%{public}u queueSize=%{public}zu",
          static_cast<int>(type), handleId, queueSize);
 }

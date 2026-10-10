@@ -1071,9 +1071,12 @@ HWTEST_F(MtpfsFuseTest, MtpfsFuseTest_EventWorker_001, TestSize.Level1)
     GTEST_LOG_(INFO) << "MtpfsFuseTest_EventWorker_001 start";
     MtpFileSystem& instance = MtpFileSystem::GetInstance();
 
-    EXPECT_TRUE(instance.eventWorkerRunning_.load());
+    instance.StopEventWorker();
+    EXPECT_FALSE(instance.eventWorkerRunning_.load());
+
     instance.StartEventWorker();
     EXPECT_TRUE(instance.eventWorkerRunning_.load());
+    EXPECT_TRUE(instance.eventWorkerThread_.joinable());
 
     instance.StopEventWorker();
     EXPECT_FALSE(instance.eventWorkerRunning_.load());
@@ -1085,6 +1088,9 @@ HWTEST_F(MtpfsFuseTest, MtpfsFuseTest_EventWorker_001, TestSize.Level1)
     instance.StartEventWorker();
     EXPECT_TRUE(instance.eventWorkerRunning_.load());
     EXPECT_TRUE(instance.eventWorkerThread_.joinable());
+
+    instance.StopEventWorker();
+    EXPECT_FALSE(instance.eventWorkerRunning_.load());
     GTEST_LOG_(INFO) << "MtpfsFuseTest_EventWorker_001 end";
 }
 
@@ -1097,6 +1103,7 @@ HWTEST_F(MtpfsFuseTest, MtpfsFuseTest_EnqueueEvent_001, TestSize.Level1)
 {
     GTEST_LOG_(INFO) << "MtpfsFuseTest_EnqueueEvent_001 start";
     MtpFileSystem& instance = MtpFileSystem::GetInstance();
+    instance.StartEventWorker();
     EXPECT_TRUE(instance.eventWorkerRunning_.load());
 
     instance.HandleRemove(200);
@@ -1109,6 +1116,9 @@ HWTEST_F(MtpfsFuseTest, MtpfsFuseTest_EnqueueEvent_001, TestSize.Level1)
         queueSize = instance.eventQueue_.size();
     }
     EXPECT_EQ(queueSize, 0u);
+
+    instance.StopEventWorker();
+    EXPECT_FALSE(instance.eventWorkerRunning_.load());
     GTEST_LOG_(INFO) << "MtpfsFuseTest_EnqueueEvent_001 end";
 }
 } // STORAGE_DAEMON
