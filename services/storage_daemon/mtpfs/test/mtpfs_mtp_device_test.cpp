@@ -455,5 +455,32 @@ HWTEST_F(MtpfsDeviceTest, MtpfsDeviceTest_FileMove_001, TestSize.Level1)
     int result = device.FileMove(oldPath, newPath);
     EXPECT_EQ(result, -ENOENT);
 }
+
+/**
+ * @tc.name: MtpfsDeviceTest_MtpEventCallback_002
+ * @tc.desc: Test MtpEventCallback branches: OBJECT_REMOVED, OBJECT_INFO_CHANGED, EVENT_NONE and default
+ * @tc.type: FUNC
+ */
+HWTEST_F(MtpfsDeviceTest, MtpfsDeviceTest_MtpEventCallback_002, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "MtpfsDeviceTest_MtpEventCallback_002 start";
+    auto mtpfsdevice = std::make_shared<MtpFsDevice>();
+    int32_t ret = 0;
+    void *data = nullptr;
+
+    mtpfsdevice->MtpEventCallback(ret, LIBMTP_EVENT_OBJECT_REMOVED, 300000001, data);
+    mtpfsdevice->MtpEventCallback(ret, LIBMTP_EVENT_OBJECT_REMOVED, 100, data);
+
+    mtpfsdevice->SetTransferValue(true);
+    mtpfsdevice->MtpEventCallback(ret, LIBMTP_EVENT_OBJECT_REMOVED, 300000001, data);
+    mtpfsdevice->MtpEventCallback(ret, LIBMTP_EVENT_OBJECT_INFO_CHANGED, 500, data);
+    mtpfsdevice->SetTransferValue(false);
+
+    mtpfsdevice->MtpEventCallback(ret, LIBMTP_EVENT_OBJECT_INFO_CHANGED, 500, data);
+    mtpfsdevice->MtpEventCallback(ret, LIBMTP_EVENT_NONE, 0, data);
+    mtpfsdevice->MtpEventCallback(ret, LIBMTP_EVENT_DEVICE_PROPERTY_CHANGED, 0, data);
+    SUCCEED();
+    GTEST_LOG_(INFO) << "MtpfsDeviceTest_MtpEventCallback_002 end";
+}
 }
 }
