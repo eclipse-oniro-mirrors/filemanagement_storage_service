@@ -614,7 +614,6 @@ void KeyManager::ProcUpgradeKey(const std::vector<FileList> &dirInfo)
 int KeyManager::LoadAllUsersEl1Key(void)
 {
     LOGI("[L3:KeyManager] LoadAllUsersEl1Key: >>> ENTER <<<");
-    int ret = E_OK;
     std::vector<FileList> dirInfo;
     ReadDigitDir(USER_EL2_DIR, dirInfo);
     UpgradeKeys(dirInfo);
@@ -622,7 +621,7 @@ int KeyManager::LoadAllUsersEl1Key(void)
     ReadDigitDir(USER_EL1_DIR, dirInfo);
     UpgradeKeys(dirInfo);
     for (auto &item : dirInfo) {
-        ret = RestoreUserKey(item.userId, item.path, NULL_KEY_AUTH, EL1_KEY);
+        int ret = RestoreUserKey(item.userId, item.path, NULL_KEY_AUTH, EL1_KEY);
         if (ret != E_OK) {
             LOGE("[L3:KeyManager] LoadAllUsersEl1Key: failed to restore el1 key for user %{public}u", item.userId);
             StorageRadar::ReportUserKeyResult("LoadAllUsersEl1Key::RestoreUserKey", item.userId,
@@ -640,8 +639,8 @@ int KeyManager::LoadAllUsersEl1Key(void)
     dirInfo.clear();
     ReadDigitDir(USER_EL5_DIR, dirInfo);
     ProcUpgradeKey(dirInfo);
-    LOGI("[L3:KeyManager] LoadAllUsersEl1Key: <<< EXIT SUCCESS <<< [retval=%{public}d]", ret);
-    return ret;
+    LOGI("[L3:KeyManager] LoadAllUsersEl1Key: <<< EXIT SUCCESS <<<");
+    return E_OK;
 }
 
 int KeyManager::InitUserElkeyStorageDir(void)
