@@ -12,6 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include <chrono>
 #include <fstream>
 #include <gtest/gtest.h>
 #include <fuse_opt.h>
@@ -1058,6 +1059,67 @@ HWTEST_F(MtpfsFuseTest, MtpfsFuseTest_IsFilePathValid_011, TestSize.Level1)
     EXPECT_FALSE(IsFilePathValid("dir\\..\\/a.txt"));   // 混合分隔符仍应识别为 ".." 段
     EXPECT_FALSE(IsFilePathValid("dir/..\\a.txt"));
     GTEST_LOG_(INFO) << "MtpfsFuseTest_IsFilePathValid_011 end";
+}
+
+/**
+ * @tc.name: MtpfsFuseTest_EventWorker_001
+ * @tc.desc: Test event queue start/stop: StartEventWorker, StopEventWorker, worker loop exit branches
+ * @tc.type: FUNC
+ */
+HWTEST_F(MtpfsFuseTest, MtpfsFuseTest_EventWorker_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "MtpfsFuseTest_EventWorker_001 start";
+    MtpFileSystem& instance = MtpFileSystem::GetInstance();
+
+    instance.StopEventWorker();
+    EXPECT_FALSE(instance.eventWorkerRunning_.load());
+
+    instance.StartEventWorker();
+    EXPECT_TRUE(instance.eventWorkerRunning_.load());
+    EXPECT_TRUE(instance.eventWorkerThread_.joinable());
+
+    instance.StopEventWorker();
+    EXPECT_FALSE(instance.eventWorkerRunning_.load());
+    EXPECT_FALSE(instance.eventWorkerThread_.joinable());
+
+    instance.StopEventWorker();
+    EXPECT_FALSE(instance.eventWorkerRunning_.load());
+
+    instance.StartEventWorker();
+    EXPECT_TRUE(instance.eventWorkerRunning_.load());
+    EXPECT_TRUE(instance.eventWorkerThread_.joinable());
+
+    instance.StopEventWorker();
+    EXPECT_FALSE(instance.eventWorkerRunning_.load());
+    GTEST_LOG_(INFO) << "MtpfsFuseTest_EventWorker_001 end";
+}
+
+/**
+ * @tc.name: MtpfsFuseTest_EnqueueEvent_001
+ * @tc.desc: Test EnqueueEvent/HandleRemove/HandleObjectInfoChanged enqueue and EventWorkerLoop consume events
+ * @tc.type: FUNC
+ */
+HWTEST_F(MtpfsFuseTest, MtpfsFuseTest_EnqueueEvent_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "MtpfsFuseTest_EnqueueEvent_001 start";
+    MtpFileSystem& instance = MtpFileSystem::GetInstance();
+    instance.StartEventWorker();
+    EXPECT_TRUE(instance.eventWorkerRunning_.load());
+
+    instance.HandleRemove(200);
+    instance.HandleObjectInfoChanged(300);
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+    size_t queueSize = 0;
+    {
+        std::lock_guard<std::mutex> lock(instance.eventQueueMutex_);
+        queueSize = instance.eventQueue_.size();
+    }
+    EXPECT_EQ(queueSize, 0u);
+
+    instance.StopEventWorker();
+    EXPECT_FALSE(instance.eventWorkerRunning_.load());
+    GTEST_LOG_(INFO) << "MtpfsFuseTest_EnqueueEvent_001 end";
 }
 } // STORAGE_DAEMON
 } // OHOS

@@ -17,8 +17,12 @@
 #define MTPFS_FUSE_H
 
 #include "fuse.h"
+#include <atomic>
+#include <condition_variable>
 #include <mutex>
+#include <queue>
 #include <singleton.h>
+#include <thread>
 
 #include "mtpfs_mtp_device.h"
 #include "mtpfs_tmp_files_pool.h"
@@ -114,6 +118,24 @@ public:
     void HandleRemove(uint32_t handleId);
     void HandleObjectInfoChanged(uint32_t handleId);
     void InitCurrentUidAndCacheMap();
+
+private:
+    enum class MtpEventType { REMOVE, OBJECT_INFO_CHANGED };
+    struct MtpEvent {
+        MtpEventType type;
+        uint32_t handleId;
+    };
+    void EnqueueEvent(MtpEventType type, uint32_t handleId);
+    void EventWorkerLoop();
+    void StartEventWorker();
+    void StopEventWorker();
+    std::queue<MtpEvent> eventQueue_;
+    std::mutex eventQueueMutex_;
+    std::condition_variable eventQueueCv_;
+    std::thread eventWorkerThread_;
+    std::atomic<bool> eventWorkerRunning_{false};
+
+public:
     bool IsCurrentUserReadOnly();
     void SetCurrentUid(int32_t uid);
     void SetMtpClientWriteMap(uid_t first, bool second);

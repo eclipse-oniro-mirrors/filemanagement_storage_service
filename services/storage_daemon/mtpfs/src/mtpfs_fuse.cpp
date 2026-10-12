@@ -608,6 +608,7 @@ MtpFileSystem::MtpFileSystem() : args_(), tmpFilesPool_(), options_(), device_()
 MtpFileSystem::~MtpFileSystem()
 {
     LOGI("MtpFileSystem FreeAllObjectHandles");
+    StopEventWorker();
     device_.FreeAllObjectHandles();
     fuse_opt_free_args(&args_);
 }
@@ -722,6 +723,7 @@ bool MtpFileSystem::Exec()
 
 void *MtpFileSystem::Init(struct fuse_conn_info *conn, struct fuse_config *cfg)
 {
+    StartEventWorker();
     device_.InitDevice();
     cfg->attr_timeout = 0;
     LOGI("MtpFileSystem: Init end, cfg->attr_timeout=%{public}f", cfg->attr_timeout);
@@ -1487,14 +1489,80 @@ int MtpFileSystem::GetFriendlyName(const char *in, char *out, size_t size)
     return nameLen;
 }
 
+void MtpFileSystem::StartEventWorker()
+{
+    bool wasRunning = eventWorkerRunning_.exchange(true);
+    LOGI("StartEventWorker enter, wasRunning=%{public}d", wasRunning);
+    if (wasRunning) {
+        return;
+    }
+    eventWorkerThread_ = std::thread(&MtpFileSystem::EventWorkerLoop, this);
+    LOGI("MtpFileSystem event worker thread started, joinable=%{public}d",
+         eventWorkerThread_.joinable() ? 1 : 0);
+}
+
+void MtpFileSystem::StopEventWorker()
+{
+    if (!eventWorkerRunning_.exchange(false)) {
+        return;
+    }
+    eventQueueCv_.notify_all();
+    if (eventWorkerThread_.joinable()) {
+        eventWorkerThread_.join();
+    }
+    LOGI("MtpFileSystem event worker thread stopped");
+}
+
+void MtpFileSystem::EnqueueEvent(MtpEventType type, uint32_t handleId)
+{
+    size_t queueSize = 0;
+    {
+        std::lock_guard<std::mutex> lock(eventQueueMutex_);
+        eventQueue_.push(MtpEvent{type, handleId});
+        queueSize = eventQueue_.size();
+    }
+    eventQueueCv_.notify_one();
+    LOGD("EnqueueEvent type=%{public}d handleId=%{public}u queueSize=%{public}zu",
+         static_cast<int>(type), handleId, queueSize);
+}
+
+void MtpFileSystem::EventWorkerLoop()
+{
+    LOGI("MtpFileSystem event worker loop started, pid=%{public}d", static_cast<int>(getpid()));
+    while (eventWorkerRunning_.load()) {
+        MtpEvent evt;
+        size_t remainingSize = 0;
+        {
+            std::unique_lock<std::mutex> lock(eventQueueMutex_);
+            eventQueueCv_.wait(lock, [this] {
+                return !eventQueue_.empty() || !eventWorkerRunning_.load();
+            });
+            if (!eventWorkerRunning_.load() && eventQueue_.empty()) {
+                break;
+            }
+            evt = eventQueue_.front();
+            eventQueue_.pop();
+            remainingSize = eventQueue_.size();
+        }
+        LOGD("EventWorker process type=%{public}d handleId=%{public}u remaining=%{public}zu",
+             static_cast<int>(evt.type), evt.handleId, remainingSize);
+        if (evt.type == MtpEventType::REMOVE) {
+            device_.HandleRemoveEvent(evt.handleId);
+        } else {
+            device_.HandleObjectInfoChangedEvent(evt.handleId);
+        }
+    }
+    LOGI("MtpFileSystem event worker loop exited");
+}
+
 void MtpFileSystem::HandleRemove(uint32_t handleId)
 {
-    std::thread([this, handleId]() { device_.HandleRemoveEvent(handleId); }).detach();
+    EnqueueEvent(MtpEventType::REMOVE, handleId);
 }
 
 void MtpFileSystem::HandleObjectInfoChanged(uint32_t handleId)
 {
-    std::thread([this, handleId]() { device_.HandleObjectInfoChangedEvent(handleId); }).detach();
+    EnqueueEvent(MtpEventType::OBJECT_INFO_CHANGED, handleId);
 }
 
 MtpFsTmpFilesPool* MtpFileSystem::GetTempFilesPool()
