@@ -689,7 +689,6 @@ int32_t StorageDaemonProvider::SetDirEncryptionPolicy(uint32_t userId, const std
     return ret;
 }
 
-#ifdef USER_CRYPTO_MANAGER
 int32_t StorageDaemonProvider::SetDirEncryptionPolicyWithKeyDesc(const std::string &dirPath,
     uint32_t level, const std::string &keyDesc)
 {
@@ -723,7 +722,6 @@ int32_t StorageDaemonProvider::SetDirEncryptionPolicyWithKeyDesc(const std::stri
     }
     return ret;
 }
-#endif
 
 int32_t StorageDaemonProvider::CompleteAddUser(int32_t userId)
 {
