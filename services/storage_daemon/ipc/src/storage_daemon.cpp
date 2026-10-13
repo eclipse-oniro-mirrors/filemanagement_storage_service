@@ -2045,6 +2045,7 @@ int32_t StorageDaemon::SetDirEncryptionPolicyWithKeyDesc(const std::string &dirP
     uint32_t level, const std::string &keyDesc)
 {
     LOGI("[L1:StorageDaemon] SetDirEncryptionPolicyWithKeyDesc: >>> ENTER <<< level=%{public}u", level);
+#ifdef USER_CRYPTO_MANAGER
     auto ret = IsDirPathSupport(dirPath);
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemon] SetDirEncryptionPolicyWithKeyDesc: IsDirPathSupport failed, ret=%{public}d", ret);
@@ -2057,6 +2058,10 @@ int32_t StorageDaemon::SetDirEncryptionPolicyWithKeyDesc(const std::string &dirP
     }
     LOGI("[L1:StorageDaemon] SetDirEncryptionPolicyWithKeyDesc: <<< EXIT SUCCESS <<<");
     return ret;
+#else
+    LOGE("[L1:StorageDaemon] SetDirEncryptionPolicyWithKeyDesc: not supported");
+    return E_NOT_SUPPORT;
+#endif
 }
 
 } // namespace StorageDaemon
