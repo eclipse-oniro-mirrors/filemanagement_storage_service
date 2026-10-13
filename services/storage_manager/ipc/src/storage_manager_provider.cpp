@@ -428,7 +428,6 @@ int32_t StorageManagerProvider::SetDirEncryptionPolicy(uint32_t userId, const st
 #endif
 }
 
-#ifdef USER_CRYPTO_MANAGER
 int32_t StorageManagerProvider::SetDirEncryptionPolicyWithKeyDesc(const std::string &dirPath,
     uint32_t level, const std::string &keyDesc)
 {
@@ -446,6 +445,7 @@ int32_t StorageManagerProvider::SetDirEncryptionPolicyWithKeyDesc(const std::str
         LOGE("StorageManagerProvider::SetDirEncryptionPolicyWithKeyDesc level is out of range");
         return E_PARAMS_INVALID;
     }
+#ifdef USER_CRYPTO_MANAGER
     LOGI("StorageManagerProvider::SetDirEncryptionPolicyWithKeyDesc start");
     auto& sdCommunication = StorageDaemonCommunication::GetInstance();
     int32_t err = sdCommunication.SetDirEncryptionPolicyWithKeyDesc(dirPath, level, keyDesc);

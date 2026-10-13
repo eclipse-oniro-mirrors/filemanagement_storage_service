@@ -609,7 +609,6 @@ HWTEST_F(KeyManagerExtTest, KeyManagerExt_Init_004, TestSize.Level1)
     KeyManagerExt::GetInstance().handler_ = nullptr;
     KeyManagerExt::GetInstance().service_ = nullptr;
 
-
     EXPECT_CALL(*fscryptControlMock_, KeyCtrlHasFscryptSyspara()).WillOnce(Return(false));
 
     KeyManagerExt::GetInstance().Init();
