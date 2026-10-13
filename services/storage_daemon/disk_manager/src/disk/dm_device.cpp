@@ -92,13 +92,14 @@ uint64_t DmDevice::GetDeviceSectors()
         return 0;
     }
 
+    fdsan_exchange_owner_tag(fd, 0, NEW_TAG);
     if (ioctl(fd, BLKGETSIZE64, &bytes) != -1) {
         sectors = bytes / SECTOR_SIZE;
     } else {
         LOGE("BLKGETSIZE64 failed for %{public}s: %{public}s", sourceDevPath_.c_str(), strerror(errno));
     }
 
-    close(fd);
+    fdsan_close_with_tag(fd, NEW_TAG);
     return sectors;
 }
 
