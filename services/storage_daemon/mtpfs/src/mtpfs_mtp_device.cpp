@@ -31,6 +31,7 @@
 const int32_t FETCH_NUM = 3000;
 const int32_t DIR_COUNT_ONE = 1;
 const uint32_t DEFAULT_COUNT = 100;
+const uint32_t ROOT_DIR_INDEX = 1; // MTP device root directory handleId
 const uint32_t PTP_ID_START = 300000000;
 const uint32_t PTP_ID_INDEX = 200000000;
 constexpr uint32_t DELETE_OBJECT_DELAY_US = 50000;
@@ -1086,7 +1087,7 @@ int MtpFsDevice::FilePushAsync(const std::string src, const std::string dst)
     LOGI("FilePushAsync enter");
     MtpFileSystem& mtpFs = MtpFileSystem::GetInstance();
     MtpFsTmpFilesPool* filesPool = mtpFs.GetTempFilesPool();
-    pushThread_ = std::thread([this, src, dst, filesPool]() {
+    std::thread([this, src, dst, filesPool]() {
         LOGI("Start async push to mtp device.");
         int ret = FilePush(src, dst);
         SetUploadRecord(dst, (ret == E_OK) ? "success" : "fail");
@@ -1095,7 +1096,7 @@ int MtpFsDevice::FilePushAsync(const std::string src, const std::string dst)
         if (unlinkRet != E_OK) {
             LOGE("MtpFileSystem: FilePushAsync unlink error, errno=%{public}d", unlinkRet);
         }
-    });
+    }).detach();
 
     return E_OK;
 }
@@ -1132,10 +1133,6 @@ int MtpFsDevice::PerformUpload(const std::string &src, const std::string &dst, c
         fileToUpload.SetId(f->item_id);
         fileToUpload.SetParent(f->parent_id);
         fileToUpload.SetStorage(f->storage_id);
-        if (f->filename == nullptr) {
-            LOGE("filename is null");
-            return -EINVAL;
-        }
         fileToUpload.SetName(std::string(f->filename));
         fileToUpload.SetModificationDate(fileStat.st_mtime);
         if (fileToRemove) {
@@ -1501,6 +1498,10 @@ void MtpFsDevice::HandleDiffFdMap(std::map<uint32_t, std::string> &diffFdMap, Mt
 
 void MtpFsDevice::HandleRemoveEvent(uint32_t handleId)
 {
+    if (handleId <= ROOT_DIR_INDEX) {
+        LOGI("HandleRemoveEvent skip invalid handle=%{public}u", handleId);
+        return;
+    }
     LOGI("HandleRemoveEvent HandleID=%{public}u", handleId);
     std::unique_lock<std::mutex> lock(deviceMutex_);
     LIBMTP_file_t *file = LIBMTP_Get_Filemetadata(device_, handleId);

@@ -36,6 +36,8 @@
 using namespace OHOS::StorageService;
 namespace OHOS {
 namespace StorageDaemon {
+#define FDSAN_TAG 1
+const uint64_t NEW_TAG = static_cast<uint64_t>(0xD004301) << 32 | FDSAN_TAG;
 const UserAuth NULL_KEY_AUTH = {};
 constexpr const char *BACKUP_NAME = "_bak";
 constexpr const char *DEFAULT_NEED_RESTORE_VERSION = "1";
@@ -616,7 +618,6 @@ void KeyManager::ProcUpgradeKey(const std::vector<FileList> &dirInfo)
 int KeyManager::LoadAllUsersEl1Key(void)
 {
     LOGI("[L3:KeyManager] LoadAllUsersEl1Key: >>> ENTER <<<");
-    int ret = E_OK;
     std::vector<FileList> dirInfo;
     ReadDigitDir(USER_EL2_DIR, dirInfo);
     UpgradeKeys(dirInfo);
@@ -624,7 +625,7 @@ int KeyManager::LoadAllUsersEl1Key(void)
     ReadDigitDir(USER_EL1_DIR, dirInfo);
     UpgradeKeys(dirInfo);
     for (auto &item : dirInfo) {
-        ret = RestoreUserKey(item.userId, item.path, NULL_KEY_AUTH, EL1_KEY);
+        int ret = RestoreUserKey(item.userId, item.path, NULL_KEY_AUTH, EL1_KEY);
         if (ret != E_OK) {
             LOGE("[L3:KeyManager] LoadAllUsersEl1Key: failed to restore el1 key for user %{public}u", item.userId);
             StorageRadar::ReportUserKeyResult("LoadAllUsersEl1Key::RestoreUserKey", item.userId,
@@ -642,50 +643,57 @@ int KeyManager::LoadAllUsersEl1Key(void)
     dirInfo.clear();
     ReadDigitDir(USER_EL5_DIR, dirInfo);
     ProcUpgradeKey(dirInfo);
-    LOGI("[L3:KeyManager] LoadAllUsersEl1Key: <<< EXIT SUCCESS <<< [retval=%{public}d]", ret);
-    return ret;
+    LOGI("[L3:KeyManager] LoadAllUsersEl1Key: <<< EXIT SUCCESS <<<");
+    return E_OK;
 }
 
 int KeyManager::InitUserElkeyStorageDir(void)
 {
     int ret = MkDir(SERVICE_STORAGE_DAEMON_DIR, S_IRWXU);
     if (ret && errno != EEXIST) {
-        LOGE("[L3:KeyManager] InitUserElkeyStorageDir: failed to create service storage daemon directory");
+        LOGE("[L3:KeyManager] InitUserElkeyStorageDir: failed to create service storage daemon directory, "
+            "errno=%{public}d", errno);
         return ret;
     }
 
     ret = MkDir(FSCRYPT_EL_DIR, S_IRWXU);
     if (ret && errno != EEXIST) {
-        LOGE("[L3:KeyManager] InitUserElkeyStorageDir: failed to create fscrypt el directory");
+        LOGE("[L3:KeyManager] InitUserElkeyStorageDir: failed to create fscrypt el directory, errno=%{public}d",
+            errno);
         return ret;
     }
 
     ret = MkDir(USER_EL1_DIR, S_IRWXU);
     if (ret && errno != EEXIST) {
-        LOGE("[L3:KeyManager] InitUserElkeyStorageDir: failed to create EL1 storage directory");
+        LOGE("[L3:KeyManager] InitUserElkeyStorageDir: failed to create EL1 storage directory, errno=%{public}d",
+            errno);
         return ret;
     }
     ret = MkDir(USER_EL2_DIR, S_IRWXU);
     if (ret && errno != EEXIST) {
-        LOGE("[L3:KeyManager] InitUserElkeyStorageDir: failed to create EL2 storage directory");
+        LOGE("[L3:KeyManager] InitUserElkeyStorageDir: failed to create EL2 storage directory, errno=%{public}d",
+            errno);
         return ret;
     }
     // 0700 means create el3 permissions
     ret = MkDir(USER_EL3_DIR, S_IRWXU);
     if (ret && errno != EEXIST) {
-        LOGE("[L3:KeyManager] InitUserElkeyStorageDir: failed to create EL3 storage directory");
+        LOGE("[L3:KeyManager] InitUserElkeyStorageDir: failed to create EL3 storage directory, errno=%{public}d",
+            errno);
         return ret;
     }
     // 0700 means create el4 permissions
     ret = MkDir(USER_EL4_DIR, S_IRWXU);
     if (ret && errno != EEXIST) {
-        LOGE("[L3:KeyManager] InitUserElkeyStorageDir: failed to create EL4 storage directory");
+        LOGE("[L3:KeyManager] InitUserElkeyStorageDir: failed to create EL4 storage directory, errno=%{public}d",
+            errno);
         return ret;
     }
     // 0700 means create el5 permissions
     ret = MkDir(USER_EL5_DIR, S_IRWXU);
     if (ret && errno != EEXIST) {
-        LOGE("[L3:KeyManager] InitUserElkeyStorageDir: failed to create EL5 storage directory");
+        LOGE("[L3:KeyManager] InitUserElkeyStorageDir: failed to create EL5 storage directory, errno=%{public}d",
+            errno);
         return ret;
     }
     return 0;
@@ -818,7 +826,7 @@ int KeyManager::GenerateUserKeys(unsigned int user, uint32_t flags)
     }
     if ((!IsDir(USER_EL1_DIR)) || (!IsDir(USER_EL2_DIR)) || (!IsDir(USER_EL3_DIR)) ||
         (!IsDir(USER_EL4_DIR)) || (!IsDir(USER_EL5_DIR))) {
-        LOGI("[L3:KeyManager] GenerateUserKeys: <<< EXIT FAILED <<< [el storage directory does not exist]");
+        LOGE("[L3:KeyManager] GenerateUserKeys: <<< EXIT FAILED <<< [el storage directory does not exist]");
         return -ENOENT;
     }
     std::lock_guard<std::mutex> lock(keyMutex_);
@@ -980,7 +988,7 @@ int KeyManager::GenerateUserKeyByType(unsigned int user, KeyType type,
 
     std::string elPath = GetKeyDirByType(type);
     if (!IsDir(elPath)) {
-        LOGI("[L3:KeyManager] GenerateUserKeyByType: <<< EXIT FAILED <<< [el storage directory does not exist]");
+        LOGE("[L3:KeyManager] GenerateUserKeyByType: <<< EXIT FAILED <<< [el storage directory does not exist]");
         return -ENOENT;
     }
 
@@ -2424,6 +2432,7 @@ int KeyManager::LockUserScreen(uint32_t user)
     auto el5Key = GetUserElKey(user, EL5_KEY, false);
     saveESecretStatus[user] = true;
     if (el5Key != nullptr && el5Key->LockUece(saveESecretStatus[user]) != E_OK) {
+        StorageRadar::ReportUpdateUserAuth("LockUserScreen::LockUece", user, -ENOENT, "EL5", "LockUece failed");
         LOGE("[L3:KeyManager] LockUserScreen: failed to lock el5 key for user %{public}u", user);
     }
     auto el4Key = GetUserElKey(user, EL4_KEY, false);
@@ -2698,7 +2707,8 @@ bool KeyManager::IsUeceSupport()
         LOGE("[L3:KeyManager] IsUeceSupport: failed to open UECE, errno=%{public}d", errno);
         return false;
     }
-    close(fd);
+    fdsan_exchange_owner_tag(fd, 0, NEW_TAG);
+    fdsan_close_with_tag(fd, NEW_TAG);
     LOGD("[L3:KeyManager] IsUeceSupport: <<< EXIT SUCCESS <<< [uece supported=true]");
     return true;
 }
@@ -2747,7 +2757,8 @@ int KeyManager::IsUeceSupportWithErrno()
         LOGE("[L3:KeyManager] IsUeceSupportWithErrno: failed to open UECE, errno=%{public}d", tmpErrno);
         return tmpErrno;
     }
-    close(fd);
+    fdsan_exchange_owner_tag(fd, 0, NEW_TAG);
+    fdsan_close_with_tag(fd, NEW_TAG);
     LOGI("[L3:KeyManager] IsUeceSupportWithErrno: <<< EXIT SUCCESS <<< [retval=0, uece supported=true]");
     return E_OK;
 }

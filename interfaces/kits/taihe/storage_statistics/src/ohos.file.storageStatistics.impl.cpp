@@ -264,7 +264,8 @@ ohos::file::storageStatistics::ExtBundleStats GetExtBundleStatsSync(int32_t user
         OHOS::StorageTaiheError::SetStorageTaiheError(errNum);
         return { "", DEFAULTSIZE, false };
     }
-    int64_t businessSize_o = static_cast<int64_t>(extBundleStats.businessSize_);
+    int64_t businessSize_o = (extBundleStats.businessSize_ > static_cast<uint64_t>(INT64_MAX)) ?
+        INT64_MAX : static_cast<int64_t>(extBundleStats.businessSize_);
     return { businessName, businessSize_o, extBundleStats.showFlag_};
 }
 
@@ -284,13 +285,13 @@ taihe::array<ohos::file::storageStatistics::ExtBundleStats> GetAllExtBundleStats
             ohos::file::storageStatistics::ExtBundleStats{});
     }
     auto result = taihe::array<ohos::file::storageStatistics::ExtBundleStats>::
-        make(statsVec.size(), ohos::file::storageStatistics::ExtBundleStats{});
+    make(statsVec.size(), ohos::file::storageStatistics::ExtBundleStats{});
     auto extBundleStatsTransformer = [](auto &stats) -> ohos::file::storageStatistics::ExtBundleStats {
         return { stats.businessName_, stats.businessSize_, stats.showFlag_ };
     };
     std::transform(statsVec.begin(), statsVec.end(), result.begin(), extBundleStatsTransformer);
-    return taihe::array<ohos::file::storageStatistics::ExtBundleStats>(taihe::copy_data_t{},
-        result.data(), result.size());
+    return taihe::array<ohos::file::storageStatistics::ExtBundleStats>(taihe::copy_data_t{}, result.data(),
+        result.size());
 }
 
 taihe::array<ohos::file::storageStatistics::UserdataDirInfo> ListUserdataDirInfoSync()

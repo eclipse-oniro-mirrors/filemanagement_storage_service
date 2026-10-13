@@ -673,6 +673,7 @@ int GetCdUsedCapacity(int fd, int64_t &cdUsedCapacity)
     unsigned char cmd_buf[GET_CAPACITY_CMD_BUF_LEN] = {0};
     unsigned char data_buf[GET_CAPACITY_DATA_BUF_LEN] = {0};
     uint8_t senseBuf[SENSE_BUFF_LEN] = {0};
+    unsigned int dataLen = GET_CD_USED_CAPACITY_DATA_LEN;
     /*
     * 使用 SCSI READ TRACK INFORMATION 指令 (0x52) 获取cd光盘轨道/逻辑分区信息
     * cmd_buf[0]: 指令操作码 0x52 (READ TRACK/RZONE INFORMATION)
@@ -683,8 +684,8 @@ int GetCdUsedCapacity(int fd, int64_t &cdUsedCapacity)
     cmd_buf[0] = GPCMD_READ_TRACK_RZONE_INFO;
     cmd_buf[1] = 1;
     cmd_buf[5] = 0xff;
-    cmd_buf[CDB_ALLOCATION_LENGTH_HIGH] = (GET_CD_USED_CAPACITY_DATA_LEN >> BYTE_SHIFT_8) & 0xff;
-    cmd_buf[CDB_ALLOCATION_LENGTH_LOW] = GET_CD_USED_CAPACITY_DATA_LEN & 0xff;
+    cmd_buf[CDB_ALLOCATION_LENGTH_HIGH] = (dataLen >> BYTE_SHIFT_8) & 0xff;
+    cmd_buf[CDB_ALLOCATION_LENGTH_LOW] = dataLen & 0xff;
     ScsiCmdInfo cmdInfo = { cmd_buf, GET_CD_USED_CAPACITY_CMD_LEN, data_buf,
                             GET_CD_USED_CAPACITY_DATA_LEN };
     int ret = SendScsiCmd(fd, cmdInfo, senseBuf, sizeof(senseBuf));

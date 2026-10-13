@@ -21,6 +21,7 @@
 #include "storage_service_log.h"
 #include "utils/storage_radar.h"
 #include "utils/string_utils.h"
+#include "utils/hi_audit.h"
 
 using namespace OHOS::StorageService;
 namespace OHOS {
@@ -43,6 +44,7 @@ int AppCloneKeyManager::ActiveAppCloneUserKey(unsigned int &failedUserId)
                  "errCode=%{public}d", userId, errCode.value());
             continue;
         }
+        HiAudit::GetInstance().WriteStart("AppCloneKeyManager::ActiveAppCloneUserKey start");
         int ret = KeyManager::GetInstance().ActiveCeSceSeceUserKey(userId, EL2_KEY, {}, {});
         if (ret != E_OK && ret != E_ACTIVE_REPEATED) {
             failedUserId = static_cast<unsigned int>(userId);
@@ -68,10 +70,12 @@ int AppCloneKeyManager::ActiveAppCloneUserKey(unsigned int &failedUserId)
             return ret;
         }
         LOGI("[L4:AppCloneKeyManager] ActiveAppCloneUserKey: <<< EXIT SUCCESS <<< userId=%{public}u", userId);
+        HiAudit::GetInstance().WriteEnd("AppCloneKeyManager::ActiveAppCloneUserKey end", E_OK);
         return E_OK;
     }
     LOGE("[L4:AppCloneKeyManager] ActiveAppCloneUserKey: <<< EXIT FAILED <<< Did not find app clone userId in valid"
          "range = {219 ~ 239}");
+    HiAudit::GetInstance().WriteEnd("AppCloneKeyManager::ActiveAppCloneUserKey failed", E_NOT_SUPPORT);
     return E_NOT_SUPPORT;
 }
 } // namespace StorageDaemon

@@ -414,7 +414,7 @@ HWTEST_F(StorageDaemonTest, StorageDaemonTest_RestoreOneUserKey_005, TestSize.Le
     EXPECT_CALL(*userManagerMock_, PrepareUserDirsForUpdate(_, _)).WillRepeatedly(Return(E_OK));
     EXPECT_CALL(*keyManagerMock_, GetSecureUid(_, _)).WillRepeatedly(Return(E_OK));
     EXPECT_CALL(*keyManagerMock_, UpdateUserAuthByKeyType(_, _, _, _)).WillOnce(Return(E_OK))
-        .WillOnce(Return(E_OK)).WillOnce(Return(E_OK)).WillOnce(Return(E_PARAMS_NULLPTR_ERR));
+        .WillOnce(Return(E_OK)).WillOnce(Return(E_PARAMS_NULLPTR_ERR));
     EXPECT_CALL(*keyManagerMock_, UpdateKeyContextByKeyType(_, _)).WillRepeatedly(Return(E_OK));
 
     // userId < START_APP_CLONE_USER_ID
@@ -437,6 +437,25 @@ HWTEST_F(StorageDaemonTest, StorageDaemonTest_RestoreOneUserKey_005, TestSize.Le
     CreateNeedRestoreFile(userId, EL4_KEY);
     EXPECT_EQ(storageDaemon_->RestoreOneUserKey(userId, EL4_KEY), E_PARAMS_NULLPTR_ERR);
     DeleteNeedRestoreFile(userId, EL4_KEY);
+}
+
+/**
+ * @tc.name: StorageDaemonTest_RestoreOneUserKey_006
+ * @tc.desc: Verify RestoreOneUserKey skips DoStoreAndUpdate when type is EL1_KEY.
+ * @tc.type: FUNC
+ * @tc.require: AR000H09L6
+ */
+HWTEST_F(StorageDaemonTest, StorageDaemonTest_RestoreOneUserKey_006, TestSize.Level1)
+{
+    ASSERT_TRUE(storageDaemon_ != nullptr);
+    RefreshConfigDir();
+    EXPECT_CALL(*keyManagerMock_, RestoreUserKey(_, _)).WillRepeatedly(Return(E_OK));
+    EXPECT_CALL(*userManagerMock_, PrepareUserDirsForUpdate(_, _)).WillRepeatedly(Return(E_OK));
+    EXPECT_CALL(*keyManagerMock_, GetSecureUid(_, _)).WillRepeatedly(Return(E_OK));
+    EXPECT_CALL(*keyManagerMock_, UpdateKeyContextByKeyType(_, _)).WillRepeatedly(Return(E_OK));
+    EXPECT_CALL(*keyManagerMock_, UpdateUserAuthByKeyType(_, _, _, _)).Times(0);
+
+    EXPECT_EQ(storageDaemon_->RestoreOneUserKey(userId_, EL1_KEY), E_OK);
 }
 
 /**

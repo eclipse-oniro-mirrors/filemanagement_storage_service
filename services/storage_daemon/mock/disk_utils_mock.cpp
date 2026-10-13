@@ -146,5 +146,21 @@ int GetBdTotalCapacity(int fd, int64_t &bdTotalCapacity)
     }
     return IDiskUtilMoc::diskUtilMoc->GetBdTotalCapacity(fd, bdTotalCapacity);
 }
+
+int GetDvdConfiguration(int fd, int &dvdMedia)
+{
+    if (IDiskUtilMoc::diskUtilMoc == nullptr) {
+        return 0;
+    }
+    return IDiskUtilMoc::diskUtilMoc->GetDvdConfiguration(fd, dvdMedia);
+}
+
+bool IsDvdRwRestrictedOverwrite(int cmdFd)
+{
+    if (IDiskUtilMoc::diskUtilMoc == nullptr) {
+        return false;
+    }
+    return IDiskUtilMoc::diskUtilMoc->IsDvdRwRestrictedOverwrite(cmdFd);
+}
 }
 }

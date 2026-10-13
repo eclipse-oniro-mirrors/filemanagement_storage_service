@@ -163,6 +163,28 @@ char *realpath(const char *path, char *resolved_path)
     return IFuncMock::iFuncMock_->realpath(path, resolved_path);
 }
 
+extern "C" {
+void fdsan_exchange_owner_tag(int fd, uint64_t expected_tag, uint64_t new_tag)
+{
+    (void)fd;
+    (void)expected_tag;
+    (void)new_tag;
+}
+
+int fdsan_close_with_tag(int fd, uint64_t tag)
+{
+    (void)tag;
+    if (IFuncMock::iFuncMock_ == nullptr || fd != FbexTest::fd_) {
+        closeFuncT originalClose = reinterpret_cast<closeFuncT>(dlsym(RTLD_NEXT, "close"));
+        if (originalClose == nullptr) {
+            return -1;
+        }
+        return originalClose(fd);
+    }
+    return IFuncMock::iFuncMock_->close(fd);
+}
+}
+
 namespace OHOS::StorageDaemon::Test {
 using namespace testing::ext;
 using namespace testing;
@@ -1192,33 +1214,5 @@ HWTEST_F(FbexTest, Fbex_WriteESecretToKernel_005, TestSize.Level1)
     EXPECT_CALL(*funcMock_, ioctl(_, _)).WillOnce(Return(0));
 
     EXPECT_EQ(FBEX::WriteESecretToKernel(userIdToFbe, UNLOCK_STATUS, iv_.data.get(), iv_.size), 0);
-}
-
-/**
- * @tc.name: Fbex_GetStatus_001
- * @tc.desc: Should returns -errno when fopen failed.
- * @tc.type: FUNC
- * @tc.require: AR000GK0BP
- */
-HWTEST_F(FbexTest, Fbex_GetStatus_001, TestSize.Level1)
-{
-    EXPECT_CALL(*funcMock_, open(_, _)).WillOnce(Return(-1));
-    errno = EACCES;
-
-    EXPECT_EQ(FBEX::GetStatus(), -EACCES);
-}
-
-/**
- * @tc.name: Fbex_GetStatus_002
- * @tc.desc: Should returns -errno when ioctl success.
- * @tc.type: FUNC
- * @tc.require: AR000GK0BP
- */
-HWTEST_F(FbexTest, Fbex_GetStatus_002, TestSize.Level1)
-{
-    MockopenSuccess();
-    EXPECT_CALL(*funcMock_, ioctl(_, _)).WillOnce(Return(0));
-
-    EXPECT_EQ(FBEX::GetStatus(), 0);
 }
 } // OHOS::StorageDaemon

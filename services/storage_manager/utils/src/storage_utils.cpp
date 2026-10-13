@@ -18,6 +18,7 @@
 #include <climits>
 #include <cstdlib>
 #include <regex>
+#include "os_account_manager.h"
 
 #include "ipc_skeleton.h"
 #include "storage_service_log.h"
@@ -26,12 +27,8 @@
 
 namespace OHOS {
 namespace StorageManager {
-constexpr const char *PATH_INVALID_FLAG1 = "../";
-constexpr const char *PATH_INVALID_FLAG2 = "/..";
-constexpr int32_t PATH_INVALID_FLAG_LEN = 3;
-constexpr char FILE_SEPARATOR_CHAR = '/';
-constexpr size_t INPUT_LIST_LEN = 50000;
 constexpr size_t PKG_NAME_LEN = 128;
+constexpr size_t INPUT_LIST_LEN = 50000;
 int64_t GetRoundSize(int64_t size)
 {
     int64_t val = 1;
@@ -53,7 +50,6 @@ std::string GetAnonyString(const std::string &value)
     constexpr size_t INT32_SHORT_ID_LENGTH = 20;
     constexpr size_t INT32_PLAINTEXT_LENGTH = 4;
     constexpr size_t INT32_MIN_ID_LENGTH = 3;
-
     std::string res;
     std::string tmpStr("******");
     size_t strLen = value.length();
@@ -98,6 +94,11 @@ int GetCurrentUserId()
 
 bool IsFilePathInvalid(const std::string &filePath)
 {
+    constexpr const char *PATH_INVALID_FLAG1 = "../";
+    constexpr const char *PATH_INVALID_FLAG2 = "/..";
+    constexpr int32_t PATH_INVALID_FLAG_LEN = 3;
+    constexpr char FILE_SEPARATOR_CHAR = '/';
+
     size_t pos = filePath.find(PATH_INVALID_FLAG1);
     while (pos != std::string::npos) {
         if (pos == 0 || filePath[pos - 1] == FILE_SEPARATOR_CHAR) {
@@ -114,6 +115,28 @@ bool IsFilePathInvalid(const std::string &filePath)
     return false;
 }
 
+bool IsUserUnlocked(int32_t userId)
+{
+    bool isUserUnlocked = false;
+    ErrCode ret = AccountSA::OsAccountManager::IsOsAccountVerified(userId, isUserUnlocked);
+    if (ret != ERR_OK) {
+        LOGE("IsOsAccountVerified failed, ret: %{public}d", ret);
+        return false;
+    }
+    return isUserUnlocked;
+}
+
+int32_t GetForegroundUserIDFromOs()
+{
+    int32_t foregroundId = INVALID_USER_ID;
+    int32_t res = OHOS::AccountSA::OsAccountManager::GetForegroundOsAccountLocalId(foregroundId);
+    if (res != ERR_OK || foregroundId == INVALID_USER_ID) {
+        LOGE("GetForegroundId failed, res:%{public}d", res);
+        return INVALID_USER_ID;
+    }
+    return foregroundId;
+}
+
 bool IsPathStartWithDlp(const std::string &dstPath)
 {
     if (dstPath.empty()) {
@@ -128,6 +151,17 @@ bool IsPathStartWithDlp(const std::string &dstPath)
     return true;
 }
 
+bool IsPathStartWithCloudDisk(int32_t userId, const std::string &dstPath)
+{
+    const std::string dir = "/mnt/data/" + std::to_string(userId) + "/cloud_disk_fuse";
+    if (dstPath.compare(0, dir.size(), dir) == 0) {
+        return true;
+    }
+    LOGE("path is not start with %{public}s, path: %{public}s", dir.c_str(),
+         GetAnonyString(dstPath).c_str());
+    return false;
+}
+
 bool CheckPkgNameRange(const std::string &pkgName)
 {
     if (pkgName.empty()) {
@@ -135,7 +169,7 @@ bool CheckPkgNameRange(const std::string &pkgName)
         return false;
     }
     if (pkgName.length() > PKG_NAME_LEN) {
-        LOGE("CheckPkgNameRange pkgName is invalid");
+        LOGE("CheckPkgNameRange pkgName is empty");
         return false;
     }
     return true;
@@ -153,7 +187,7 @@ bool CheckAppIndexRange(int32_t appIndex)
 bool CheckLevelRange(uint32_t level)
 {
     if ((level < StorageService::EL1_SYS_KEY) || (level > StorageService::EL5_USER_KEY)) {
-        LOGE("CheckLevelRange level is out of range");
+        LOGE("CheckLevelRange level out of range");
         return false;
     }
     return true;
@@ -166,7 +200,7 @@ bool CheckInputListRange(const std::vector<std::string> &inputList)
         return false;
     }
     if (inputList.size() > INPUT_LIST_LEN) {
-        LOGE("CheckInputListRange inputList is out of range");
+        LOGE("CheckInputListRange inputList out of range");
         return false;
     }
     return true;

@@ -12,6 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include <chrono>
 #include <fstream>
 #include <gtest/gtest.h>
 #include <fuse_opt.h>
@@ -525,8 +526,8 @@ HWTEST_F(MtpfsFuseTest, MtpfsFuseTest_AccountSubscriber_OnStateChanged_001, Test
 HWTEST_F(MtpfsFuseTest, MtpfsFuseTest_GetXAttrTest_001, TestSize.Level1)
 {
     char out[1024];
-    MtpFileSystem& mtpFileSystem = MtpFileSystem::GetInstance();
-    int result = mtpFileSystem.GetXAttr(nullptr, "user.isDirFetched", out, sizeof(out));
+    auto mtpFileSystem = DelayedSingleton<MtpFileSystem>::GetInstance();
+    int result = mtpFileSystem->GetXAttr(nullptr, "user.isDirFetched", out, sizeof(out));
     EXPECT_EQ(result, 0);
 }
 
@@ -538,8 +539,8 @@ HWTEST_F(MtpfsFuseTest, MtpfsFuseTest_GetXAttrTest_001, TestSize.Level1)
 HWTEST_F(MtpfsFuseTest, MtpfsFuseTest_GetXAttrTest_002, TestSize.Level1)
 {
     char out[1024];
-    MtpFileSystem& mtpFileSystem = MtpFileSystem::GetInstance();
-    int result = mtpFileSystem.GetXAttr("/path/to/file", nullptr, out, sizeof(out));
+    auto mtpFileSystem = DelayedSingleton<MtpFileSystem>::GetInstance();
+    int result = mtpFileSystem->GetXAttr("/path/to/file", nullptr, out, sizeof(out));
     EXPECT_EQ(result, 0);
 }
 
@@ -550,8 +551,8 @@ HWTEST_F(MtpfsFuseTest, MtpfsFuseTest_GetXAttrTest_002, TestSize.Level1)
  */
 HWTEST_F(MtpfsFuseTest, MtpfsFuseTest_GetXAttrTest_003, TestSize.Level1)
 {
-    MtpFileSystem& mtpFileSystem = MtpFileSystem::GetInstance();
-    int result = mtpFileSystem.GetXAttr("/path/to/file", "user.isDirFetched", nullptr, 0);
+    auto mtpFileSystem = DelayedSingleton<MtpFileSystem>::GetInstance();
+    int result = mtpFileSystem->GetXAttr("/path/to/file", "user.isDirFetched", nullptr, 0);
     EXPECT_EQ(result, UPLOAD_RECORD_SUCCESS_LEN);
 }
 
@@ -563,8 +564,8 @@ HWTEST_F(MtpfsFuseTest, MtpfsFuseTest_GetXAttrTest_003, TestSize.Level1)
 HWTEST_F(MtpfsFuseTest, MtpfsFuseTest_GetXAttrTest_004, TestSize.Level1)
 {
     char out[1024];
-    MtpFileSystem& mtpFileSystem = MtpFileSystem::GetInstance();
-    int result = mtpFileSystem.GetXAttr("/path/to/file", "invalid_attr_key", out, sizeof(out));
+    auto mtpFileSystem = DelayedSingleton<MtpFileSystem>::GetInstance();
+    int result = mtpFileSystem->GetXAttr("/path/to/file", "invalid_attr_key", out, sizeof(out));
     EXPECT_EQ(result, 0);
 }
 
@@ -581,6 +582,7 @@ HWTEST_F(MtpfsFuseTest, MtpfsFuseTest_AccountConstraintSubscriber_OnConstraintCh
     const std::set<std::string> constraintSet = { "constraint.mtp.client.write" };
     AccountConstraintSubscriber accountConstraintSubscriber(constraintSet);
 
+    mtpFileSystem.mtpClientWriteMap_[100] = 0;
     OHOS::AccountSA::OsAccountConstraintStateData osAccountConstraintStateData;
     osAccountConstraintStateData.isEnabled = true;
     osAccountConstraintStateData.localId = 100;
@@ -1057,6 +1059,67 @@ HWTEST_F(MtpfsFuseTest, MtpfsFuseTest_IsFilePathValid_011, TestSize.Level1)
     EXPECT_FALSE(IsFilePathValid("dir\\..\\/a.txt"));   // 混合分隔符仍应识别为 ".." 段
     EXPECT_FALSE(IsFilePathValid("dir/..\\a.txt"));
     GTEST_LOG_(INFO) << "MtpfsFuseTest_IsFilePathValid_011 end";
+}
+
+/**
+ * @tc.name: MtpfsFuseTest_EventWorker_001
+ * @tc.desc: Test event queue start/stop: StartEventWorker, StopEventWorker, worker loop exit branches
+ * @tc.type: FUNC
+ */
+HWTEST_F(MtpfsFuseTest, MtpfsFuseTest_EventWorker_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "MtpfsFuseTest_EventWorker_001 start";
+    MtpFileSystem& instance = MtpFileSystem::GetInstance();
+
+    instance.StopEventWorker();
+    EXPECT_FALSE(instance.eventWorkerRunning_.load());
+
+    instance.StartEventWorker();
+    EXPECT_TRUE(instance.eventWorkerRunning_.load());
+    EXPECT_TRUE(instance.eventWorkerThread_.joinable());
+
+    instance.StopEventWorker();
+    EXPECT_FALSE(instance.eventWorkerRunning_.load());
+    EXPECT_FALSE(instance.eventWorkerThread_.joinable());
+
+    instance.StopEventWorker();
+    EXPECT_FALSE(instance.eventWorkerRunning_.load());
+
+    instance.StartEventWorker();
+    EXPECT_TRUE(instance.eventWorkerRunning_.load());
+    EXPECT_TRUE(instance.eventWorkerThread_.joinable());
+
+    instance.StopEventWorker();
+    EXPECT_FALSE(instance.eventWorkerRunning_.load());
+    GTEST_LOG_(INFO) << "MtpfsFuseTest_EventWorker_001 end";
+}
+
+/**
+ * @tc.name: MtpfsFuseTest_EnqueueEvent_001
+ * @tc.desc: Test EnqueueEvent/HandleRemove/HandleObjectInfoChanged enqueue and EventWorkerLoop consume events
+ * @tc.type: FUNC
+ */
+HWTEST_F(MtpfsFuseTest, MtpfsFuseTest_EnqueueEvent_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "MtpfsFuseTest_EnqueueEvent_001 start";
+    MtpFileSystem& instance = MtpFileSystem::GetInstance();
+    instance.StartEventWorker();
+    EXPECT_TRUE(instance.eventWorkerRunning_.load());
+
+    instance.HandleRemove(200);
+    instance.HandleObjectInfoChanged(300);
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+    size_t queueSize = 0;
+    {
+        std::lock_guard<std::mutex> lock(instance.eventQueueMutex_);
+        queueSize = instance.eventQueue_.size();
+    }
+    EXPECT_EQ(queueSize, 0u);
+
+    instance.StopEventWorker();
+    EXPECT_FALSE(instance.eventWorkerRunning_.load());
+    GTEST_LOG_(INFO) << "MtpfsFuseTest_EnqueueEvent_001 end";
 }
 } // STORAGE_DAEMON
 } // OHOS

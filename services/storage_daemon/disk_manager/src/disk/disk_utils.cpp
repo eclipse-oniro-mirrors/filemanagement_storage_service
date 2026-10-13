@@ -86,9 +86,12 @@ constexpr uint8_t BLOCK_SIZE_BYTE_0 = 4;
 constexpr uint8_t BLOCK_SIZE_BYTE_1 = 5;
 constexpr uint8_t BLOCK_SIZE_BYTE_2 = 6;
 constexpr uint8_t BLOCK_SIZE_BYTE_3 = 7;
+constexpr int DVD_RW_PROFILE_RESTRICTED_OVERWRITE = 0x13;
 constexpr int32_t FORMAT_PARTITION_TIMEOUT_S = 5 * 60;
 constexpr int32_t PARTITION_HMFS_VALID = 2;
 constexpr const char *VOL_TMP_PERCENT_PATH = "/data/local/vol_tmp/percent";
+#define FDSAN_TAG 1
+const uint64_t NEW_TAG = static_cast<uint64_t>(0xD004301) << 32 | FDSAN_TAG;
 
 const std::map<std::string, std::string> formatTypeMap_ = {
     {"exfat", "mkfs.exfat"},
@@ -684,7 +687,7 @@ int ReadCDDiscInfo(const std::string &diskPath, int32_t cmdIndex, uint8_t *buf, 
     LOGI("ReadCDDiscInfo: >>> ENTER <<< diskPath=%{public}s, len=%{public}d", diskPath.c_str(), len);
     char realPath[PATH_MAX] = { 0 };
     if (realpath(diskPath.c_str(), realPath) == nullptr) {
-        LOGE("ReadCDDiscInfo: <<< EXIT FAILED <<< realpath failed");
+        LOGE("ReadCDDiscInfo: <<< EXIT FAILED <<< realpath failed, errno=%{public}d", errno);
         return E_ERR;
     }
     FILE* file = fopen(realPath, "rb");
@@ -718,7 +721,7 @@ int GetCDDiskStatus(const char *device, int &status)
 {
     char realPath[PATH_MAX] = { 0 };
     if (realpath(device, realPath) == nullptr) {
-        LOGE("realpath failed.");
+        LOGE("realpath failed, errno=%{public}d", errno);
         return E_FILE_PATH_INVALID;
     }
     FILE* file = fopen(realPath, "rb");
@@ -1244,13 +1247,33 @@ static int32_t GetDvdPlusRwTotalCapacity(int fd, int64_t &dvdTotalCapacity)
     return E_OK;
 }
 
+bool DiskUtils::IsDvdRwRestrictedOverwrite(int cmdFd)
+{
+    int dvdMedia = 0;
+    int ret = GetDvdConfiguration(cmdFd, dvdMedia);
+    if (ret != E_OK) {
+        LOGI("IsDvdRwRestrictedOverwrite: GetDvdConfiguration failed, treat as sequential");
+        return false;
+    }
+    LOGI("IsDvdRwRestrictedOverwrite: dvdMedia=0x%{public}x", dvdMedia);
+    return dvdMedia == DVD_RW_PROFILE_RESTRICTED_OVERWRITE;
+}
+
 int64_t DiskUtils::GetDiscCapacity(int cmdFd, const std::string& discType)
 {
     int64_t totalSize = 0;
     int ret = E_OK;
     if (discType == "DVD-ROM" || discType == "DVD-R" || discType == "DVD+R") {
         ret = GetDvdTotalCapacity(cmdFd, totalSize);
-    } else if (discType == "DVD+RW" || discType == "DVD-RW") {
+    } else if (discType == "DVD-RW") {
+        bool isRestricted = IsDvdRwRestrictedOverwrite(cmdFd);
+        LOGI("DVD-RW: isRestrictedOverwrite=%{public}d", isRestricted);
+        if (isRestricted) {
+            ret = GetDvdPlusRwTotalCapacity(cmdFd, totalSize);
+        } else {
+            ret = GetDvdTotalCapacity(cmdFd, totalSize);
+        }
+    } else if (discType == "DVD+RW") {
         ret = GetDvdPlusRwTotalCapacity(cmdFd, totalSize);
     } else if (discType.find("CD") == 0) {
         ret = GetCdTotalCapacity(cmdFd, totalSize);
@@ -1332,6 +1355,7 @@ int32_t DiskUtils::GetCapacity(const std::string& devPath, int64_t &totalSize, i
         LOGE("GetCapacity:<<< EXIT FAILED <<< open failed");
         return E_ERR;
     }
+    fdsan_exchange_owner_tag(cmdFd, 0, NEW_TAG);
     std::string discType = GetCDType(devPath);
     LOGI("label is %{public}s", discType.c_str());
     totalSize = GetDiscCapacity(cmdFd, discType);
@@ -1343,7 +1367,7 @@ int32_t DiskUtils::GetCapacity(const std::string& devPath, int64_t &totalSize, i
             usedSize = -1;
         }
     }
-    close(cmdFd);
+    fdsan_close_with_tag(cmdFd, NEW_TAG);
     if (usedSize < 0) {
         usedSize = GetUsedSizeFromSysfs(devPath);
     }
@@ -1405,22 +1429,23 @@ int32_t DiskUtils::QueryUsbIsInUse(const std::string &diskPath, bool &isInUse)
         LOGE("[L3:DiskUtils] QueryUsbIsInUse: <<< EXIT FAILED <<< open failed, errno=%{public}d", errno);
         return E_OPEN_FAILED;
     }
+    fdsan_exchange_owner_tag(fd, 0, NEW_TAG);
     int inUse = -1;
     if (ioctl(fd, STORAGE_MANAGER_IOC_CHK_BUSY, &inUse) < 0) {
         LOGE("[L3:DiskUtils] QueryUsbIsInUse: <<< EXIT FAILED <<< ioctl failed, errno=%{public}d", errno);
-        close(fd);
+        fdsan_close_with_tag(fd, NEW_TAG);
         return E_IOCTL_FAILED;
     }
 
     if (inUse) {
         LOGI("[L3:DiskUtils] QueryUsbIsInUse: <<< EXIT SUCCESS <<< inUse=%{public}d", inUse);
-        close(fd);
+        fdsan_close_with_tag(fd, NEW_TAG);
         isInUse = true;
         return E_OK;
     }
     LOGI("[L3:DiskUtils] QueryUsbIsInUse: usb not inUse");
     isInUse = false;
-    close(fd);
+    fdsan_close_with_tag(fd, NEW_TAG);
     LOGI("[L3:DiskUtils] QueryUsbIsInUse: <<< EXIT SUCCESS <<< not in use");
     return E_OK;
 }

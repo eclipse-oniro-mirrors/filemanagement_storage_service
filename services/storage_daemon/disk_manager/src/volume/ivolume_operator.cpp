@@ -56,7 +56,8 @@ constexpr uint8_t UUID_DIGEST_TIME_MID_OFFSET = 4;
 constexpr uint8_t UUID_DIGEST_TIME_HI_VERSION_OFFSET = 6;
 constexpr uint8_t UUID_DIGEST_CLOCK_SEQ_OFFSET = 8;
 constexpr uint8_t UUID_DIGEST_NODE_ID_OFFSET = 10;
-
+#define FDSAN_TAG 1
+const uint64_t NEW_TAG = static_cast<uint64_t>(0xD004301) << 32 | FDSAN_TAG;
 int32_t IVolumeOperator::EnsureMountPath(const std::string& mountPath)
 {
     struct stat statbuf;
@@ -248,6 +249,7 @@ int32_t IVolumeOperator::Unmount(const std::string& mountPath, const std::string
         LOGE("IVolumeOperator::Unmount invalid mountPath prefix");
         return E_PARAMS_INVALID;
     }
+
     if (force) {
         int ret = umount2(resolvedPath.c_str(), MNT_DETACH);
         if (ret != 0) {
@@ -259,15 +261,17 @@ int32_t IVolumeOperator::Unmount(const std::string& mountPath, const std::string
         LOGI("IVolumeOperator::Unmount force success");
         return E_OK;
     }
+
     int fd = open(resolvedPath.c_str(), O_RDONLY);
     if (fd >= 0) {
+        fdsan_exchange_owner_tag(fd, 0, NEW_TAG);
         IsUsbInUse(fd);
     }
     int ret = umount2(resolvedPath.c_str(), MNT_DETACH);
     int umountErrno = errno;
     if (fd >= 0) {
         int32_t checkResult = IsUsbInUse(fd);
-        close(fd);
+        fdsan_close_with_tag(fd, NEW_TAG);
         if ((checkResult != E_OK) && (resolvedPath.find("/mnt/data/voldata/") == 0)) {
             LOGE("IVolumeOperator::Unmount final check in use failed, errno=%{public}d", checkResult);
             return E_VOL_UMOUNT_ERR;
