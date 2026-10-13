@@ -48,8 +48,16 @@ declare_args() {
   enable_disk_manager =
       defined(global_parts_info) &&
       defined(global_parts_info.filemanagement_disk_manager)
+
   enable_tee_client = !is_emulator
   enable_huks_hdi = !is_emulator
+
+  config_policy_ext_disable = true
+  if (defined(global_parts_info) &&
+  defined(
+  global_parts_info.customization_config_policy_ext)) {
+    config_policy_ext_disable = false
+  }
 }
 
 storage_manager_path =
@@ -66,6 +74,12 @@ if ("${target_platform}" == "pc" || "${target_platform}" == "2in1" || "${target_
   pc_device_enable = true
 } else {
   pc_device_enable = false
+}
+
+if ("${target_platform}" == "pc" || "${target_platform}" == "2in1") {
+  enable_pc_encryption_extension = true
+} else {
+  enable_pc_encryption_extension = false
 }
 
 if ("${target_platform}" == "pc") {

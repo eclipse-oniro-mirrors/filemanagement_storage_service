@@ -15,15 +15,19 @@
 
 #include "storage_daemon_test.h"
 
+#include <fcntl.h>
 #include <filesystem>
 #include <fstream>
 #include <gmock/gmock.h>
 #include <string>
 
 #include <vector>
+#include "directory_ex.h"
 #include "file_ex.h"
 #include "file_sharing/file_sharing.h"
+#include "test/common/help_utils.h"
 #include "userdata_dir_info.h"
+#include "storage_service_constants.h"
 
 namespace {
 #ifdef USER_CRYPTO_MIGRATE_KEY
@@ -33,6 +37,28 @@ constexpr const char *NEED_RESTORE_SUFFIX = "/latest/need_restore";
 }
 
 namespace OHOS {
+static bool IsPathExist(const std::string &path)
+{
+    struct stat st {};
+    return (lstat(path.c_str(), &st) == 0);
+}
+
+static void RmFile(const std::string &path)
+{
+    (void)unlink(path.c_str());
+}
+
+static void RmDir(const std::string &path)
+{
+    (void)rmdir(path.c_str());
+}
+
+// 生成一个尽量不冲突的测试目录
+static std::string MakeTestDir(const std::string &prefix)
+{
+    return "/data/service/" + prefix;
+}
+
 bool SaveStringToFile(const std::string& filePath, const std::string& content, bool truncated /*= true*/)
 {
     return StorageDaemon::Test::StorageDaemonTest::g_saveStringToFile;
@@ -282,6 +308,7 @@ void StorageDaemonTest::TearDown(void)
     huksMasterMock_ = nullptr;
     IBaseKeyMoc::baseKeyMoc = nullptr;
     baseKeyMock_ = nullptr;
+
     RefreshConfigDir();
 }
 
@@ -1440,6 +1467,192 @@ HWTEST_F(StorageDaemonTest, StorageDaemonTest_ActiveUserKeyAndPrepare_005, TestS
     EXPECT_EQ(storageDaemon_->ActiveUserKeyAndPrepare(userId_, EL1_KEY, token_, secret_), E_OK);
 #endif
 #endif
+}
+
+/**
+ * @tc.name: StorageDaemonTest_ClearNatoRestoreKey_002
+ * @tc.desc: Verify the ClearNatoRestoreKey when all operations succeed.
+ * @tc.type: FUNC
+ * @tc.require: AR000H09L6
+ */
+HWTEST_F(StorageDaemonTest, StorageDaemonTest_ClearNatoRestoreKey_002, TestSize.Level1)
+{
+    ASSERT_TRUE(storageDaemon_ != nullptr);
+    mode_t mode = 0711;
+    uint32_t userId = 100;
+    keyType type = EL2_KEY;
+    bool isClearAll = false;
+
+    EXPECT_CALL(*keyManagerMock_, IsDirRecursivelyEmpty(_)).WillOnce(Return(true));
+    storageDaemon_->ClearNatoRestoreKey(userId, type, isClearAll);
+
+    EXPECT_CALL(*keyManagerMock_, IsDirRecursivelyEmpty(_)).WillOnce(Return(false));
+    storageDaemon_->ClearNatoRestoreKey(userId, type, isClearAll);
+
+    isClearAll = true;
+    EXPECT_CALL(*keyManagerMock_, IsDirRecursivelyEmpty(_)).WillOnce(Return(true)).WillOnce(Return(true));
+    StorageTest::StorageTestUtils::MkDir(NATO_EL2_DIR, mode);
+    storageDaemon_->ClearNatoRestoreKey(userId, type, isClearAll);
+
+    EXPECT_CALL(*keyManagerMock_, IsDirRecursivelyEmpty(_)).WillOnce(Return(true)).WillOnce(Return(true));
+    std::string tempPath = std::string(NATO_EL2_DIR) + "temp";
+    StorageTest::StorageTestUtils::MkDir(tempPath.c_str(), mode);
+    storageDaemon_->ClearNatoRestoreKey(userId, type, isClearAll);
+
+    EXPECT_CALL(*keyManagerMock_, IsDirRecursivelyEmpty(_)).WillOnce(Return(true)).WillOnce(Return(false));
+    type = EL3_KEY;
+    StorageTest::StorageTestUtils::MkDir(NATO_EL3_DIR, mode);
+    storageDaemon_->ClearNatoRestoreKey(userId, type, isClearAll);
+    EXPECT_TRUE(rmdir(NATO_EL2_DIR) != 0);
+
+    EXPECT_CALL(*keyManagerMock_, IsDirRecursivelyEmpty(_)).WillOnce(Return(true)).WillOnce(Return(false));
+    tempPath = std::string(NATO_EL3_DIR) + "temp";
+    StorageTest::StorageTestUtils::MkDir(tempPath.c_str(), mode);
+    storageDaemon_->ClearNatoRestoreKey(userId, type, isClearAll);
+
+    EXPECT_CALL(*keyManagerMock_, IsDirRecursivelyEmpty(_)).WillOnce(Return(true)).WillOnce(Return(false));
+    type = EL4_KEY;
+    StorageTest::StorageTestUtils::MkDir(NATO_EL4_DIR, mode);
+    storageDaemon_->ClearNatoRestoreKey(userId, type, isClearAll);
+    EXPECT_TRUE(rmdir(NATO_EL3_DIR) != 0);
+
+    EXPECT_CALL(*keyManagerMock_, IsDirRecursivelyEmpty(_)).WillOnce(Return(true)).WillOnce(Return(false));
+    tempPath = std::string(NATO_EL4_DIR) + "temp";
+    StorageTest::StorageTestUtils::MkDir(tempPath.c_str(), mode);
+    storageDaemon_->ClearNatoRestoreKey(userId, type, isClearAll);
+
+    EXPECT_CALL(*keyManagerMock_, IsDirRecursivelyEmpty(_)).WillOnce(Return(true)).WillOnce(Return(false));
+    EXPECT_TRUE(rmdir(NATO_EL4_DIR) != 0);
+    type = EL4_KEY;
+    storageDaemon_->ClearNatoRestoreKey(userId, type, isClearAll);
+}
+
+/**
+ * @tc.name: StorageDaemonTest_ClearNatoRestoreKey_003
+ * @tc.desc: Verify the ClearNatoRestoreKey when all operations succeed.
+ * @tc.type: FUNC
+ * @tc.require: AR000H09L6
+ */
+HWTEST_F(StorageDaemonTest, StorageDaemonTest_ClearNatoRestoreKey_003, TestSize.Level1)
+{
+    ASSERT_TRUE(storageDaemon_ != nullptr);
+    mode_t mode = 0711;
+    uint32_t userId = 100;
+    keyType type = EL2_KEY;
+    bool isClearAll = true;
+
+    EXPECT_CALL(*keyManagerMock_, IsDirRecursivelyEmpty(_)).WillOnce(Return(true)).WillOnce(Return(false));
+    EXPECT_TRUE(StorageTest::StorageTestUtils::MkDir(NATO_EL2_DIR, mode) == 0);
+    storageDaemon_->ClearNatoRestoreKey(userId, type, isClearAll);
+
+    type = EL3_KEY;
+    EXPECT_CALL(*keyManagerMock_, IsDirRecursivelyEmpty(_)).WillOnce(Return(true)).WillOnce(Return(false));
+    EXPECT_TRUE(StorageTest::StorageTestUtils::MkDir(NATO_EL3_DIR, mode) == 0);
+    storageDaemon_->ClearNatoRestoreKey(userId, type, isClearAll);
+
+    type = EL4_KEY;
+    EXPECT_CALL(*keyManagerMock_, IsDirRecursivelyEmpty(_)).WillOnce(Return(true)).WillOnce(Return(false));
+    EXPECT_TRUE(StorageTest::StorageTestUtils::MkDir(NATO_EL4_DIR, mode) == 0);
+    storageDaemon_->ClearNatoRestoreKey(userId, type, isClearAll);
+}
+
+/**
+ * @tc.name: StorageDaemonTest_ClearKeyDirInfo_001
+ * @tc.desc: Verify the ClearKeyDirInfo when all operations succeed.
+ * @tc.type: FUNC
+ * @tc.require: AR000H09L6
+ */
+HWTEST_F(StorageDaemonTest, StorageDaemonTest_ClearKeyDirInfo_001, TestSize.Level1)
+{
+    ASSERT_TRUE(storageDaemon_ != nullptr);
+    std::string path = "test";
+    EXPECT_CALL(*keyManagerMock_, IsDirRecursivelyEmpty(_)).WillOnce(Return(false));
+    storageDaemon_->ClearKeyDirInfo(path.c_str());
+    EXPECT_CALL(*keyManagerMock_, IsDirRecursivelyEmpty(_)).WillOnce(Return(true)).WillOnce(Return(true));
+    storageDaemon_->ClearKeyDirInfo(path.c_str());
+    EXPECT_CALL(*keyManagerMock_, IsDirRecursivelyEmpty(_)).WillOnce(Return(true)).WillOnce(Return(false));
+    storageDaemon_->ClearKeyDirInfo(path.c_str());
+    ASSERT_TRUE(storageDaemon_ != nullptr);
+    ASSERT_NE(access(path.c_str(), F_OK), 0);
+}
+
+/**
+ * @tc.name: StorageDaemonTest_ClearKeyDir_001
+ * @tc.desc: Verify ClearKeyDir returns when opendir failed (path not exist).
+ * @tc.type: FUNC
+ */
+HWTEST_F(StorageDaemonTest, StorageDaemonTest_ClearKeyDir_001, TestSize.Level1)
+{
+    ASSERT_TRUE(storageDaemon_ != nullptr);
+    std::string notExistPath = MakeTestDir("ut_clear_key_dir_not_exist");
+    ASSERT_FALSE(IsPathExist(notExistPath));
+    // 不崩溃即可（无返回值）
+    storageDaemon_->ClearKeyDir(notExistPath);
+}
+
+/**
+ * @tc.name: StorageDaemonTest_ClearKeyDir_002
+ * @tc.desc: Verify ClearKeyDir removes directory when it is recursively empty.
+ * @tc.type: FUNC
+ */
+HWTEST_F(StorageDaemonTest, StorageDaemonTest_ClearKeyDir_002, TestSize.Level1)
+{
+    ASSERT_TRUE(storageDaemon_ != nullptr);
+    std::string dir = MakeTestDir("ut_clear_key_dir_empty");
+    mode_t mode = 0711;
+    ASSERT_TRUE(StorageTest::StorageTestUtils::MkDir(dir.c_str(), mode));
+    ASSERT_TRUE(IsPathExist(dir));
+    storageDaemon_->ClearKeyDir(dir);
+    if (IsPathExist(dir)) {
+        RmDir(dir);
+    }
+}
+
+/**
+ * @tc.name: StorageDaemonTest_ClearKeyDir_003
+ * @tc.desc: Verify ClearKeyDir does not remove directory when it is not empty.
+ * @tc.type: FUNC
+ */
+HWTEST_F(StorageDaemonTest, StorageDaemonTest_ClearKeyDir_003, TestSize.Level1)
+{
+    ASSERT_TRUE(storageDaemon_ != nullptr);
+    std::string dir = MakeTestDir("ut_clear_key_dir_not_empty");
+    mode_t mode = 0711;
+    ASSERT_TRUE(StorageTest::StorageTestUtils::MkDir(dir.c_str(), mode));
+    ASSERT_TRUE(IsPathExist(dir));
+    std::string f = dir + "/keep.txt";
+    StorageTest::StorageTestUtils::CreateFile(f);
+    ASSERT_TRUE(IsPathExist(f));
+    storageDaemon_->ClearKeyDir(dir);
+    // 目录里有文件：递归非空，应不被 rmdir 删除
+    EXPECT_TRUE(IsPathExist(dir));
+    // 清理
+    RmFile(f);
+    RmDir(dir);
+}
+
+/**
+ * @tc.name: StorageDaemonTest_ClearKeyDir_004
+ * @tc.desc: Verify ClearKeyDir does not remove directory when it is not empty.
+ * @tc.type: FUNC
+ */
+HWTEST_F(StorageDaemonTest, StorageDaemonTest_ClearKeyDir_004, TestSize.Level1)
+{
+    ASSERT_TRUE(storageDaemon_ != nullptr);
+    std::string dir = MakeTestDir("ut_clear_key_dir_not_empty");
+    mode_t mode = 0711;
+    ASSERT_TRUE(StorageTest::StorageTestUtils::MkDir(dir.c_str(), mode));
+    ASSERT_TRUE(IsPathExist(dir));
+    std::string f = dir + "/keeps.txt";
+    StorageTest::StorageTestUtils::CreateFile(f);
+    ASSERT_TRUE(IsPathExist(f));
+    EXPECT_CALL(*keyManagerMock_, IsDirRecursivelyEmpty(_)).WillOnce(Return(true));
+    storageDaemon_->ClearKeyDir(dir);
+    // 目录里有文件：递归非空，应不被 rmdir 删除
+    EXPECT_TRUE(IsPathExist(dir));
+    // 清理
+    RmFile(f);
+    RmDir(dir);
 }
 
 /**

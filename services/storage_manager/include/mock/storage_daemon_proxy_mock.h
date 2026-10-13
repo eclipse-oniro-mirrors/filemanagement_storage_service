@@ -37,6 +37,7 @@ public:
     // fscrypt api
     virtual int32_t InitGlobalKey(void) override;
     virtual int32_t InitGlobalUserKeys(void) override;
+    virtual int32_t GenerateUserKeys(uint32_t userId, uint32_t flags) override;
     virtual int32_t EraseAllUserEncryptedKeys(const std::vector<int32_t> &localIdList) override;
     virtual int32_t UpdateUserAuth(uint32_t userId, uint64_t secureUid,
                                    const std::vector<uint8_t> &token,

@@ -73,6 +73,11 @@ int32_t StorageDaemonProxy::SetDirEncryptionPolicy(uint32_t userId, const std::s
     return E_OK;
 }
 
+int32_t StorageDaemonProxy::GenerateUserKeys(uint32_t userId, uint32_t flags)
+{
+    return E_OK;
+}
+
 int32_t StorageDaemonProxy::EraseAllUserEncryptedKeys(const std::vector<int32_t> &localIdList)
 {
     return E_OK;
@@ -431,7 +436,6 @@ int32_t StorageDaemonProxy::Partition(const std::string &diskPath, const std::st
 {
     return E_OK;
 }
-
 
 int32_t StorageDaemonProxy::GetBlockInfoByType(const std::string &type, const std::string &diskId,
                                                std::string &blockInfos)

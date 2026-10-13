@@ -31,6 +31,12 @@ enum UserChangedEventType {
     EVENT_USER_UNLOCKED = 0,
     EVENT_USER_SWITCHED = 1,
 };
+
+enum AncoCreateLevel {
+    ANCO_CREATE_NONE_AND_EL1 = 0,
+    ANCO_CREATE_EL2 = 1,
+    ANCO_CREATE_ALL = 2,
+}
 } // namespace StorageService
 } // namespace OHOS
 

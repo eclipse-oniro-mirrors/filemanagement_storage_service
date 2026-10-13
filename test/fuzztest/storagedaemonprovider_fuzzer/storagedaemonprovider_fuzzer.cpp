@@ -242,6 +242,7 @@ enum StorageDaemonFunction {
     FUNC_ACTIVE_USER_KEY = 21,
     FUNC_INACTIVE_USER_KEY = 22,
     FUNC_UPDATE_KEY_CONTEXT = 23,
+    FUNC_MOUNT_CRYPTO_PATH_AGAIN = 24,
     
     FUNC_LOCK_USER_SCREEN = 25,
     FUNC_UNLOCK_USER_SCREEN = 26,
@@ -413,6 +414,9 @@ static void HandleGlobalKeyOps(FuzzedDataProvider& provider,
         case FUNC_INIT_GLOBAL_KEY: providerObj->InitGlobalKey(); break;
         case FUNC_INIT_GLOBAL_USER_KEYS: providerObj->InitGlobalUserKeys(); break;
         case FUNC_GENERATE_USER_KEYS: {
+            uint32_t userId = provider.ConsumeIntegral<uint32_t>();
+            uint32_t flags = provider.ConsumeIntegral<uint32_t>();
+            providerObj->GenerateUserKeys(userId, flags);
             break;
         }
         default: break;
@@ -892,7 +896,7 @@ static void DispatchStorageDaemonFunction(FuzzedDataProvider& provider,
         {FUNC_START_USER, FUNC_CREATE_USER_DIR, HandleUserDirOps},
         {FUNC_INIT_GLOBAL_KEY, FUNC_DELETE_USER_KEYS, HandleGlobalKeyOps},
         {FUNC_UPDATE_USER_AUTH, FUNC_INACTIVE_USER_KEY, HandleUserAuthOps},
-        {FUNC_UPDATE_KEY_CONTEXT, FUNC_UPDATE_KEY_CONTEXT, HandleKeyContextOps},
+        {FUNC_UPDATE_KEY_CONTEXT, FUNC_MOUNT_CRYPTO_PATH_AGAIN, HandleKeyContextOps},
         {FUNC_LOCK_USER_SCREEN, FUNC_GET_LOCK_SCREEN_STATUS, HandleScreenLockOps},
         {FUNC_UPDATE_USE_AUTH_WITH_RECOVERY_KEY, FUNC_RESET_SECRET_WITH_RECOVERY_KEY, HandleRecoveryKeyOps},
         {FUNC_GENERATE_APPKEY, FUNC_DELETE_SHARE_FILE, HandleAppShareOps},
