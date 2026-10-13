@@ -29,7 +29,6 @@ public:
     virtual bool IsEncryption(void) = 0;
     virtual int LoadAndSetPolicy(const char *keyDir, const char *dir) = 0;
     virtual int LoadAndSetEceAndSecePolicy(const char *keyDir, const char *dir, int type) = 0;
-    virtual bool IsEncryption(void) = 0;
 public:
     static inline std::shared_ptr<IFscryptControlMoc> fscryptControlMoc = nullptr;
 };
@@ -41,7 +40,6 @@ public:
     MOCK_METHOD0(IsEncryption, bool());
     MOCK_METHOD2(LoadAndSetPolicy, int(const char *keyDir, const char *dir));
     MOCK_METHOD3(LoadAndSetEceAndSecePolicy, int(const char *keyDir, const char *dir, int type));
-    MOCK_METHOD0(IsEncryption, bool());
 };
 }
 }

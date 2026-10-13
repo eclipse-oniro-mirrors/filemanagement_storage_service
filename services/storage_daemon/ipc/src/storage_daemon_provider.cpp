@@ -689,6 +689,42 @@ int32_t StorageDaemonProvider::SetDirEncryptionPolicy(uint32_t userId, const std
     return ret;
 }
 
+#ifdef USER_CRYPTO_MANAGER
+int32_t StorageDaemonProvider::SetDirEncryptionPolicyWithKeyDesc(const std::string &dirPath,
+    uint32_t level, const std::string &keyDesc)
+{
+    LOGI("SetDirEncryptionPolicyWithKeyDesc begin.");
+    std::string message = "dirPath: " + GetAnonyString(dirPath)
+        + " level: " + std::to_string(level);
+    HiAudit::GetInstance().WriteStart("SetDirEncryptionPolicyWithKeyDesc", message);
+    auto uid = IPCSkeleton::GetCallingUid();
+    if (uid != STORAGE_MANAGER_UID) {
+        LOGE("[L1:StorageDaemonProvider] SetDirEncryptionPolicyWithKeyDesc: <<< EXIT FAILED <<< "
+            "uid=%{public}d is invalid", uid);
+        return E_PERMISSION_DENIED;
+    }
+    if (IsFilePathInvalid(dirPath)) {
+        LOGE("[L1:StorageDaemonProvider] SetDirEncryptionPolicyWithKeyDesc: <<< EXIT FAILED <<< dirPath is invalid");
+        return E_PARAMS_INVALID;
+    }
+    if (!CheckLevelRange(level)) {
+        LOGE("[L1:StorageDaemonProvider] SetDirEncryptionPolicyWithKeyDesc: <<< EXIT FAILED <<< level is invalid");
+        return E_PARAMS_INVALID;
+    }
+    int timerId = StorageXCollie::SetTimer("storage:SetDirEncryptionPolicyWithKeyDesc", LOCAL_TIME_OUT_SECONDS);
+    int32_t ret = StorageDaemon::GetInstance().SetDirEncryptionPolicyWithKeyDesc(dirPath, level, keyDesc);
+    StorageXCollie::CancelTimer(timerId);
+    HiAudit::GetInstance().WriteEnd("SetDirEncryptionPolicyWithKeyDesc", ret);
+    if (ret == E_OK) {
+        LOGI("[L1:StorageDaemonProvider] SetDirEncryptionPolicyWithKeyDesc: <<< EXIT SUCCESS <<< "
+            "dirPath=%{public}s", dirPath.c_str());
+    } else {
+        LOGE("[L1:StorageDaemonProvider] SetDirEncryptionPolicyWithKeyDesc: <<< EXIT FAILED <<< ret=%{public}d", ret);
+    }
+    return ret;
+}
+#endif
+
 int32_t StorageDaemonProvider::CompleteAddUser(int32_t userId)
 {
     HiAudit::GetInstance().WriteStart("CompleteAddUser", "userId: " + std::to_string(userId));
