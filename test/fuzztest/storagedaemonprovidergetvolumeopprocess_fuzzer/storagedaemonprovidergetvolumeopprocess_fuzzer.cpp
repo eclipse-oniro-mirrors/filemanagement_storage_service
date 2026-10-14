@@ -18,6 +18,7 @@
 #include <cstdint>
 #include <cstring>
 #include <string>
+#include <vector>
 
 #include "fuzzer/FuzzedDataProvider.h"
 #include "message_parcel.h"

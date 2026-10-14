@@ -140,6 +140,7 @@ ohos_fuzztest("StorageDaemonStubFuzzTest") {
     "cJSON:cjson",
     "config_policy:configpolicy_util",
     "c_utils:utils",
+    "crypto_framework:crypto_framework_lib",
     "eventhandler:libeventhandler",
     "hicollie:libhicollie",
     "hilog:libhilog",

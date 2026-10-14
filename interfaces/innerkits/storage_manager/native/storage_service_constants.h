@@ -36,7 +36,7 @@ enum AncoCreateLevel {
     ANCO_CREATE_NONE_AND_EL1 = 0,
     ANCO_CREATE_EL2 = 1,
     ANCO_CREATE_ALL = 2,
-}
+};
 } // namespace StorageService
 } // namespace OHOS
 

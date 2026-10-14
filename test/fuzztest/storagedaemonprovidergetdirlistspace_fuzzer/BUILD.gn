@@ -31,7 +31,6 @@ ohos_static_library("storagedaemonprovider_getdirlistspace_fuzzer") {
     "${storage_daemon_path}/utils/hi_audit.cpp",
     "${storage_daemon_path}/utils/zip_utils.cpp",
     "${storage_daemon_path}/ipc/src/storage_daemon_provider.cpp",
-    "${storage_daemon_path}/ipc/src/storage_manager_client.cpp",
     "${storage_daemon_path}/quota/quota_manager.cpp",
     "${storage_daemon_path}/user/src/mount_manager.cpp",
     "${storage_daemon_path}/user/src/mount_manager_ext.cpp",
@@ -123,6 +122,7 @@ ohos_fuzztest("StorageDaemonProviderGetDirListSpaceFuzzTest") {
     "-fno-omit-frame-pointer",
   ]
   sources = [
+    "${storage_daemon_path}/ipc/src/storage_manager_client.cpp",
     "${storage_service_path}/test/fuzztest/storagedaemonprovidergetdirlistspace_fuzzer/storagedaemonprovidergetdirlistspace_fuzzer.cpp",
   ]
 
