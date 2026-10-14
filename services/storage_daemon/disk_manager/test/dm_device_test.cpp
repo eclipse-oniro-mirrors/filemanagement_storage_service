@@ -220,7 +220,6 @@ HWTEST_F(DmDeviceTest, Destructor_RemoveFailNoCrash, TestSize.Level1)
         EXPECT_FALSE(dm.Create());
     }
     EXPECT_TRUE(g_mock.dmRemoveCalled);
-    // fd_ 通过 fdsan_close_with_tag 关闭，该函数是 Bionic 内联函数，--wrap 无法拦截，故 closeCount 不会增加
     EXPECT_EQ(g_mock.closeCount, beforeClose);
 }
 
