@@ -1480,7 +1480,7 @@ HWTEST_F(StorageDaemonTest, StorageDaemonTest_ClearNatoRestoreKey_002, TestSize.
     ASSERT_TRUE(storageDaemon_ != nullptr);
     mode_t mode = 0711;
     uint32_t userId = 100;
-    keyType type = EL2_KEY;
+    KeyType type = EL2_KEY;
     bool isClearAll = false;
 
     EXPECT_CALL(*keyManagerMock_, IsDirRecursivelyEmpty(_)).WillOnce(Return(true));
