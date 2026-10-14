@@ -3359,7 +3359,7 @@ int32_t StorageDaemonProvider::CreateDmLinear(const std::string &sourceDevPath,
                                               uint64_t &dmDev)
 {
 #ifdef DISK_MANAGER
-    LOGI("[L1:StorageDaemonProvider] CreateDmLinear: >>> ENTER <<< source=%{public}s, "
+    LOGI("[L1:StorageDaemonProvider] CreateDmLinear: >>> ENTER <<< source=%{public}.128s, "
          "start=%{public}llu, count=%{public}llu",
          sourceDevPath.c_str(),
          static_cast<unsigned long long>(startSector),

@@ -72,7 +72,8 @@ std::string DmDevice::GetDmName(const std::string &devPath)
         LOGE("devPath is empty");
         return "";
     }
-    std::string baseName = devPath.substr(devPath.find_last_of('/') + 1);
+    size_t pos = devPath.find_last_of('/');
+    std::string baseName = (pos == std::string::npos) ? "" : devPath.substr(pos + 1);
     if (baseName.empty()) {
         LOGE("baseName is empty");
         return "";
