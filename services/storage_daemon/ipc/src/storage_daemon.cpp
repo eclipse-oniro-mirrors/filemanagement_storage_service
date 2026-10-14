@@ -503,7 +503,7 @@ int32_t StorageDaemon::GenerateUserKeys(uint32_t userId, uint32_t flags)
             .userId = userId,
             .funcName = "GenerateUserKeys",
             .bizScene = BizScene::USER_KEY_ENCRYPTION,
-            .bizStage = BizStage::BIZ_STAGE_GENERATE_USER_KEY,
+            .bizStage = BizStage::BIZ_STAGE_GENERATE_USER_KEYS,
             .keyElxLevel = "EL1",
             .errorCode = ret
         };
