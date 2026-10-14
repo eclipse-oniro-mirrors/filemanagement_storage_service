@@ -85,9 +85,11 @@ MtpFsDevice::~MtpFsDevice()
         std::lock_guard<std::mutex> lock(eventMutex_);
         eventCon_.notify_all();
     }
+    
     if (eventThread_.joinable()) {
         eventThread_.join();
     }
+
     if (pushThread_.joinable()) {
         pushThread_.join();
     }
@@ -451,10 +453,11 @@ void MtpFsDevice::SetFetched(MtpFsTypeDir *dir)
 
 const MtpFsTypeDir *MtpFsDevice::DirFetchContent(std::string path)
 {
-    if (device == nullptr) {
+    if (device_ == nullptr) {
         LOGE("Device is not connected");
         return nullptr;
     }
+
     if (!rootDir_.IsFetched()) {
         for (LIBMTP_devicestorage_t *s = device_->storage; s; s = s->next) {
             rootDir_.AddDir(MtpFsTypeDir(rootNode_, 0, s->id, std::string(s->StorageDescription)));

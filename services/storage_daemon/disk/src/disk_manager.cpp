@@ -45,20 +45,20 @@ std::shared_ptr<DiskInfo> DiskManager::MatchConfig(NetlinkData *data)
         LOGE("[L2:DiskManager] MatchConfig: <<< EXIT FAILED <<< data is nullptr");
         return nullptr;
     }
-    std::lock_guard<std::mutex> lock(lock_);
     std::string sysPath = data->GetSyspath();
     std::string devPath = data->GetDevpath();
     errno = 0;
-    char *endptr = nullptr;
+    char *endptr_major = nullptr;
     std::string majorStr = data->GetParam("MAJOR");
-    long majorLong = strtol(majorStr.c_str(), &endptr, 10);
-    if (errno == ERANGE || endptr == majorStr.c_str() || *endptr != '\0' || majorLong < 0) {
+    long majorLong = strtol(majorStr.c_str(), &endptr_major, 10);
+    if (errno == ERANGE || endptr_major == majorStr.c_str() || *endptr_major != '\0' || majorLong < 0) {
         LOGE("[L2:DiskManager] MatchConfig: invalid MAJOR='%{public}s'", majorStr.c_str());
         return nullptr;
     }
+    char *endptr_minor = nullptr;
     std::string minorStr = data->GetParam("MINOR");
-    long minorLong = strtol(minorStr.c_str(), &endptr, 10);
-    if (errno == ERANGE || endptr == minorStr.c_str() || *endptr != '\0' || minorLong < 0) {
+    long minorLong = strtol(minorStr.c_str(), &endptr_minor, 10);
+    if (errno == ERANGE || endptr_minor == minorStr.c_str() || *endptr_minor != '\0' || minorLong < 0) {
         LOGE("[L2:DiskManager] MatchConfig: invalid MINOR='%{public}s'", minorStr.c_str());
         return nullptr;
     }

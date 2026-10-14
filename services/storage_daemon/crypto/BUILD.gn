@@ -27,8 +27,6 @@ config("storage_daemon_crypto_config") {
   cflags = [
     "-Oz",
     "-Wall",
-    "-ffunction-sections",
-    "-fdata-sections",
   ]
 }
 
@@ -79,7 +77,9 @@ ohos_static_library("libsdcrypto") {
   ]
 
   external_deps = [
+    "cJSON:cjson",
     "c_utils:utils",
+    "crypto_framework:crypto_framework_lib",
     "eventhandler:libeventhandler",
     "hilog:libhilog",
     "huks:libhukssdk",
@@ -124,6 +124,10 @@ ohos_static_library("libsdcrypto") {
 
   if (storage_service_glasses_device) {
     defines += [ "GLASSES_DEVICE" ]
+  }
+
+  if (enable_pc_encryption_extension) {
+    defines += [ "PC_ENCRYPTION_EXTENSION" ]
   }
 
   subsystem_name = "filemanagement"

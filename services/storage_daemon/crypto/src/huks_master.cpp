@@ -263,7 +263,7 @@ int32_t HuksMaster::HdiAccessInit(const HuksBlob &key, const HksParamSet *paramS
     LOGE("[L8:HuksMaster] HdiAccessInit: HuksHdiInit end, retryRet %{public}d", retryRet);
     if (retryRet != HKS_SUCCESS) {
         StorageRadar::ReportHuksResult("HuksHdiInit_Retry", retryRet);
-        LOGI("[L8:HuksMaster] HdiAccessInit: <<< EXIT FAILED <<<");
+        LOGE("[L8:HuksMaster] HdiAccessInit: <<< EXIT FAILED <<<");
     } else {
         LOGI("[L8:HuksMaster] HdiAccessInit: <<< EXIT SUCCESS <<<");
     }

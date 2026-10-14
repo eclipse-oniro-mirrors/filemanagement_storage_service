@@ -484,8 +484,12 @@ int32_t BaseKey::UpdateKey(const std::string &keypath, bool needSyncCandidate)
     }
 
     std::string backupDir;
-    KeyBackup::GetInstance().GetBackupDir(dir_, backupDir);
-    KeyBackup::GetInstance().CreateBackup(dir_, backupDir, true);
+    KeyBackup *keyBackup = &KeyBackup::GetInstance();
+    if (keyBackup == nullptr) {
+        return E_PARAMS_NULLPTR_ERR;
+    }
+    keyBackup->GetBackupDir(dir_, backupDir);
+    keyBackup->CreateBackup(dir_, backupDir, true);
     SyncKeyDir();
     LOGI("[L4:BaseKey] UpdateKey: <<< EXIT SUCCESS <<< dir=%{public}s", dir_.c_str());
     return E_OK;
