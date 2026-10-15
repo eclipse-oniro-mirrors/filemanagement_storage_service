@@ -483,7 +483,7 @@ HWTEST_F(UserPathResolverTest, UserPathResolverTest_GetVirtualPath_UdmfClipFuse,
 }
 
 /**
- * @tc.name: UserPathResolverTest_GetVirtualPath_UdmfClipFuse
+ * @tc.name: UserPathResolverTest_GetAppDataMountNodeList_001
  * @tc.desc: Verify the GetAppDataMountNodeList.
  * @tc.type: FUNC
  * @tc.require: AR000H09L6
