@@ -49,6 +49,8 @@ public:
     virtual int32_t RegistCredChangeEventListener(const std::vector<AuthType> &authType,
         const std::shared_ptr<CredChangeEventListener> &listener) = 0;
     virtual int32_t UnRegistCredChangeEventListener(const std::shared_ptr<CredChangeEventListener> &listener) = 0;
+    virtual int32_t GetLatestEnrollmentTime(int32_t userId, AuthType authType,
+        uint64_t &latestEnrollmentTime) = 0;
 
 public:
     static inline std::shared_ptr<IUserIdmClientMoc> userIdmClientMoc = nullptr;
@@ -77,6 +79,8 @@ public:
     MOCK_METHOD2(RegistCredChangeEventListener, int32_t(const std::vector<AuthType> &authType,
         const std::shared_ptr<CredChangeEventListener> &listener));
     MOCK_METHOD1(UnRegistCredChangeEventListener, int32_t(const std::shared_ptr<CredChangeEventListener> &listener));
+    MOCK_METHOD3(GetLatestEnrollmentTime, int32_t(int32_t userId, AuthType authType,
+        uint64_t &latestEnrollmentTime));
 };
 }
 }
