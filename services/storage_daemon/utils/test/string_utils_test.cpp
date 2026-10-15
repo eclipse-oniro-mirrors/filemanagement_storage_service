@@ -20,6 +20,7 @@
 #include <cstdio>
 #include <fstream>
 
+#include "directory_ex.h"
 #include "storage_service_constant.h"
 #include "storage_service_constants.h"
 
@@ -281,6 +282,89 @@ HWTEST_F(StringUtilsTest, StringUtilsTest_CheckIdRange_001, TestSize.Level1)
     std::string longId(66, 'a');
     EXPECT_FALSE(CheckIdRange(longId));
     GTEST_LOG_(INFO) << "StringUtilsTest_CheckIdRange_001 end";
+}
+
+/**
+ * @tc.name: StringUtilsTest_IsUdmfClipPathValid_001
+ * @tc.desc: Verify IsUdmfClipPathValid returns true for valid udmf_fuse path.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(StringUtilsTest, StringUtilsTest_IsUdmfClipPathValid_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StringUtilsTest_IsUdmfClipPathValid_001 start";
+    int32_t userId = 100;
+    std::string path = "/mnt/data/100/udmf_fuse/test_valid";
+    OHOS::ForceCreateDirectory(path);
+    EXPECT_TRUE(IsUdmfClipPathValid(userId, path));
+    OHOS::ForceRemoveDirectory(path);
+    GTEST_LOG_(INFO) << "StringUtilsTest_IsUdmfClipPathValid_001 end";
+}
+
+/**
+ * @tc.name: StringUtilsTest_IsUdmfClipPathValid_002
+ * @tc.desc: Verify IsUdmfClipPathValid returns true for valid clipboard_fuse path.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(StringUtilsTest, StringUtilsTest_IsUdmfClipPathValid_002, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StringUtilsTest_IsUdmfClipPathValid_002 start";
+    int32_t userId = 100;
+    std::string path = "/mnt/data/100/clipboard_fuse/test_valid";
+    OHOS::ForceCreateDirectory(path);
+    EXPECT_TRUE(IsUdmfClipPathValid(userId, path));
+    OHOS::ForceRemoveDirectory(path);
+    GTEST_LOG_(INFO) << "StringUtilsTest_IsUdmfClipPathValid_002 end";
+}
+
+/**
+ * @tc.name: StringUtilsTest_IsUdmfClipPathValid_003
+ * @tc.desc: Verify IsUdmfClipPathValid returns false for mismatched prefix.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(StringUtilsTest, StringUtilsTest_IsUdmfClipPathValid_003, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StringUtilsTest_IsUdmfClipPathValid_003 start";
+    int32_t userId = 100;
+    std::string path = "/mnt/data/100/cloud_disk_fuse/test_mismatch";
+    OHOS::ForceCreateDirectory(path);
+    EXPECT_FALSE(IsUdmfClipPathValid(userId, path));
+    OHOS::ForceRemoveDirectory(path);
+    GTEST_LOG_(INFO) << "StringUtilsTest_IsUdmfClipPathValid_003 end";
+}
+
+/**
+ * @tc.name: StringUtilsTest_IsUdmfClipPathValid_004
+ * @tc.desc: Verify IsUdmfClipPathValid returns false when path does not exist.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(StringUtilsTest, StringUtilsTest_IsUdmfClipPathValid_004, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StringUtilsTest_IsUdmfClipPathValid_004 start";
+    int32_t userId = 100;
+    std::string path = "/mnt/data/100/udmf_fuse/nonexistent_path_12345";
+    EXPECT_FALSE(IsUdmfClipPathValid(userId, path));
+    GTEST_LOG_(INFO) << "StringUtilsTest_IsUdmfClipPathValid_004 end";
+}
+
+/**
+ * @tc.name: StringUtilsTest_IsUdmfClipPathValid_005
+ * @tc.desc: Verify IsUdmfClipPathValid returns false when userId in path does not match.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(StringUtilsTest, StringUtilsTest_IsUdmfClipPathValid_005, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StringUtilsTest_IsUdmfClipPathValid_005 start";
+    int32_t userId = 100;
+    std::string path = "/mnt/data/101/udmf_fuse/test_uid_mismatch";
+    OHOS::ForceCreateDirectory(path);
+    EXPECT_FALSE(IsUdmfClipPathValid(userId, path));
+    OHOS::ForceRemoveDirectory(path);
+    GTEST_LOG_(INFO) << "StringUtilsTest_IsUdmfClipPathValid_005 end";
 }
 } // Test
 } // STORAGE_DAEMON

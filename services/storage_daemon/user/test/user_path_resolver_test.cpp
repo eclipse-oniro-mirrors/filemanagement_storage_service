@@ -459,7 +459,31 @@ HWTEST_F(UserPathResolverTest, UserPathResolverTest_GetVirtualPath_001, TestSize
 }
 
 /**
- * @tc.name: UserPathResolverTest_GetAppDataMountNodeList_001
+ * @tc.name: UserPathResolverTest_GetVirtualPath_UdmfClipFuse
+ * @tc.desc: Verify the GetVirtualPath contains udmf_fuse and clipboard_fuse entries.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(UserPathResolverTest, UserPathResolverTest_GetVirtualPath_UdmfClipFuse, TestSize.Level1)
+{
+    std::vector<DirInfo> dirInfoList;
+    EXPECT_EQ(UserPathResolver::GetVirtualPath(userId_, dirInfoList), E_OK);
+    bool hasUdmfFuse = false;
+    bool hasClipboardFuse = false;
+    for (const auto &dirInfo : dirInfoList) {
+        if (dirInfo.path.find("udmf_fuse") != std::string::npos) {
+            hasUdmfFuse = true;
+        }
+        if (dirInfo.path.find("clipboard_fuse") != std::string::npos) {
+            hasClipboardFuse = true;
+        }
+    }
+    EXPECT_TRUE(hasUdmfFuse);
+    EXPECT_TRUE(hasClipboardFuse);
+}
+
+/**
+ * @tc.name: UserPathResolverTest_GetVirtualPath_UdmfClipFuse
  * @tc.desc: Verify the GetAppDataMountNodeList.
  * @tc.type: FUNC
  * @tc.require: AR000H09L6

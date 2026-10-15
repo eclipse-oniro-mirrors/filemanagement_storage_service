@@ -162,6 +162,20 @@ bool IsPathStartWithCloudDisk(int32_t userId, const std::string &dstPath)
     return false;
 }
 
+bool IsPathStartWithUdmfClip(int32_t userId, const std::string &dstPath)
+{
+    const std::string udmfDir = "/mnt/data/" + std::to_string(userId) + "/udmf_fuse";
+    if (dstPath.compare(0, udmfDir.size(), udmfDir) == 0) {
+        return true;
+    }
+    const std::string clipDir = "/mnt/data/" + std::to_string(userId) + "/clipboard_fuse";
+    if (dstPath.compare(0, clipDir.size(), clipDir) == 0) {
+        return true;
+    }
+    LOGE("path %{public}s is not start with udmf_fuse or clipboard_fuse", dstPath.c_str());
+    return false;
+}
+
 bool CheckPkgNameRange(const std::string &pkgName)
 {
     if (pkgName.empty()) {

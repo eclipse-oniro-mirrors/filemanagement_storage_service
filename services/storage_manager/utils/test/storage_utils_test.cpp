@@ -389,5 +389,85 @@ HWTEST_F(StorageUtilsTest, IsPathStartWithCloudDisk_UserIdMismatch, testing::ext
 
     GTEST_LOG_(INFO) << "IsPathStartWithCloudDisk_UserIdMismatch end";
 }
+
+/**
+ * @tc.number: SUB_STORAGE_IsPathStartWithUdmfClip_ValidUdmfPrefix
+ * @tc.name: IsPathStartWithUdmfClip_ValidUdmfPrefix
+ * @tc.desc: Test path with valid udmf fuse prefix returns true.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(StorageUtilsTest, IsPathStartWithUdmfClip_ValidUdmfPrefix, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "IsPathStartWithUdmfClip_ValidUdmfPrefix start";
+
+    EXPECT_TRUE(IsPathStartWithUdmfClip(100, "/mnt/data/100/udmf_fuse/sub"));
+
+    GTEST_LOG_(INFO) << "IsPathStartWithUdmfClip_ValidUdmfPrefix end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_IsPathStartWithUdmfClip_ValidClipboardPrefix
+ * @tc.name: IsPathStartWithUdmfClip_ValidClipboardPrefix
+ * @tc.desc: Test path with valid clipboard fuse prefix returns true.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(StorageUtilsTest, IsPathStartWithUdmfClip_ValidClipboardPrefix, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "IsPathStartWithUdmfClip_ValidClipboardPrefix start";
+
+    EXPECT_TRUE(IsPathStartWithUdmfClip(100, "/mnt/data/100/clipboard_fuse/sub"));
+
+    GTEST_LOG_(INFO) << "IsPathStartWithUdmfClip_ValidClipboardPrefix end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_IsPathStartWithUdmfClip_Mismatch
+ * @tc.name: IsPathStartWithUdmfClip_Mismatch
+ * @tc.desc: Test path with mismatched prefix returns false.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(StorageUtilsTest, IsPathStartWithUdmfClip_Mismatch, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "IsPathStartWithUdmfClip_Mismatch start";
+
+    EXPECT_FALSE(IsPathStartWithUdmfClip(100, "/mnt/data/100/cloud_disk_fuse/sub"));
+
+    GTEST_LOG_(INFO) << "IsPathStartWithUdmfClip_Mismatch end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_IsPathStartWithUdmfClip_Empty
+ * @tc.name: IsPathStartWithUdmfClip_Empty
+ * @tc.desc: Test empty path returns false.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(StorageUtilsTest, IsPathStartWithUdmfClip_Empty, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "IsPathStartWithUdmfClip_Empty start";
+
+    EXPECT_FALSE(IsPathStartWithUdmfClip(100, ""));
+
+    GTEST_LOG_(INFO) << "IsPathStartWithUdmfClip_Empty end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_IsPathStartWithUdmfClip_UserIdMismatch
+ * @tc.name: IsPathStartWithUdmfClip_UserIdMismatch
+ * @tc.desc: Test path with different userId in prefix returns false.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(StorageUtilsTest, IsPathStartWithUdmfClip_UserIdMismatch, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "IsPathStartWithUdmfClip_UserIdMismatch start";
+
+    EXPECT_FALSE(IsPathStartWithUdmfClip(100, "/mnt/data/101/udmf_fuse/sub"));
+
+    GTEST_LOG_(INFO) << "IsPathStartWithUdmfClip_UserIdMismatch end";
+}
 } // namespace StorageManager
 } // namespace OHOS

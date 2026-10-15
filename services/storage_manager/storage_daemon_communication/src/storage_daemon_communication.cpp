@@ -753,6 +753,36 @@ int32_t StorageDaemonCommunication::UMountCloudDiskFuse(int32_t userId, const st
     return proxy->UMountCloudDiskFuse(userId, path);
 }
 
+int32_t StorageDaemonCommunication::MountUdmfClipFuse(int32_t userId, const std::string &path, int32_t &fuseFd)
+{
+    int32_t err = Connect();
+    if (err != E_OK) {
+        LOGE("Connect failed");
+        return err;
+    }
+    auto proxy = GetStorageDaemon();
+    if (proxy == nullptr) {
+        LOGE("StorageDaemonCommunication::Connect service nullptr");
+        return E_SERVICE_IS_NULLPTR;
+    }
+    return proxy->MountUdmfClipFuse(userId, path, fuseFd);
+}
+
+int32_t StorageDaemonCommunication::UMountUdmfClipFuse(int32_t userId, const std::string &path)
+{
+    int32_t err = Connect();
+    if (err != E_OK) {
+        LOGE("Connect failed");
+        return err;
+    }
+    auto proxy = GetStorageDaemon();
+    if (proxy == nullptr) {
+        LOGE("StorageDaemonCommunication::Connect service nullptr");
+        return E_SERVICE_IS_NULLPTR;
+    }
+    return proxy->UMountUdmfClipFuse(userId, path);
+}
+
 int32_t StorageDaemonCommunication::IsFileOccupied(const std::string &path, const std::vector<std::string> &inputList,
     std::vector<std::string> &outputList, bool &isOccupy)
 {

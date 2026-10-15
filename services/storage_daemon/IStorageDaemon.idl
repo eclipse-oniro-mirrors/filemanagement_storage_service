@@ -171,4 +171,6 @@ interface OHOS.StorageDaemon.IStorageDaemon{
                                        [out] unsigned long dmDev);
      [ipccode 265] void MountCloudDiskFuse([in] int userId, [in] String path, [out] FileDescriptor fuseFd);
      [ipccode 266] void UMountCloudDiskFuse([in] int userId, [in] String path);
+     [ipccode 267] void MountUdmfClipFuse([in] int userId, [in] String path, [out] FileDescriptor fuseFd);
+     [ipccode 268] void UMountUdmfClipFuse([in] int userId, [in] String path);
 }

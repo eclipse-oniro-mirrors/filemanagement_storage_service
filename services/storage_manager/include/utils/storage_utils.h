@@ -38,6 +38,7 @@ bool IsUserUnlocked(int32_t userId);
 int32_t GetForegroundUserIDFromOs();
 bool IsPathStartWithDlp(const std::string &dstPath);
 bool IsPathStartWithCloudDisk(int32_t userId, const std::string &dstPath);
+bool IsPathStartWithUdmfClip(int32_t userId, const std::string &dstPath);
 bool CheckPkgNameRange(const std::string &pkgName);
 bool CheckAppIndexRange(int32_t appIndex);
 bool CheckLevelRange(uint32_t level);

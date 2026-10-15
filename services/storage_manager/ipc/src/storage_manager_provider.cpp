@@ -69,6 +69,8 @@ constexpr pid_t SPACE_ABILITY_SERVICE_UID = 7014;
 constexpr pid_t UPDATE_SERVICE_UID = 6666;
 constexpr pid_t DLP_UID = 3553;
 constexpr pid_t CLOUD_DISK_UID = 6161;
+constexpr pid_t UDMF_UID = 3012;
+constexpr pid_t CLIPBOARD_UID = 3816;
 constexpr bool ENCRYPTED = true;
 constexpr uint32_t MOUNT_MAX_WAIT_TIME = 2;
 const std::string MEDIALIBRARY_BUNDLE_NAME = "com.ohos.medialibrary.medialibrarydata";
@@ -1457,6 +1459,59 @@ int32_t StorageManagerProvider::UMountCloudDiskFuse(int32_t userId, const std::s
     auto& sdCommunication = StorageDaemonCommunication::GetInstance();
     err = sdCommunication.UMountCloudDiskFuse(userId, path);
     StorageRadar::ReportFucBehavior("UMountCloudDiskFuse", userId, "UMountCloudDiskFuse End", err);
+    return err;
+}
+
+int32_t StorageManagerProvider::MountUdmfClipFuse(int32_t userId, const std::string &path, int32_t &fuseFd)
+{
+    std::string message = "MountUdmfClipFuse Begin, path:" + path;
+    StorageRadar::ReportFucBehavior("MountUdmfClipFuse", userId, message, E_OK);
+    int32_t err = CheckUserIdRange(userId);
+    if (err != E_OK) {
+        return err;
+    }
+    if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER)) {
+        LOGE("MountUdmfClipFuse CheckClientPermission failed");
+        return E_PERMISSION_DENIED;
+    }
+    auto callUid = IPCSkeleton::GetCallingUid();
+    if (callUid != UDMF_UID && callUid != CLIPBOARD_UID) {
+        LOGE("MountUdmfClipFuse uid check error, calling uid %{public}d is invalid", callUid);
+        return E_PERMISSION_DENIED;
+    }
+    if (IsFilePathInvalid(path) || !IsPathStartWithUdmfClip(userId, path)) {
+        return E_PARAMS_INVALID;
+    }
+    fuseFd = -1;
+    auto& sdCommunication = StorageDaemonCommunication::GetInstance();
+    err = sdCommunication.MountUdmfClipFuse(userId, path, fuseFd);
+    StorageRadar::ReportFucBehavior("MountUdmfClipFuse", userId, "MountUdmfClipFuse End", err);
+    return err;
+}
+
+int32_t StorageManagerProvider::UMountUdmfClipFuse(int32_t userId, const std::string &path)
+{
+    std::string message = "UMountUdmfClipFuse Begin, path:" + path;
+    StorageRadar::ReportFucBehavior("UMountUdmfClipFuse", userId, message, E_OK);
+    int32_t err = CheckUserIdRange(userId);
+    if (err != E_OK) {
+        return err;
+    }
+    if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER)) {
+        LOGE("UMountUdmfClipFuse CheckClientPermission failed");
+        return E_PERMISSION_DENIED;
+    }
+    auto callUid = IPCSkeleton::GetCallingUid();
+    if (callUid != UDMF_UID && callUid != CLIPBOARD_UID) {
+        LOGE("UMountUdmfClipFuse uid check error, calling uid %{public}d is invalid", callUid);
+        return E_PERMISSION_DENIED;
+    }
+    if (IsFilePathInvalid(path) || !IsPathStartWithUdmfClip(userId, path)) {
+        return E_PARAMS_INVALID;
+    }
+    auto& sdCommunication = StorageDaemonCommunication::GetInstance();
+    err = sdCommunication.UMountUdmfClipFuse(userId, path);
+    StorageRadar::ReportFucBehavior("UMountUdmfClipFuse", userId, "UMountUdmfClipFuse End", err);
     return err;
 }
 

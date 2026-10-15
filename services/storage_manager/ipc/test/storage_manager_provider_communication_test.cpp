@@ -1032,5 +1032,159 @@ HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_UMountCloudDiskF
     g_testBundleMgrProxy = oldBundleMgrProxy;
     GTEST_LOG_(INFO) << "StorageManagerProviderTest_UMountCloudDiskFuse_005 end";
 }
+
+/**
+ * @tc.name: StorageManagerProviderTest_MountUdmfClipFuse_001
+ * @tc.desc: Verify MountUdmfClipFuse with valid UDMF uid and valid path prefix.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_MountUdmfClipFuse_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageManagerProviderTest_MountUdmfClipFuse_001 start";
+    ASSERT_TRUE(storageManagerProviderTest_ != nullptr);
+    ScopedTestUid uidGuard(UDMF_UID);
+    auto oldBundleMgrProxy = g_testBundleMgrProxy;
+    g_testBundleMgrProxy = new MockBundleMgrCloudDisk();
+    int32_t userId = 100;
+    std::string path = "/mnt/data/100/udmf_fuse/test";
+    OHOS::ForceCreateDirectory(path);
+    int32_t fuseFd = -1;
+    auto ret = storageManagerProviderTest_->MountUdmfClipFuse(userId, path, fuseFd);
+    EXPECT_NE(ret, E_PERMISSION_DENIED);
+    OHOS::ForceRemoveDirectory(path);
+    g_testBundleMgrProxy = oldBundleMgrProxy;
+    GTEST_LOG_(INFO) << "StorageManagerProviderTest_MountUdmfClipFuse_001 end";
+}
+
+/**
+ * @tc.name: StorageManagerProviderTest_MountUdmfClipFuse_002
+ * @tc.desc: Verify MountUdmfClipFuse returns E_USERID_RANGE when userId is invalid.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_MountUdmfClipFuse_002, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageManagerProviderTest_MountUdmfClipFuse_002 start";
+    ASSERT_TRUE(storageManagerProviderTest_ != nullptr);
+    int32_t userId = -1;
+    std::string path = "/mnt/data/100/udmf_fuse/test";
+    int32_t fuseFd = -1;
+    auto ret = storageManagerProviderTest_->MountUdmfClipFuse(userId, path, fuseFd);
+    EXPECT_EQ(ret, E_USERID_RANGE);
+    EXPECT_EQ(fuseFd, -1);
+    GTEST_LOG_(INFO) << "StorageManagerProviderTest_MountUdmfClipFuse_002 end";
+}
+
+/**
+ * @tc.name: StorageManagerProviderTest_MountUdmfClipFuse_003
+ * @tc.desc: Verify MountUdmfClipFuse returns E_PERMISSION_DENIED when not called by UDMF or clipboard.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_MountUdmfClipFuse_003, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageManagerProviderTest_MountUdmfClipFuse_003 start";
+    ASSERT_TRUE(storageManagerProviderTest_ != nullptr);
+    auto oldBundleMgrProxy = g_testBundleMgrProxy;
+    g_testBundleMgrProxy = nullptr;
+    int32_t userId = 100;
+    std::string path = "/mnt/data/100/udmf_fuse/test";
+    int32_t fuseFd = -1;
+    auto ret = storageManagerProviderTest_->MountUdmfClipFuse(userId, path, fuseFd);
+    EXPECT_EQ(ret, E_PERMISSION_DENIED);
+    g_testBundleMgrProxy = oldBundleMgrProxy;
+    GTEST_LOG_(INFO) << "StorageManagerProviderTest_MountUdmfClipFuse_003 end";
+}
+
+/**
+ * @tc.name: StorageManagerProviderTest_MountUdmfClipFuse_004
+ * @tc.desc: Verify MountUdmfClipFuse returns E_PARAMS_INVALID when path is invalid.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_MountUdmfClipFuse_004, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageManagerProviderTest_MountUdmfClipFuse_004 start";
+    ASSERT_TRUE(storageManagerProviderTest_ != nullptr);
+    ScopedTestUid uidGuard(CLIPBOARD_UID);
+    auto oldBundleMgrProxy = g_testBundleMgrProxy;
+    g_testBundleMgrProxy = new MockBundleMgrCloudDisk();
+    int32_t userId = 100;
+    std::string path = "../evil";
+    int32_t fuseFd = -1;
+    auto ret = storageManagerProviderTest_->MountUdmfClipFuse(userId, path, fuseFd);
+    EXPECT_EQ(ret, E_PARAMS_INVALID);
+    EXPECT_EQ(fuseFd, -1);
+    g_testBundleMgrProxy = oldBundleMgrProxy;
+    GTEST_LOG_(INFO) << "StorageManagerProviderTest_MountUdmfClipFuse_004 end";
+}
+
+/**
+ * @tc.name: StorageManagerProviderTest_MountUdmfClipFuse_005
+ * @tc.desc: Verify MountUdmfClipFuse returns E_PARAMS_INVALID when path does not match udmf_fuse or clipboard_fuse.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_MountUdmfClipFuse_005, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageManagerProviderTest_MountUdmfClipFuse_005 start";
+    ASSERT_TRUE(storageManagerProviderTest_ != nullptr);
+    ScopedTestUid uidGuard(UDMF_UID);
+    auto oldBundleMgrProxy = g_testBundleMgrProxy;
+    g_testBundleMgrProxy = new MockBundleMgrCloudDisk();
+    int32_t userId = 100;
+    std::string path = "/mnt/data/100/cloud_disk_fuse/test";
+    OHOS::ForceCreateDirectory(path);
+    int32_t fuseFd = -1;
+    auto ret = storageManagerProviderTest_->MountUdmfClipFuse(userId, path, fuseFd);
+    EXPECT_EQ(ret, E_PARAMS_INVALID);
+    OHOS::ForceRemoveDirectory(path);
+    g_testBundleMgrProxy = oldBundleMgrProxy;
+    GTEST_LOG_(INFO) << "StorageManagerProviderTest_MountUdmfClipFuse_005 end";
+}
+
+/**
+ * @tc.name: StorageManagerProviderTest_UMountUdmfClipFuse_001
+ * @tc.desc: Verify UMountUdmfClipFuse returns E_PERMISSION_DENIED when not called by UDMF or clipboard.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_UMountUdmfClipFuse_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageManagerProviderTest_UMountUdmfClipFuse_001 start";
+    ASSERT_TRUE(storageManagerProviderTest_ != nullptr);
+    auto oldBundleMgrProxy = g_testBundleMgrProxy;
+    g_testBundleMgrProxy = nullptr;
+    int32_t userId = 100;
+    std::string path = "/mnt/data/100/udmf_fuse/test";
+    auto ret = storageManagerProviderTest_->UMountUdmfClipFuse(userId, path);
+    EXPECT_EQ(ret, E_PERMISSION_DENIED);
+    g_testBundleMgrProxy = oldBundleMgrProxy;
+    GTEST_LOG_(INFO) << "StorageManagerProviderTest_UMountUdmfClipFuse_001 end";
+}
+
+/**
+ * @tc.name: StorageManagerProviderTest_UMountUdmfClipFuse_002
+ * @tc.desc: Verify UMountUdmfClipFuse returns E_PARAMS_INVALID when path prefix is invalid.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_UMountUdmfClipFuse_002, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageManagerProviderTest_UMountUdmfClipFuse_002 start";
+    ASSERT_TRUE(storageManagerProviderTest_ != nullptr);
+    ScopedTestUid uidGuard(CLIPBOARD_UID);
+    auto oldBundleMgrProxy = g_testBundleMgrProxy;
+    g_testBundleMgrProxy = new MockBundleMgrCloudDisk();
+    int32_t userId = 100;
+    std::string path = "/mnt/data/100/cloud_disk_fuse/test";
+    OHOS::ForceCreateDirectory(path);
+    auto ret = storageManagerProviderTest_->UMountUdmfClipFuse(userId, path);
+    EXPECT_EQ(ret, E_PARAMS_INVALID);
+    OHOS::ForceRemoveDirectory(path);
+    g_testBundleMgrProxy = oldBundleMgrProxy;
+    GTEST_LOG_(INFO) << "StorageManagerProviderTest_UMountUdmfClipFuse_002 end";
+}
 }
 }
