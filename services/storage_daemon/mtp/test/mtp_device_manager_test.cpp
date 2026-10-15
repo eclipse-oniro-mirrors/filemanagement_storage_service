@@ -174,6 +174,44 @@ HWTEST_F(MtpDeviceManagerTest, MountDeviceTest_004, TestSize.Level1)
 }
 
 /**
+ * @tc.name  : MountDeviceTest_005
+ * @tc.number: MountDeviceTest_005
+ * @tc.desc  : Test fork exec returns errno -> return the real errno for dfx report
+ */
+HWTEST_F(MtpDeviceManagerTest, MountDeviceTest_005, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "MountDeviceTest_005 start";
+
+    auto &manager = MtpDeviceManager::GetInstance();
+    manager.isMounting_ = false;
+    EXPECT_CALL(*fileUtilMoc_, IsDir(_)).WillOnce(Return(true));
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_WEXITSTATUS));
+    EXPECT_EQ(manager.MountDevice(deviceInfo), E_WEXITSTATUS);
+    EXPECT_FALSE(manager.isMounting_);
+
+    GTEST_LOG_(INFO) << "MountDeviceTest_005 end";
+}
+
+/**
+ * @tc.name  : MountDeviceTest_006
+ * @tc.number: MountDeviceTest_006
+ * @tc.desc  : Test fork exec succeeds with empty output -> return E_OK and reset isMounting
+ */
+HWTEST_F(MtpDeviceManagerTest, MountDeviceTest_006, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "MountDeviceTest_006 start";
+
+    auto &manager = MtpDeviceManager::GetInstance();
+    manager.isMounting_ = false;
+    EXPECT_CALL(*fileUtilMoc_, IsDir(_)).WillOnce(Return(true));
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(0));
+    EXPECT_EQ(manager.MountDevice(deviceInfo), E_OK);
+    EXPECT_FALSE(manager.isMounting_);
+
+    GTEST_LOG_(INFO) << "MountDeviceTest_006 end";
+}
+
+/**
  * @tc.name  : UmountDeviceTest_001
  * @tc.number: UmountDeviceTest_001
  * @tc.desc  : BadRemove=true, umount2 ok and remove ok, needNotify=false -> return E_OK and DelFolder called
@@ -252,6 +290,23 @@ HWTEST_F(MtpDeviceManagerTest, UmountDeviceTest_005, TestSize.Level1)
     EXPECT_EQ(manager.UmountDevice(deviceInfo, true, true), E_OK);
 
     GTEST_LOG_(INFO) << "UmountDeviceTest_005 end";
+}
+
+/**
+ * @tc.name  : UmountDeviceTest_006
+ * @tc.number: UmountDeviceTest_006
+ * @tc.desc  : BadRemove=false, umount ok and rmdir ok, needNotify=true -> return E_OK and notify client
+ */
+HWTEST_F(MtpDeviceManagerTest, UmountDeviceTest_006, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "UmountDeviceTest_006 start";
+
+    auto &manager = MtpDeviceManager::GetInstance();
+    EXPECT_CALL(*libraryFuncMock_, umount(_)).WillOnce(Return(0));
+    EXPECT_CALL(*libraryFuncMock_, rmdir(_)).WillRepeatedly(Return(0));
+    EXPECT_EQ(manager.UmountDevice(deviceInfo, true, false), E_OK);
+
+    GTEST_LOG_(INFO) << "UmountDeviceTest_006 end";
 }
 
 /**
