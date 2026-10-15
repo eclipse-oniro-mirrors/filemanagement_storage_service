@@ -1048,5 +1048,20 @@ int32_t StorageDaemonCommunication::GetSystemDataSize(int64_t &otherUidSizeSum)
     return proxy->GetSystemDataSize(otherUidSizeSum);
 }
 
+int32_t StorageDaemonCommunication::SetDirEncryptionPolicyWithKeyDesc(const std::string &dirPath,
+    uint32_t level, const std::string &keyDesc)
+{
+    int32_t err = Connect();
+    if (err != E_OK) {
+        LOGE("StorageDaemonCommunication::SetDirEncryptionPolicyWithKeyDesc Connect failed");
+        return err;
+    }
+    if (storageDaemon_ == nullptr) {
+        LOGE("StorageDaemonCommunication::SetDirEncryptionPolicyWithKeyDesc service nullptr");
+        return E_SERVICE_IS_NULLPTR;
+    }
+    return storageDaemon_->SetDirEncryptionPolicyWithKeyDesc(dirPath, level, keyDesc);
+}
+
 } // namespace StorageManager
 } // namespace OHOS

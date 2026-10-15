@@ -47,6 +47,8 @@ public:
     int32_t GetUserStorageStatsByType(int32_t userId, StorageStats &storageStats, const std::string& type) override;
     int32_t GetCurrentBundleStats(BundleStats &bundleStats, uint32_t statFlag) override;
     int32_t SetDirEncryptionPolicy(uint32_t userId, const std::string &dirPath, uint32_t type) override;
+    int32_t SetDirEncryptionPolicyWithKeyDesc(const std::string &dirPath, uint32_t level,
+                                               const std::string &keyDesc) override;
     int32_t EraseAllUserEncryptedKeys() override;
     int32_t UpdateUserAuth(uint32_t userId, uint64_t secureUid,
                            const std::vector<uint8_t> &token,

@@ -48,6 +48,12 @@ int32_t StorageManagerProxy::SetDirEncryptionPolicy(uint32_t userId, const std::
     return E_OK;
 }
 
+int32_t StorageManagerProxy::SetDirEncryptionPolicyWithKeyDesc(const std::string &dirPath,
+    uint32_t level, const std::string &keyDesc)
+{
+    return E_OK;
+}
+
 int32_t StorageManagerProxy::EraseAllUserEncryptedKeys()
 {
     return E_OK;

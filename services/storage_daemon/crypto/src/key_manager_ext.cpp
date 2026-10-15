@@ -15,6 +15,9 @@
 
 #include "key_manager_ext.h"
 
+#include <dlfcn.h>
+#include <vector>
+
 #include "directory_ex.h"
 #include "file_ex.h"
 #include "key_manager.h"
@@ -365,5 +368,105 @@ int KeyManagerExt::UpdateUserPublicDirPolicy(uint32_t userId)
     LOGI("[L3:KeyManagerExt] UpdateUserPublicDirPolicy: <<< EXIT SUCCESS <<< userId=%{public}u", userId);
     return ret;
 }
+
+void KeyManagerExt::CallPcEncExtGenerateUserFileKeys(int32_t userId)
+{
+#ifdef PC_ENCRYPTION_EXTENSION
+    void *handle = dlopen("libpc_encryption_ext_volume_user_api.z.so", RTLD_LAZY);
+    if (handle == nullptr) {
+        LOGE("[L1:StorageDaemon] CallPcEncExtGenerateUserFileKeys: dlopen failed, "
+             "userId=%{public}d, error=%{public}s", userId, dlerror());
+        return;
+    }
+    
+    auto func = (int32_t(*)(int32_t))dlsym(handle, "PC_ENC_EXT_GenerateUserFileKeys");
+    if (func == nullptr) {
+        LOGE("[L1:StorageDaemon] CallPcEncExtGenerateUserFileKeys: dlsym failed, "
+             "userId=%{public}d, error=%{public}s", userId, dlerror());
+        dlclose(handle);
+        return;
+    }
+    
+    int32_t ret = func(userId);
+    if (ret != E_OK) {
+        LOGE("[L1:StorageDaemon] CallPcEncExtGenerateUserFileKeys: failed, userId=%{public}d, ret=%{public}d",
+             userId, ret);
+    } else {
+        LOGI("[L1:StorageDaemon] CallPcEncExtGenerateUserFileKeys: success, userId=%{public}d", userId);
+    }
+    
+    dlclose(handle);
+#endif
+}
+
+void KeyManagerExt::CallPcEncExtActiveUserFileKey(int32_t userId, const std::vector<uint8_t> &token,
+    const std::vector<uint8_t> &secret)
+{
+#ifdef PC_ENCRYPTION_EXTENSION
+    void *handle = dlopen("libpc_encryption_ext_volume_user_api.z.so", RTLD_LAZY);
+    if (handle == nullptr) {
+        LOGE("[L1:StorageDaemon] CallPcEncExtActiveUserFileKey: dlopen failed, "
+             "userId=%{public}d, error=%{public}s", userId, dlerror());
+        return;
+    }
+    
+    auto func = (int32_t(*)(int32_t, std::vector<uint8_t>&, std::vector<uint8_t>&))
+        dlsym(handle, "PC_ENC_EXT_ActiveUserFileKey");
+    if (func == nullptr) {
+        LOGE("[L1:StorageDaemon] CallPcEncExtActiveUserFileKey: dlsym failed, "
+             "userId=%{public}d, error=%{public}s", userId, dlerror());
+        dlclose(handle);
+        return;
+    }
+    
+    std::vector<uint8_t> tokenCopy = token;
+    std::vector<uint8_t> secretCopy = secret;
+    int32_t ret = func(userId, tokenCopy, secretCopy);
+    if (ret != E_OK) {
+        LOGE("[L1:StorageDaemon] CallPcEncExtActiveUserFileKey: failed, userId=%{public}d, ret=%{public}d",
+             userId, ret);
+    } else {
+        LOGI("[L1:StorageDaemon] CallPcEncExtActiveUserFileKey: success, userId=%{public}d", userId);
+    }
+    
+    dlclose(handle);
+#endif
+}
+
+void KeyManagerExt::CallPcEncExtUpdateUserFileKeyAuth(int32_t userId, const std::vector<uint8_t> &token,
+    const std::vector<uint8_t> &oldSecret, const std::vector<uint8_t> &newSecret)
+{
+#ifdef PC_ENCRYPTION_EXTENSION
+    void *handle = dlopen("libpc_encryption_ext_volume_user_api.z.so", RTLD_LAZY);
+    if (handle == nullptr) {
+        LOGE("[L1:StorageDaemon] CallPcEncExtUpdateUserFileKeyAuth: dlopen failed, "
+             "userId=%{public}d, error=%{public}s", userId, dlerror());
+        return;
+    }
+    
+    auto func = (int32_t(*)(int32_t, std::vector<uint8_t>&, std::vector<uint8_t>&, std::vector<uint8_t>&))
+        dlsym(handle, "PC_ENC_EXT_UpdateUserFileKeyAuth");
+    if (func == nullptr) {
+        LOGE("[L1:StorageDaemon] CallPcEncExtUpdateUserFileKeyAuth: dlsym failed, "
+             "userId=%{public}d, error=%{public}s", userId, dlerror());
+        dlclose(handle);
+        return;
+    }
+    
+    std::vector<uint8_t> tokenCopy = token;
+    std::vector<uint8_t> oldSecretCopy = oldSecret;
+    std::vector<uint8_t> newSecretCopy = newSecret;
+    int32_t ret = func(userId, tokenCopy, oldSecretCopy, newSecretCopy);
+    if (ret != E_OK) {
+        LOGE("[L1:StorageDaemon] CallPcEncExtUpdateUserFileKeyAuth: failed, userId=%{public}d, ret=%{public}d",
+             userId, ret);
+    } else {
+        LOGI("[L1:StorageDaemon] CallPcEncExtUpdateUserFileKeyAuth: success, userId=%{public}d", userId);
+    }
+    
+    dlclose(handle);
+#endif
+}
+
 } // namespace StorageDaemon
 } // namespace OHOS

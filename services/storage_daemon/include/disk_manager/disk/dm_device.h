@@ -26,6 +26,8 @@ namespace OHOS {
 namespace StorageDaemon {
 
 constexpr const char *DM_CONTROL = "/dev/mapper/control";
+#define FDSAN_TAG 1
+const uint64_t NEW_TAG = static_cast<uint64_t>(0xD004301) << 32 | FDSAN_TAG;
 
 class DmDevice {
 public:
@@ -56,6 +58,7 @@ public:
             LOGE("open dm control failed: %{public}s", strerror(errno));
             return;
         }
+        fdsan_exchange_owner_tag(fd_, 0, NEW_TAG);
         paramsValid_ = true;
     }
     ~DmDevice()
@@ -64,7 +67,7 @@ public:
             RemoveDevice();
         }
         if (fd_ >= 0) {
-            close(fd_);
+            fdsan_close_with_tag(fd_, NEW_TAG);
             fd_ = -1;
         }
     }

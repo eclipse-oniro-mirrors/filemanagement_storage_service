@@ -420,6 +420,12 @@ int32_t MountManager::UMountCloudDiskFuse(int32_t userId, const std::string &pat
 {
     LOGI("[L2:MountManager] UMountCloudDiskFuse: >>> ENTER <<< userId=%{public}d, path=%{public}s",
         userId, path.c_str());
+    std::string checkPath = path;
+    if (!IsPathMounted(checkPath)) {
+        LOGI("[L2:MountManager] UMountCloudDiskFuse: path not mounted, skip umount");
+        return E_OK;
+    }
+
     auto startTime = StorageService::StorageRadar::RecordCurrentTime();
     int32_t ret = UMount2(path, MNT_DETACH);
     if (ret != E_OK && errno != ENOENT && errno != EINVAL) {
