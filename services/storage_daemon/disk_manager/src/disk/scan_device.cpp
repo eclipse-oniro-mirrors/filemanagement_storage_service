@@ -770,7 +770,7 @@ std::string ScanDevice::GetSerialNumber(const std::string &deviceName, const boo
         LOGE("GetSerialNumber: failed to get serial number for %{public}s", deviceName.c_str());
         return "Unknown";
     }
-    LOGI("GetSerialNumber success: %{public}s", serial.c_str());
+    LOGI("GetSerialNumber success: %{public}s", GetAnonyString(serial).c_str());
     return serial;
 }
 

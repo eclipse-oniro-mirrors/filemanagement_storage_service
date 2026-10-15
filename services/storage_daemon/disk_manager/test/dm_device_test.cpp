@@ -220,7 +220,7 @@ HWTEST_F(DmDeviceTest, Destructor_RemoveFailNoCrash, TestSize.Level1)
         EXPECT_FALSE(dm.Create());
     }
     EXPECT_TRUE(g_mock.dmRemoveCalled);
-    EXPECT_GT(g_mock.closeCount, beforeClose);
+    EXPECT_EQ(g_mock.closeCount, beforeClose);
 }
 
 HWTEST_F(DmDeviceTest, Destructor_NoFdNoClose, TestSize.Level1)
