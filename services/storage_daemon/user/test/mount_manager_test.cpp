@@ -1371,6 +1371,8 @@ HWTEST_F(MountManagerTest, Storage_Manager_MountManagerTest_UMountCloudDiskFuse_
     int32_t userId = 100;
     std::string path = "/mnt/data/100/cloud_disk_fuse/test_umount";
     ForceCreateDirectory(path);
+    EXPECT_CALL(*fileUtilMoc_, IsPathMounted(_)).WillRepeatedly(Return(true));
+
     errno = ENOENT;
     EXPECT_CALL(*fileUtilMoc_, UMount2(_, _)).WillOnce(Return(1));
     int32_t ret = MountManager::GetInstance().UMountCloudDiskFuse(userId, path);

@@ -284,6 +284,15 @@ int32_t KeyManager::SetDirEncryptionPolicy(uint32_t userId, const std::string &d
     return KeyManagerMock::iKeyManagerMock_->SetDirEncryptionPolicy(userId, dirPath, level);
 }
 
+int32_t KeyManager::SetDirEncryptionPolicyWithKeyDesc(const std::string &dirPath,
+    uint32_t level, const std::string &keyDesc)
+{
+    if (KeyManagerMock::iKeyManagerMock_ == nullptr) {
+        return E_OK;
+    }
+    return KeyManagerMock::iKeyManagerMock_->SetDirEncryptionPolicyWithKeyDesc(dirPath, level, keyDesc);
+}
+
 int32_t KeyManager::UpdateKeyContext(uint32_t userId, bool needRemoveTmpKey)
 {
     if (KeyManagerMock::iKeyManagerMock_ == nullptr) {

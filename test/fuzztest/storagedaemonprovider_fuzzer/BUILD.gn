@@ -94,6 +94,10 @@ ohos_fuzztest("StorageDaemonProviderFuzzTest") {
     defines += [ "DISK_MANAGER" ]
   }
 
+  if (enable_pc_encryption_extension) {
+    defines += [ "PC_ENCRYPTION_EXTENSION" ]
+  }
+
   deps = [
     "${storage_daemon_path}:sdc",
     "${storage_daemon_path}:storage_common_utils",

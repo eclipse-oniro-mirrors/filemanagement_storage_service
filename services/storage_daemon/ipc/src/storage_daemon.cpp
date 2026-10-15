@@ -14,6 +14,7 @@
  */
 
 #include "ipc/storage_daemon.h"
+#include "crypto/key_manager_ext.h"
 #include "file_ex.h"
 #include "utils/hi_audit.h"
 #include "utils/memory_reclaim_manager.h"
@@ -324,6 +325,11 @@ int32_t StorageDaemon::PrepareUserDirs(int32_t userId, uint32_t flags)
             StorageRadar::ReportUserManager("PrepareUserDirs::KeyManagerExt::GenerateUserKeys", userId, result,
                 extraData);
         }
+}
+#endif
+#ifdef PC_ENCRYPTION_EXTENSION
+    if (prepareRet == E_OK) {
+        std::thread([userId]() { KeyManagerExt::GetInstance().CallPcEncExtGenerateUserFileKeys(userId); }).detach();
     }
 #endif
     if (prepareRet == E_OK) {
@@ -565,6 +571,12 @@ int32_t StorageDaemon::UpdateUserAuth(uint32_t userId, uint64_t secureUid,
         };
         StorageRadar::GetInstance().RecordFunctionResult(parameterRes);
     }
+#ifdef PC_ENCRYPTION_EXTENSION
+    std::thread([userId, token, oldSecret, newSecret]() {
+        KeyManagerExt::GetInstance().CallPcEncExtUpdateUserFileKeyAuth(
+            static_cast<int32_t>(userId), token, oldSecret, newSecret);
+    }).detach();
+#endif
     LOGI("[L1:StorageDaemon] UpdateUserAuth: <<< EXIT SUCCESS <<< userId=%{public}u", userId);
     return ret;
 #else
@@ -1073,7 +1085,12 @@ int32_t StorageDaemon::ActiveUserKey(uint32_t userId, const std::vector<uint8_t>
         StorageRadar::ReportUserKeyResult("ActiveUserKey::KeyManagerExt", userId, result, "",
             "KeyManagerExt ActiveUserKey failed, userId=" + std::to_string(userId) +
             ", ret=" + std::to_string(result));
-    }
+}
+#endif
+#ifdef PC_ENCRYPTION_EXTENSION
+    std::thread([userId, token, secret]() {
+        KeyManagerExt::GetInstance().CallPcEncExtActiveUserFileKey(static_cast<int32_t>(userId), token, secret);
+    }).detach();
 #endif
     LOGI("[L1:StorageDaemon] ActiveUserKey: <<< EXIT SUCCESS <<< userId=%{public}d", userId);
     MemoryReclaimManager::ScheduleReclaimCurrentProcess(ACTIVE_USER_KEY_DELAY_SECOND);
@@ -1911,7 +1928,8 @@ int32_t StorageDaemon::IsDirPathSupport(const std::string &dirPath)
         LOGE("[L1:StorageDaemon] IsDirPathSupport: <<< EXIT FAILED <<< dirPath is not dir");
         return E_NOT_DIR_PATH;
     }
-    if (strncmp(dirPath.c_str(), ANCO_DIR, strlen(ANCO_DIR)) != 0) {
+    if (strncmp(dirPath.c_str(), ANCO_DIR, strlen(ANCO_DIR)) != 0 &&
+        strncmp(dirPath.c_str(), MNT_DATA_VOL_DIR, strlen(MNT_DATA_VOL_DIR)) != 0) {
         LOGE("[L1:StorageDaemon] IsDirPathSupport: <<< EXIT FAILED <<< dir is not permission");
         return E_PARAMS_INVALID;
     }
@@ -2022,5 +2040,29 @@ void StorageDaemon::UpgradeEl5AuthType(uint32_t userId, const std::vector<uint8_
 #endif
     LOGI("[L1:StorageDaemon] UpgradeEl5AuthType: <<< EXIT <<<");
 }
+
+int32_t StorageDaemon::SetDirEncryptionPolicyWithKeyDesc(const std::string &dirPath,
+    uint32_t level, const std::string &keyDesc)
+{
+    LOGI("[L1:StorageDaemon] SetDirEncryptionPolicyWithKeyDesc: >>> ENTER <<< level=%{public}u", level);
+#ifdef USER_CRYPTO_MANAGER
+    auto ret = IsDirPathSupport(dirPath);
+    if (ret != E_OK) {
+        LOGE("[L1:StorageDaemon] SetDirEncryptionPolicyWithKeyDesc: IsDirPathSupport failed, ret=%{public}d", ret);
+        return ret;
+    }
+    ret = KeyManager::GetInstance().SetDirEncryptionPolicyWithKeyDesc(dirPath, level, keyDesc);
+    if (ret != E_OK) {
+        LOGE("[L1:StorageDaemon] SetDirEncryptionPolicyWithKeyDesc: failed, ret=%{public}d", ret);
+        return ret;
+    }
+    LOGI("[L1:StorageDaemon] SetDirEncryptionPolicyWithKeyDesc: <<< EXIT SUCCESS <<<");
+    return ret;
+#else
+    LOGE("[L1:StorageDaemon] SetDirEncryptionPolicyWithKeyDesc: not supported");
+    return E_NOT_SUPPORT;
+#endif
+}
+
 } // namespace StorageDaemon
 } // namespace OHOS

@@ -542,7 +542,7 @@ HWTEST_F(StorageDaemonCommunicationTest, Daemon_communication_CompleteAddUser_00
  * @tc.size: MEDIUM
  * @tc.type: FUNC
  * @tc.level Level 1
- * @tc.require:
+ * @tc.require: issueI9G5A0
  */
 HWTEST_F(StorageDaemonCommunicationTest, Daemon_communication_EraseAllUserEncryptedKeys_0000, TestSize.Level1)
 {
@@ -922,7 +922,7 @@ HWTEST_F(StorageDaemonCommunicationTest, Daemon_communication_IsFileOccupied_000
  * @tc.size: MEDIUM
  * @tc.type: FUNC
  * @tc.level Level 1
- * @tc.require:
+ * @tc.require: issueI9G5A0
  */
 HWTEST_F(StorageDaemonCommunicationTest, Daemon_communication_GetDataSizeByPath_0000, testing::ext::TestSize.Level1)
 {
@@ -963,6 +963,33 @@ HWTEST_F(StorageDaemonCommunicationTest, Daemon_communication_ListUserdataDirInf
     int32_t ret = sdCommunication.ListUserdataDirInfo(scanDirs);
     EXPECT_EQ(ret, E_OK);
     GTEST_LOG_(INFO) << "StorageDaemonCommunicationTest-end Daemon_communication_ListUserdataDirInfo_001 SUCCESS";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_Daemon_communication_SetDirEncryptionPolicyWithKeyDesc_0000
+ * @tc.name: Daemon_communication_SetDirEncryptionPolicyWithKeyDesc_0000
+ * @tc.desc: Test function of SetDirEncryptionPolicyWithKeyDesc interface for SUCCESS.
+ * @tc.size: MEDIUM
+ * @tc.type: FUNC
+ * @tc.level Level 1
+ * @tc.require: issueI9G5A0
+ */
+HWTEST_F(StorageDaemonCommunicationTest, Daemon_communication_SetDirEncryptionPolicyWithKeyDesc_0000,
+    testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonCommunicationTest-begin SetDirEncryptionPolicyWithKeyDesc_0000 SUCCESS";
+    auto& sdCommunication = StorageDaemonCommunication::GetInstance();
+    std::string dirPath = "/data/service/test";
+    uint32_t level = 2;
+    std::string keyDesc = "0123456789abcdef0123456789abcdef";
+
+    int32_t result = sdCommunication.SetDirEncryptionPolicyWithKeyDesc(dirPath, level, keyDesc);
+    if (g_fscryptEnable) {
+        EXPECT_EQ(result, E_OK);
+    } else {
+        EXPECT_EQ(result, E_NOT_SUPPORT);
+    }
+    GTEST_LOG_(INFO) << "StorageDaemonCommunicationTest-end SetDirEncryptionPolicyWithKeyDesc_0000 SUCCESS";
 }
 
 /**

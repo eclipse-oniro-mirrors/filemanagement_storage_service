@@ -2003,4 +2003,4 @@ HWTEST_F(StorageDaemonTest, StorageDaemonTest_EraseAllUserEncryptedKeys_002, Tes
 #endif
 } // Test
 } // STORAGE_DAEMON
-} // OHOS
+} // namespace OHOS

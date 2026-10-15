@@ -126,6 +126,8 @@ public:
     virtual int32_t QueryOccupiedSpaceForSa(std::vector<UidSaInfo> &vec, int64_t &totalSize,
         const std::map<int32_t, std::string> &bundleNameAndUid, int32_t type) override;
     virtual int32_t SetDirEncryptionPolicy(uint32_t userId, const std::string &dirPath, uint32_t level) override;
+    virtual int32_t SetDirEncryptionPolicyWithKeyDesc(const std::string &dirPath, uint32_t level,
+                                                      const std::string &keyDesc) override;
     virtual int32_t CreateUserDir(const std::string &path, mode_t mode, uid_t uid, gid_t gid) override;
     virtual int32_t GetDqBlkSpacesByUids(const std::vector<int32_t> &uids,
         std::vector<NextDqBlk> &dqBlks) override;

@@ -428,6 +428,35 @@ int32_t StorageManagerProvider::SetDirEncryptionPolicy(uint32_t userId, const st
 #endif
 }
 
+int32_t StorageManagerProvider::SetDirEncryptionPolicyWithKeyDesc(const std::string &dirPath,
+    uint32_t level, const std::string &keyDesc)
+{
+    std::string message =
+        "SetDirEncryptionPolicyWithKeyDesc Begin, dirPath: " + GetAnonyString(dirPath)
+        + " level: " + std::to_string(level);
+    StorageRadar::ReportFucBehavior("SetDirEncryptionPolicyWithKeyDesc", DEFAULT_USERID, message, E_OK);
+    if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER_CRYPT)) {
+        return E_PERMISSION_DENIED;
+    }
+    if (IsFilePathInvalid(dirPath)) {
+        return E_PARAMS_INVALID;
+    }
+    if (!CheckLevelRange(level)) {
+        LOGE("StorageManagerProvider::SetDirEncryptionPolicyWithKeyDesc level is out of range");
+        return E_PARAMS_INVALID;
+    }
+#ifdef USER_CRYPTO_MANAGER
+    LOGI("StorageManagerProvider::SetDirEncryptionPolicyWithKeyDesc start");
+    auto& sdCommunication = StorageDaemonCommunication::GetInstance();
+    int32_t err = sdCommunication.SetDirEncryptionPolicyWithKeyDesc(dirPath, level, keyDesc);
+    StorageRadar::ReportFucBehavior("SetDirEncryptionPolicyWithKeyDesc", DEFAULT_USERID,
+        "SetDirEncryptionPolicyWithKeyDesc End", err);
+    return err;
+#else
+    return E_OK;
+#endif
+}
+
 int32_t StorageManagerProvider::GetSystemSize(int64_t &systemSize)
 {
     if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER)) {
@@ -1387,6 +1416,7 @@ int32_t StorageManagerProvider::MountCloudDiskFuse(int32_t userId, const std::st
         LOGE("MountCloudDiskFuse permissionCheck error, "
              "calling uid now is %{public}d, should be CLOUD_DISK_UID: %{public}d",
              IPCSkeleton::GetCallingUid(), CLOUD_DISK_UID);
+
         return E_PERMISSION_DENIED;
     }
     if (IsFilePathInvalid(path)) {
@@ -1415,6 +1445,7 @@ int32_t StorageManagerProvider::UMountCloudDiskFuse(int32_t userId, const std::s
         LOGE("UMountCloudDiskFuse permissionCheck error, "
              "calling uid now is %{public}d, should be CLOUD_DISK_UID: %{public}d",
              IPCSkeleton::GetCallingUid(), CLOUD_DISK_UID);
+
         return E_PERMISSION_DENIED;
     }
     if (IsFilePathInvalid(path)) {

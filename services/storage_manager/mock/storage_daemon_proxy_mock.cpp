@@ -73,6 +73,12 @@ int32_t StorageDaemonProxy::SetDirEncryptionPolicy(uint32_t userId, const std::s
     return E_OK;
 }
 
+int32_t StorageDaemonProxy::SetDirEncryptionPolicyWithKeyDesc(const std::string &dirPath, uint32_t level,
+                                                              const std::string &keyDesc)
+{
+    return E_OK;
+}
+
 int32_t StorageDaemonProxy::EraseAllUserEncryptedKeys(const std::vector<int32_t> &localIdList)
 {
     return E_OK;
