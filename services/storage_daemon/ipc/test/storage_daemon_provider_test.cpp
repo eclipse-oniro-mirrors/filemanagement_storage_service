@@ -3566,6 +3566,5 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_UMountUdmfClipFuse
     OHOS::ForceRemoveDirectory(path);
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_UMountUdmfClipFuse_002 end";
 }
-
 } // namespace StorageDaemon
 } // namespace OHOS
