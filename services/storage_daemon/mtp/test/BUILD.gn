@@ -42,6 +42,7 @@ ohos_unittest("mtp_device_manager_test") {
     "${storage_daemon_path}/mtpfs/include",
     "${storage_service_common_path}/include",
     "${storage_daemon_path}/include",
+    "${storage_daemon_path}/include/utils",
     "${storage_service_path}/utils/include",
     "${storage_service_path}/storage_manager/include",
     "${storage_interface_path}/innerkits/storage_manager/native",
@@ -129,6 +130,7 @@ ohos_unittest("mtp_device_monitor_test") {
     "openssl:libcrypto_shared",
     "samgr:samgr_proxy",
     "usb_manager:usbsrv_client",
+    "cJSON:cjson",
   ]
 
   if (support_open_source_libmtp) {
@@ -138,8 +140,10 @@ ohos_unittest("mtp_device_monitor_test") {
     ]
   }
   if (support_open_source_libgphoto2) {
+    defines += [ "SUPPORT_OPEN_SOURCE_GPHOTO2_DEVICE" ]
     external_deps += [
         "libgphoto2:libgphoto2",
+        "libusb:libusb",
     ]
   }
 

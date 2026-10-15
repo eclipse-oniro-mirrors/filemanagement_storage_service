@@ -56,6 +56,8 @@ private:
     MtpDeviceManager();
     ~MtpDeviceManager();
 
+    void NotifyUmountResult(const MtpDeviceInfo &device, bool needNotify, bool isBadRemove);
+
     bool isMounting_ = false;
 };
 } // namespace StorageDaemon

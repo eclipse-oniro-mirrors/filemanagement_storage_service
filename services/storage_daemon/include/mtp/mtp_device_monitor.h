@@ -63,10 +63,11 @@ private:
     bool IsHwitDevice();
     int32_t MountMtpDevice(const std::vector<MtpDeviceInfo> &monitorDevices);
     int32_t GetMtpDevices(std::vector<MtpDeviceInfo> &devInfos, uint32_t busLocation, uint8_t devNum);
-    int32_t GetGphotoDevices(std::vector<MtpDeviceInfo> &devInfos, uint32_t busLocation, uint8_t devNum);
+    int32_t GetGphotoDevices(std::vector<MtpDeviceInfo> &devInfos, uint32_t busLocation, uint8_t devNum,
+                             bool reportFault = true);
     bool IsCameraDevice(uint16_t vendorId, uint16_t productId);
     int32_t MountDeviceByType(DeviceType deviceType, std::vector<MtpDeviceInfo> &devInfos,
-                              const std::string &deviceTypeName, uint32_t busLocation, uint8_t devNum);
+                              uint32_t busLocation, uint8_t devNum, bool isFallback = false);
     void SetPtpMode(const std::vector<MtpDeviceInfo> &devInfos, bool isCamera);
     bool NeedCameraFallback(const std::vector<MtpDeviceInfo> &detectedMtpDevices) const;
     void StopMonitor();
