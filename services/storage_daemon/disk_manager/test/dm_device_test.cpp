@@ -113,6 +113,16 @@ HWTEST_F(DmDeviceTest, Create_InvalidParams, TestSize.Level1)
     g_mock.blkGetSize64Fail = true;
     DmDevice dm6(TEST_DEV_PATH, 0, 100);
     EXPECT_FALSE(dm6.Create());
+
+    // 路径不含 '/' 时 GetDmName 返回空 -> dmName 为空 -> 拒绝
+    DmDevice dm7("noslash_dev", 0, 100);
+    EXPECT_FALSE(dm7.Create());
+ 
+    // 路径长度超过 PATH_MAX 时拒绝
+    std::string overLimit(PATH_MAX + 1, 'x');
+    overLimit = "/dev/block/" + overLimit;
+    DmDevice dm8(overLimit, 0, 100);
+    EXPECT_FALSE(dm8.Create());
 }
 
 // ==================== I/O 失败 ====================
