@@ -3393,13 +3393,25 @@ int32_t StorageDaemonProvider::CreateDmLinear(const std::string &sourceDevPath,
                                               uint64_t &dmDev)
 {
 #ifdef DISK_MANAGER
-    LOGI("[L1:StorageDaemonProvider] CreateDmLinear: >>> ENTER <<< source=%{public}s, "
+    LOGI("[L1:StorageDaemonProvider] CreateDmLinear: >>> ENTER <<< source=%{public}.128s, "
          "start=%{public}llu, count=%{public}llu",
          sourceDevPath.c_str(),
          static_cast<unsigned long long>(startSector),
          static_cast<unsigned long long>(sectorCount));
  
-    DmDevice dmDevice(sourceDevPath, startSector, sectorCount);
+    auto uid = IPCSkeleton::GetCallingUid();
+    if (uid != DISK_MANAGER_UID) {
+        LOGE("[L1:StorageDaemonProvider] CreateDmLinear: <<< EXIT FAILED <<< uid=%{public}d is invalid", uid);
+        return E_PERMISSION_DENIED;
+    }
+    std::string verifiedPath;
+    int32_t ret = ValidateBlockDevicePath(sourceDevPath, verifiedPath);
+    if (ret != E_OK) {
+        LOGE("[L1:StorageDaemonProvider] CreateDmLinear: invalid sourceDevPath");
+        return ret;
+    }
+ 
+    DmDevice dmDevice(verifiedPath, startSector, sectorCount);
     if (!dmDevice.Create()) {
         LOGE("[L1:StorageDaemonProvider] CreateDmLinear: Create failed");
         return E_ERR;

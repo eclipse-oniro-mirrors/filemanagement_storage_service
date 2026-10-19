@@ -2795,6 +2795,62 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_ValidateBlockDevic
 #endif
 }
 
+/**
+ * @tc.name: StorageDaemonProviderTest_CreateDmLinear_001
+ * @tc.desc: Verify CreateDmLinear returns E_PERMISSION_DENIED when calling uid is not DISK_MANAGER_UID.
+ * @tc.type: FUNC
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_CreateDmLinear_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_CreateDmLinear_001 start";
+    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
+    uint64_t dmDev = 0;
+    SetCallingUid(STORAGE_MANAGER_UID);
+#ifdef DISK_MANAGER
+    EXPECT_EQ(storageDaemonProviderTest_->CreateDmLinear("/dev/block/ut_test_dev", 0, 100, dmDev),
+              E_PERMISSION_DENIED);
+#else
+    EXPECT_EQ(storageDaemonProviderTest_->CreateDmLinear("/dev/block/ut_test_dev", 0, 100, dmDev),
+              E_NOT_SUPPORT);
+#endif
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_CreateDmLinear_001 end";
+}
+ 
+/**
+ * @tc.name: StorageDaemonProviderTest_CreateDmLinear_002
+ * @tc.desc: Verify CreateDmLinear rejects invalid sourceDevPath via ValidateBlockDevicePath.
+ * @tc.type: FUNC
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_CreateDmLinear_002, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_CreateDmLinear_002 start";
+    SetCallingUid(DISK_MANAGER_UID);
+    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
+    uint64_t dmDev = 0;
+#ifdef DISK_MANAGER
+    // empty path
+    EXPECT_EQ(storageDaemonProviderTest_->CreateDmLinear("", 0, 100, dmDev), E_PARAMS_INVALID);
+    // path traversal
+    EXPECT_EQ(storageDaemonProviderTest_->CreateDmLinear("/dev/block/../sda", 0, 100, dmDev),
+              E_PARAMS_INVALID);
+    // wrong prefix
+    EXPECT_EQ(storageDaemonProviderTest_->CreateDmLinear("/dev/invalid/sda1", 0, 100, dmDev),
+              E_PARAMS_INVALID);
+    // path length >= PATH_MAX
+    EXPECT_EQ(storageDaemonProviderTest_->CreateDmLinear(std::string(PATH_MAX, 'a'), 0, 100, dmDev),
+              E_PARAMS_INVALID);
+#else
+    EXPECT_EQ(storageDaemonProviderTest_->CreateDmLinear("", 0, 100, dmDev), E_NOT_SUPPORT);
+    EXPECT_EQ(storageDaemonProviderTest_->CreateDmLinear("/dev/block/../sda", 0, 100, dmDev),
+              E_NOT_SUPPORT);
+    EXPECT_EQ(storageDaemonProviderTest_->CreateDmLinear("/dev/invalid/sda1", 0, 100, dmDev),
+              E_NOT_SUPPORT);
+    EXPECT_EQ(storageDaemonProviderTest_->CreateDmLinear(std::string(PATH_MAX, 'a'), 0, 100, dmDev),
+              E_NOT_SUPPORT);
+#endif
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_CreateDmLinear_002 end";
+}
+
 HWTEST_F(StorageDaemonProviderTest, FormatPartition_CmdPathTraversal_001, TestSize.Level1)
 {
     SetCallingUid(DISK_MANAGER_UID);
