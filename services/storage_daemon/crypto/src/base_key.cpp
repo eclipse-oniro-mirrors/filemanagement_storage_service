@@ -1005,26 +1005,31 @@ bool BaseKey::ClearKey(const std::string &mnt)
         message = "startTime2: " + std::to_string(startTime2);
         HiAudit::GetInstance().WriteStart("ClearKey WipingActionDir", message);
         WipingActionDir(dir_);
+        HiAudit::GetInstance().WriteEnd("ClearKey WipingActionDir", 0);
         auto startTime3 = StorageService::StorageRadar::RecordCurrentTime();
         message = "startTime3: " + std::to_string(startTime3);
         HiAudit::GetInstance().WriteStart("ClearKey GetBackupDir", message);
         std::string backupDir;
         KeyBackup::GetInstance().GetBackupDir(dir_, backupDir);
         WipingActionDir(backupDir);
+        HiAudit::GetInstance().WriteEnd("ClearKey GetBackupDir", 0);
         auto startTime4 = StorageService::StorageRadar::RecordCurrentTime();
         message = "startTime4: " + std::to_string(startTime4);
         HiAudit::GetInstance().WriteStart("ClearKey RemoveNode", message);
         KeyBackup::GetInstance().RemoveNode(backupDir);
+        HiAudit::GetInstance().WriteEnd("ClearKey RemoveNode", 0);
         auto startTime5 = StorageService::StorageRadar::RecordCurrentTime();
         message = "startTime5: " + std::to_string(startTime5);
-        HiAudit::GetInstance().WriteStart("ClearKey ForceRemoveDirectory", message);
+        HiAudit::GetInstance().WriteStart("ClearKey ForceRemoveDirectory backupDir", message);
         LOGI("[L4:BaseKey] ClearKey: force remove backupDir, %{public}s", backupDir.c_str());
         OHOS::ForceRemoveDirectory(backupDir);
+        HiAudit::GetInstance().WriteEnd("ClearKey ForceRemoveDirectory backupDir", 0);
         auto startTime6 = StorageService::StorageRadar::RecordCurrentTime();
         message = "startTime6: " + std::to_string(startTime6);
-        HiAudit::GetInstance().WriteStart("ClearKey ForceRemoveDirectory", message);
+        HiAudit::GetInstance().WriteStart("ClearKey ForceRemoveDirectory dir_", message);
         LOGI("[L4:BaseKey] ClearKey: force remove dir_, %{public}s", dir_.c_str());
         bool removeRet = OHOS::ForceRemoveDirectory(dir_);
+        HiAudit::GetInstance().WriteEnd("ClearKey ForceRemoveDirectory dir_", 0);
         if (!removeRet) {
             LOGE("[L4:BaseKey] ClearKey: ForceRemoveDirectory failed");
             StorageService::StorageRadar::ReportUserKeyResult("ClearKey", 0, removeRet, "",
