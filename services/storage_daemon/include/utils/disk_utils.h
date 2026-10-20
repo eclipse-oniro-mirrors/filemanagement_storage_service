@@ -52,7 +52,7 @@ int IsBlankCD(const std::string &diskPath, bool &isBlankCD);
 int IsExistCD(const std::string &diskPath, bool &isExistCD);
 int GetCDStatus(const char *device, int &status);
 int GetCdTotalCapacity(int fd, int64_t &cdTotalCapacity);
-int GetCdUsedCapacity(int fd, int64_t &cdUsedCapacity);
+int GetDiscUsedCapacity(int fd, int64_t totalSize, int64_t &discUsedCapacity);
 int GetDvdTotalCapacity(int fd, int64_t &dvdTotalCapacity);
 int GetDvdUsedCapacity(int fd, int64_t &dvdUsedCapacity);
 int GetDvdConfiguration(int fd, int &dvdMedia);

@@ -1362,117 +1362,73 @@ HWTEST_F(ExtDiskUtilsTest, GetDiscCapacity_CapacityCallFailed, TestSize.Level1)
 }
 
 /**
- * @tc.name: IsDvdRwRestrictedOverwrite_RestrictedMode
- * @tc.desc: Verify IsDvdRwRestrictedOverwrite returns true when profile is 0x13 (restricted overwrite).
+ * @tc.name: GetDiscCapacity_DvdRwGetDvdTotalCapacitySuccess
+ * @tc.desc: Verify GetDiscCapacity returns capacity when GetDvdTotalCapacity succeeds for DVD-RW.
  * @tc.type: FUNC
  */
-HWTEST_F(ExtDiskUtilsTest, IsDvdRwRestrictedOverwrite_RestrictedMode, TestSize.Level1)
+HWTEST_F(ExtDiskUtilsTest, GetDiscCapacity_DvdRwGetDvdTotalCapacitySuccess, TestSize.Level1)
 {
-    GTEST_LOG_(INFO) << "IsDvdRwRestrictedOverwrite_RestrictedMode start";
-    EXPECT_CALL(*diskUtilMoc_, GetDvdConfiguration(_, _))
-        .WillOnce(Invoke([](int, int &media) { media = 0x13; return E_OK; }));
-    EXPECT_TRUE(DiskUtils::IsDvdRwRestrictedOverwrite(0));
-    GTEST_LOG_(INFO) << "IsDvdRwRestrictedOverwrite_RestrictedMode end";
-}
-
-/**
- * @tc.name: IsDvdRwRestrictedOverwrite_SequentialMode
- * @tc.desc: Verify IsDvdRwRestrictedOverwrite returns false when profile is 0x14 (sequential).
- * @tc.type: FUNC
- */
-HWTEST_F(ExtDiskUtilsTest, IsDvdRwRestrictedOverwrite_SequentialMode, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "IsDvdRwRestrictedOverwrite_SequentialMode start";
-    EXPECT_CALL(*diskUtilMoc_, GetDvdConfiguration(_, _))
-        .WillOnce(Invoke([](int, int &media) { media = 0x14; return E_OK; }));
-    EXPECT_FALSE(DiskUtils::IsDvdRwRestrictedOverwrite(0));
-    GTEST_LOG_(INFO) << "IsDvdRwRestrictedOverwrite_SequentialMode end";
-}
-
-/**
- * @tc.name: IsDvdRwRestrictedOverwrite_ConfigFailed
- * @tc.desc: Verify IsDvdRwRestrictedOverwrite returns false when GetDvdConfiguration fails.
- * @tc.type: FUNC
- */
-HWTEST_F(ExtDiskUtilsTest, IsDvdRwRestrictedOverwrite_ConfigFailed, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "IsDvdRwRestrictedOverwrite_ConfigFailed start";
-    EXPECT_CALL(*diskUtilMoc_, GetDvdConfiguration(_, _))
-        .WillOnce(Invoke([](int, int &) { return E_ERR; }));
-    EXPECT_FALSE(DiskUtils::IsDvdRwRestrictedOverwrite(0));
-    GTEST_LOG_(INFO) << "IsDvdRwRestrictedOverwrite_ConfigFailed end";
-}
-
-/**
- * @tc.name: GetDiscCapacity_DvdRwSequentialMode
- * @tc.desc: Verify GetDiscCapacity uses GetDvdTotalCapacity for DVD-RW in sequential mode.
- * @tc.type: FUNC
- */
-HWTEST_F(ExtDiskUtilsTest, GetDiscCapacity_DvdRwSequentialMode, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "GetDiscCapacity_DvdRwSequentialMode start";
-    // GetDvdConfiguration returns 0x14 (sequential) -> IsDvdRwRestrictedOverwrite returns false
-    // -> GetDvdTotalCapacity is called (external linkage, mockable)
-    EXPECT_CALL(*diskUtilMoc_, GetDvdConfiguration(_, _))
-        .WillOnce(Invoke([](int, int &media) { media = 0x14; return E_OK; }));
+    GTEST_LOG_(INFO) << "GetDiscCapacity_DvdRwGetDvdTotalCapacitySuccess start";
+    // GetDvdTotalCapacity succeeds with positive capacity -> no fallback needed
     EXPECT_CALL(*diskUtilMoc_, GetDvdTotalCapacity(_, _))
         .WillOnce(Invoke([](int, int64_t &cap) { cap = 4700372992L; return E_OK; }));
     EXPECT_EQ(DiskUtils::GetDiscCapacity(0, "DVD-RW"), 4700372992L);
-    GTEST_LOG_(INFO) << "GetDiscCapacity_DvdRwSequentialMode end";
+    GTEST_LOG_(INFO) << "GetDiscCapacity_DvdRwGetDvdTotalCapacitySuccess end";
 }
 
 /**
- * @tc.name: GetDiscCapacity_DvdRwRestrictedOverwriteMode
- * @tc.desc: Verify GetDiscCapacity uses GetDvdPlusRwTotalCapacity for DVD-RW in restricted overwrite mode.
+ * @tc.name: GetDiscCapacity_DvdRwFallbackToReadCapacity
+ * @tc.desc: Verify GetDiscCapacity falls back to GetDvdPlusRwTotalCapacity when GetDvdTotalCapacity fails.
  * @tc.type: FUNC
  */
-HWTEST_F(ExtDiskUtilsTest, GetDiscCapacity_DvdRwRestrictedOverwriteMode, TestSize.Level1)
+HWTEST_F(ExtDiskUtilsTest, GetDiscCapacity_DvdRwFallbackToReadCapacity, TestSize.Level1)
 {
-    GTEST_LOG_(INFO) << "GetDiscCapacity_DvdRwRestrictedOverwriteMode start";
-    // GetDvdConfiguration returns 0x13 (restricted overwrite)
-    // -> GetDvdPlusRwTotalCapacity is called (static, not mockable, uses real ioctl)
+    GTEST_LOG_(INFO) << "GetDiscCapacity_DvdRwFallbackToReadCapacity start";
+    // GetDvdTotalCapacity fails -> fallback to GetDvdPlusRwTotalCapacity (static, uses real ioctl)
     // With g_ioctlRet=0, ioctl succeeds but dataBuf is all zeros
     // -> blkCnt=0, blkSize=0 -> dvdTotalCapacity = (0+1)*0 = 0
-    EXPECT_CALL(*diskUtilMoc_, GetDvdConfiguration(_, _))
-        .WillOnce(Invoke([](int, int &media) { media = 0x13; return E_OK; }));
+    EXPECT_CALL(*diskUtilMoc_, GetDvdTotalCapacity(_, _))
+        .WillOnce(Invoke([](int, int64_t &) { return E_ERR; }));
     g_ioctlRet = 0;
     g_ioctlInfo = 0;
     EXPECT_EQ(DiskUtils::GetDiscCapacity(0, "DVD-RW"), 0);
-    GTEST_LOG_(INFO) << "GetDiscCapacity_DvdRwRestrictedOverwriteMode end";
+    GTEST_LOG_(INFO) << "GetDiscCapacity_DvdRwFallbackToReadCapacity end";
 }
 
 /**
- * @tc.name: GetDiscCapacity_DvdRwConfigFailed
- * @tc.desc: Verify GetDiscCapacity uses GetDvdTotalCapacity when GetDvdConfiguration fails (fallback to sequential).
+ * @tc.name: GetDiscCapacity_DvdRwZeroCapacityFallback
+ * @tc.desc: Verify GetDiscCapacity falls back to GetDvdPlusRwTotalCapacity when GetDvdTotalCapacity returns 0.
  * @tc.type: FUNC
  */
-HWTEST_F(ExtDiskUtilsTest, GetDiscCapacity_DvdRwConfigFailed, TestSize.Level1)
+HWTEST_F(ExtDiskUtilsTest, GetDiscCapacity_DvdRwZeroCapacityFallback, TestSize.Level1)
 {
-    GTEST_LOG_(INFO) << "GetDiscCapacity_DvdRwConfigFailed start";
-    // GetDvdConfiguration fails -> IsDvdRwRestrictedOverwrite returns false (treat as sequential)
-    // -> GetDvdTotalCapacity is called (external linkage, mockable)
-    EXPECT_CALL(*diskUtilMoc_, GetDvdConfiguration(_, _))
-        .WillOnce(Invoke([](int, int &) { return E_ERR; }));
+    GTEST_LOG_(INFO) << "GetDiscCapacity_DvdRwZeroCapacityFallback start";
+    // GetDvdTotalCapacity returns E_OK but totalSize=0 -> fallback to GetDvdPlusRwTotalCapacity
+    // With g_ioctlRet=0, ioctl succeeds but dataBuf is all zeros -> capacity = 0
     EXPECT_CALL(*diskUtilMoc_, GetDvdTotalCapacity(_, _))
-        .WillOnce(Invoke([](int, int64_t &cap) { cap = 4700372992L; return E_OK; }));
-    EXPECT_EQ(DiskUtils::GetDiscCapacity(0, "DVD-RW"), 4700372992L);
-    GTEST_LOG_(INFO) << "GetDiscCapacity_DvdRwConfigFailed end";
+        .WillOnce(Invoke([](int, int64_t &cap) { cap = 0; return E_OK; }));
+    g_ioctlRet = 0;
+    g_ioctlInfo = 0;
+    EXPECT_EQ(DiskUtils::GetDiscCapacity(0, "DVD-RW"), 0);
+    GTEST_LOG_(INFO) << "GetDiscCapacity_DvdRwZeroCapacityFallback end";
 }
 
 /**
- * @tc.name: GetDiscCapacity_DvdRwSequentialCapacityFailed
- * @tc.desc: Verify GetDiscCapacity returns 0 when GetDvdTotalCapacity fails for DVD-RW sequential mode.
+ * @tc.name: GetDiscCapacity_DvdRwBothCapacityFailed
+ * @tc.desc: Verify GetDiscCapacity returns 0 when both GetDvdTotalCapacity and GetDvdPlusRwTotalCapacity fail.
  * @tc.type: FUNC
  */
-HWTEST_F(ExtDiskUtilsTest, GetDiscCapacity_DvdRwSequentialCapacityFailed, TestSize.Level1)
+HWTEST_F(ExtDiskUtilsTest, GetDiscCapacity_DvdRwBothCapacityFailed, TestSize.Level1)
 {
-    GTEST_LOG_(INFO) << "GetDiscCapacity_DvdRwSequentialCapacityFailed start";
-    EXPECT_CALL(*diskUtilMoc_, GetDvdConfiguration(_, _))
-        .WillOnce(Invoke([](int, int &media) { media = 0x14; return E_OK; }));
+    GTEST_LOG_(INFO) << "GetDiscCapacity_DvdRwBothCapacityFailed start";
+    // GetDvdTotalCapacity fails -> fallback to GetDvdPlusRwTotalCapacity (static, uses real ioctl)
+    // g_ioctlRet=-1 -> SendScsiCmd fails -> GetDvdPlusRwTotalCapacity returns E_ERR -> ret != E_OK -> return 0
     EXPECT_CALL(*diskUtilMoc_, GetDvdTotalCapacity(_, _))
         .WillOnce(Invoke([](int, int64_t &) { return E_ERR; }));
+    g_ioctlRet = -1;
     EXPECT_EQ(DiskUtils::GetDiscCapacity(0, "DVD-RW"), 0);
-    GTEST_LOG_(INFO) << "GetDiscCapacity_DvdRwSequentialCapacityFailed end";
+    g_ioctlRet = 0;
+    GTEST_LOG_(INFO) << "GetDiscCapacity_DvdRwBothCapacityFailed end";
 }
 
 /**
@@ -1702,20 +1658,22 @@ HWTEST_F(ExtDiskUtilsTest, GetCapacity_SuccessWithUsedSizeEqualToTotal, TestSize
     int64_t totalSize = 0;
     int64_t freeSize = 0;
     // Use DVD-R which calls GetDvdTotalCapacity (external linkage, mock works)
-    // GetCDType is called TWICE: once by GetCapacity (line 1245) and once by
-    // IsCDBlank (line 732, called via AdjustBlankDiscCapacity)
+    // GetCDType is called TWICE: once by GetCapacity and once by
+    // IsCDBlank (called via AdjustBlankDiscCapacity)
     EXPECT_CALL(*diskUtilMoc_, GetCDType(_))
         .WillOnce(Return("DVD-R"))
         .WillOnce(Return("DVD-R"));
     EXPECT_CALL(*diskUtilMoc_, GetDvdTotalCapacity(_, _))
         .WillOnce(Invoke([](int, int64_t &cap) { cap = 4700372992L; return E_OK; }));
-    // AdjustBlankDiscCapacity -> IsCDBlank -> ReadCDDiscInfo via ioctl
-    g_ioctlRet = -1; // ReadCDDiscInfo fails
+    // GetDiscUsedCapacity (real impl) -> SendScsiCmd -> ioctl fails -> usedSize=-1
+    // -> GetUsedSizeFromSysfs fails -> usedSize=totalSize -> freeSize=0
+    // AdjustBlankDiscCapacity -> IsCDBlank -> ReadCDDiscInfo also fails (g_ioctlRet=-1)
+    g_ioctlRet = -1; // GetDiscUsedCapacity and ReadCDDiscInfo both fail
     EXPECT_CALL(*diskUtilMoc_, GetBlkidData(_, _)).WillOnce(Return("udf")); // non-empty -> not blank
     int32_t ret = DiskUtils::GetCapacity(testDevPath_, totalSize, freeSize);
     EXPECT_EQ(ret, E_OK);
     EXPECT_EQ(totalSize, 4700372992L);
-    EXPECT_EQ(freeSize, 0); // usedSize = -1 -> usedSize = totalSize -> freeSize = 0
+    EXPECT_EQ(freeSize, 0); // GetDiscUsedCapacity fails -> usedSize=totalSize -> freeSize=0
     g_ioctlRet = 0;
     GTEST_LOG_(INFO) << "GetCapacity_SuccessWithUsedSizeEqualToTotal end";
 }
@@ -1736,7 +1694,8 @@ HWTEST_F(ExtDiskUtilsTest, GetCapacity_GetDiscCapacityFailed, TestSize.Level1)
         .WillOnce(Return("DVD-R"));
     EXPECT_CALL(*diskUtilMoc_, GetDvdTotalCapacity(_, _))
         .WillOnce(Invoke([](int, int64_t &) { return E_ERR; }));
-    // AdjustBlankDiscCapacity -> IsCDBlank -> ReadCDDiscInfo
+    // GetDiscUsedCapacity (real impl) also fails via ioctl -> usedSize=-1 -> usedSize=totalSize=0
+    // AdjustBlankDiscCapacity -> IsCDBlank -> ReadCDDiscInfo also fails
     g_ioctlRet = -1;
     EXPECT_CALL(*diskUtilMoc_, GetBlkidData(_, _)).WillOnce(Return("udf"));
     int32_t ret = DiskUtils::GetCapacity(testDevPath_, totalSize, freeSize);
@@ -1763,7 +1722,10 @@ HWTEST_F(ExtDiskUtilsTest, GetCapacity_BlankDiscUsedSizeZero, TestSize.Level1)
         .WillOnce(Return("DVD-R"));
     EXPECT_CALL(*diskUtilMoc_, GetDvdTotalCapacity(_, _))
         .WillOnce(Invoke([](int, int64_t &cap) { cap = 4700372992L; return E_OK; }));
-    // AdjustBlankDiscCapacity -> IsCDBlank returns true (ioctl succeeds, discStatus=0)
+    // GetDiscUsedCapacity (real impl) -> ioctl succeeds but dataBuf all zeros
+    // -> NWA invalid -> fallback: trackSize=0, freeBlocks=0 -> E_ERR
+    // -> usedSize=-1 -> GetUsedSizeFromSysfs fails -> usedSize=totalSize
+    // AdjustBlankDiscCapacity -> IsCDBlank returns true (ioctl succeeds, discStatus=0) -> usedSize=0
     g_ioctlRet = 0;
     g_ioctlInfo = SG_INFO_OK;
     // Since blank, usedSize reset to 0, ForkExec for mediainfo
@@ -1783,13 +1745,13 @@ HWTEST_F(ExtDiskUtilsTest, GetCapacity_BlankDiscUsedSizeZero, TestSize.Level1)
 }
 
 /**
- * @tc.name: GetCapacity_CdType_GetCdUsedCapacityFailed
- * @tc.desc: Verify GetCapacity with CD type when GetCdUsedCapacity fails (ioctl error).
+ * @tc.name: GetCapacity_CdType_GetDiscUsedCapacityFailed
+ * @tc.desc: Verify GetCapacity with CD type when GetDiscUsedCapacity fails (ioctl error).
  * @tc.type: FUNC
  */
-HWTEST_F(ExtDiskUtilsTest, GetCapacity_CdType_GetCdUsedCapacityFailed, TestSize.Level1)
+HWTEST_F(ExtDiskUtilsTest, GetCapacity_CdType_GetDiscUsedCapacityFailed, TestSize.Level1)
 {
-    GTEST_LOG_(INFO) << "GetCapacity_CdType_GetCdUsedCapacityFailed start";
+    GTEST_LOG_(INFO) << "GetCapacity_CdType_GetDiscUsedCapacityFailed start";
     int64_t totalSize = 0;
     int64_t freeSize = 0;
     // GetCDType called twice: GetCapacity + IsCDBlank (in AdjustBlankDiscCapacity)
@@ -1799,9 +1761,9 @@ HWTEST_F(ExtDiskUtilsTest, GetCapacity_CdType_GetCdUsedCapacityFailed, TestSize.
     // GetDiscCapacity -> GetCdTotalCapacity (mocked) returns capacity
     EXPECT_CALL(*diskUtilMoc_, GetCdTotalCapacity(_, _))
         .WillOnce(Invoke([](int, int64_t &cap) { cap = 737280000; return E_OK; }));
-    // GetCdUsedCapacity uses real impl -> SendScsiCmd -> ioctl fails
+    // GetDiscUsedCapacity uses real impl -> SendScsiCmd -> ioctl fails
     g_ioctlRet = -1;
-    // After GetCdUsedCapacity fails, usedSize=-1 -> GetUsedSizeFromSysfs (real impl, will fail)
+    // After GetDiscUsedCapacity fails, usedSize=-1 -> GetUsedSizeFromSysfs (real impl, will fail)
     // -> usedSize=totalSize -> freeSize=0
     // AdjustBlankDiscCapacity -> IsCDBlank -> ReadCDDiscInfo via ioctl (still fails)
     EXPECT_CALL(*diskUtilMoc_, GetBlkidData(_, _)).WillOnce(Return("udf"));
@@ -1811,17 +1773,17 @@ HWTEST_F(ExtDiskUtilsTest, GetCapacity_CdType_GetCdUsedCapacityFailed, TestSize.
     // usedSize = -1 -> GetUsedSizeFromSysfs fails -> usedSize = totalSize -> freeSize = 0
     EXPECT_EQ(freeSize, 0);
     g_ioctlRet = 0;
-    GTEST_LOG_(INFO) << "GetCapacity_CdType_GetCdUsedCapacityFailed end";
+    GTEST_LOG_(INFO) << "GetCapacity_CdType_GetDiscUsedCapacityFailed end";
 }
 
 /**
- * @tc.name: GetCapacity_CdType_GetCdUsedCapacityNwaInvalid
- * @tc.desc: Verify GetCapacity with CD type when GetCdUsedCapacity returns E_ERR (NWA invalid).
+ * @tc.name: GetCapacity_CdType_GetDiscUsedCapacityNwaInvalid
+ * @tc.desc: Verify GetCapacity with CD type when GetDiscUsedCapacity returns E_ERR (NWA invalid).
  * @tc.type: FUNC
  */
-HWTEST_F(ExtDiskUtilsTest, GetCapacity_CdType_GetCdUsedCapacityNwaInvalid, TestSize.Level1)
+HWTEST_F(ExtDiskUtilsTest, GetCapacity_CdType_GetDiscUsedCapacityNwaInvalid, TestSize.Level1)
 {
-    GTEST_LOG_(INFO) << "GetCapacity_CdType_GetCdUsedCapacityNwaInvalid start";
+    GTEST_LOG_(INFO) << "GetCapacity_CdType_GetDiscUsedCapacityNwaInvalid start";
     int64_t totalSize = 0;
     int64_t freeSize = 0;
     EXPECT_CALL(*diskUtilMoc_, GetCDType(_))
@@ -1829,10 +1791,10 @@ HWTEST_F(ExtDiskUtilsTest, GetCapacity_CdType_GetCdUsedCapacityNwaInvalid, TestS
         .WillOnce(Return("CD-R"));
     EXPECT_CALL(*diskUtilMoc_, GetCdTotalCapacity(_, _))
         .WillOnce(Invoke([](int, int64_t &cap) { cap = 737280000; return E_OK; }));
-    // GetCdUsedCapacity: ioctl succeeds but data_buf is all zeros -> NWA valid bit = 0 -> E_ERR
+    // GetDiscUsedCapacity: ioctl succeeds but data_buf is all zeros -> NWA valid bit = 0 -> E_ERR
     g_ioctlRet = 0;
     g_ioctlInfo = SG_INFO_OK;
-    // After GetCdUsedCapacity fails, usedSize=-1 -> GetUsedSizeFromSysfs (real impl, fails)
+    // After GetDiscUsedCapacity fails, usedSize=-1 -> GetUsedSizeFromSysfs (real impl, fails)
     // -> usedSize=totalSize
     // AdjustBlankDiscCapacity -> IsCDBlank -> ReadCDDiscInfo via ioctl (succeeds, discStatus=0)
     // -> isBlank=true -> usedSize=0, discType is CD-R (not DVD/BD) -> return
@@ -1843,12 +1805,12 @@ HWTEST_F(ExtDiskUtilsTest, GetCapacity_CdType_GetCdUsedCapacityNwaInvalid, TestS
     EXPECT_EQ(freeSize, totalSize);
     g_ioctlRet = 0;
     g_ioctlInfo = 0;
-    GTEST_LOG_(INFO) << "GetCapacity_CdType_GetCdUsedCapacityNwaInvalid end";
+    GTEST_LOG_(INFO) << "GetCapacity_CdType_GetDiscUsedCapacityNwaInvalid end";
 }
 
 /**
  * @tc.name: GetCapacity_NonCdType
- * @tc.desc: Verify GetCapacity with non-CD type skips GetCdUsedCapacity branch.
+ * @tc.desc: Verify GetCapacity with non-CD type skips GetDiscUsedCapacity branch.
  * @tc.type: FUNC
  */
 HWTEST_F(ExtDiskUtilsTest, GetCapacity_NonCdType, TestSize.Level1)
@@ -1872,6 +1834,72 @@ HWTEST_F(ExtDiskUtilsTest, GetCapacity_NonCdType, TestSize.Level1)
     EXPECT_EQ(freeSize, 0); // usedSize = totalSize -> freeSize = 0
     g_ioctlRet = 0;
     GTEST_LOG_(INFO) << "GetCapacity_NonCdType end";
+}
+
+/**
+ * @tc.name: GetCapacity_DvdType_GetDiscUsedCapacityNwaInvalid
+ * @tc.desc: Verify GetCapacity with DVD type when GetDiscUsedCapacity NWA is invalid (blank disc).
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, GetCapacity_DvdType_GetDiscUsedCapacityNwaInvalid, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetCapacity_DvdType_GetDiscUsedCapacityNwaInvalid start";
+    int64_t totalSize = 0;
+    int64_t freeSize = 0;
+    EXPECT_CALL(*diskUtilMoc_, GetCDType(_))
+        .WillOnce(Return("DVD-R"))
+        .WillOnce(Return("DVD-R"));
+    EXPECT_CALL(*diskUtilMoc_, GetDvdTotalCapacity(_, _))
+        .WillOnce(Invoke([](int, int64_t &cap) { cap = 4700372992L; return E_OK; }));
+    // GetDiscUsedCapacity (real impl) -> ioctl succeeds but dataBuf all zeros
+    // -> NWA invalid -> fallback: trackSize=0, freeBlocks=0 -> trackSize <= freeBlocks -> E_ERR
+    // -> usedSize=-1 -> GetUsedSizeFromSysfs fails -> usedSize=totalSize
+    // AdjustBlankDiscCapacity -> IsCDBlank -> ReadCDDiscInfo succeeds, discStatus=0 -> isBlank=true
+    // -> usedSize=0, ForkExec for mediainfo
+    g_ioctlRet = 0;
+    g_ioctlInfo = SG_INFO_OK;
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
+        .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
+            output->push_back("  unformatted:   2295104*2048=4702922752");
+            return E_OK;
+        }));
+    int32_t ret = DiskUtils::GetCapacity(testDevPath_, totalSize, freeSize);
+    EXPECT_EQ(ret, E_OK);
+    EXPECT_GT(totalSize, 0);
+    // blank disc -> usedSize=0 -> freeSize = totalSize
+    EXPECT_EQ(freeSize, totalSize);
+    g_ioctlRet = 0;
+    g_ioctlInfo = 0;
+    GTEST_LOG_(INFO) << "GetCapacity_DvdType_GetDiscUsedCapacityNwaInvalid end";
+}
+
+/**
+ * @tc.name: GetCapacity_DvdType_GetDiscUsedCapacityFailed
+ * @tc.desc: Verify GetCapacity with DVD type falls back when GetDiscUsedCapacity fails.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, GetCapacity_DvdType_GetDiscUsedCapacityFailed, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetCapacity_DvdType_GetDiscUsedCapacityFailed start";
+    int64_t totalSize = 0;
+    int64_t freeSize = 0;
+    EXPECT_CALL(*diskUtilMoc_, GetCDType(_))
+        .WillOnce(Return("DVD-RW"))
+        .WillOnce(Return("DVD-RW"));
+    EXPECT_CALL(*diskUtilMoc_, GetDvdTotalCapacity(_, _))
+        .WillOnce(Invoke([](int, int64_t &cap) { cap = 4700372992L; return E_OK; }));
+    // GetDiscUsedCapacity (real impl) -> ioctl fails -> usedSize=-1
+    // -> GetUsedSizeFromSysfs (real impl, fails) -> usedSize=totalSize
+    // AdjustBlankDiscCapacity -> IsCDBlank -> ReadCDDiscInfo also fails (g_ioctlRet=-1)
+    g_ioctlRet = -1;
+    EXPECT_CALL(*diskUtilMoc_, GetBlkidData(_, _)).WillOnce(Return("udf"));
+    int32_t ret = DiskUtils::GetCapacity(testDevPath_, totalSize, freeSize);
+    EXPECT_EQ(ret, E_OK);
+    EXPECT_EQ(totalSize, 4700372992L);
+    // GetDiscUsedCapacity fails -> usedSize=totalSize -> freeSize=0
+    EXPECT_EQ(freeSize, 0);
+    g_ioctlRet = 0;
+    GTEST_LOG_(INFO) << "GetCapacity_DvdType_GetDiscUsedCapacityFailed end";
 }
 
 /**
