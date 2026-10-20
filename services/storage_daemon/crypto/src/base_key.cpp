@@ -985,6 +985,11 @@ bool BaseKey::ClearKey(const std::string &mnt)
     keyInfo_.key.Clear();
     keyInfo_.keyHash.Clear();
     bool needClearFlag = true;
+    int64_t startTime2 = 0;
+    int64_t startTime3 = 0;
+    int64_t startTime4 = 0;
+    int64_t startTime5 = 0;
+    int64_t startTime6 = 0;
 #ifdef USER_CRYPTO_MIGRATE_KEY
     std::error_code errCode;
     std::string elNeedRestorePath(PATH_USER_EL1_DIR);
@@ -1001,30 +1006,30 @@ bool BaseKey::ClearKey(const std::string &mnt)
             LOGE("[L4:BaseKey] ClearKey: dir not exist, do not need to remove dir");
             return (ret == E_OK);
         }
-        auto startTime2 = StorageService::StorageRadar::RecordCurrentTime();
+        startTime2 = StorageService::StorageRadar::RecordCurrentTime();
         message = "startTime2: " + std::to_string(startTime2);
         HiAudit::GetInstance().WriteStart("ClearKey WipingActionDir", message);
         WipingActionDir(dir_);
         HiAudit::GetInstance().WriteEnd("ClearKey WipingActionDir", 0);
-        auto startTime3 = StorageService::StorageRadar::RecordCurrentTime();
+        startTime3 = StorageService::StorageRadar::RecordCurrentTime();
         message = "startTime3: " + std::to_string(startTime3);
         HiAudit::GetInstance().WriteStart("ClearKey GetBackupDir", message);
         std::string backupDir;
         KeyBackup::GetInstance().GetBackupDir(dir_, backupDir);
         WipingActionDir(backupDir);
         HiAudit::GetInstance().WriteEnd("ClearKey GetBackupDir", 0);
-        auto startTime4 = StorageService::StorageRadar::RecordCurrentTime();
+        startTime4 = StorageService::StorageRadar::RecordCurrentTime();
         message = "startTime4: " + std::to_string(startTime4);
         HiAudit::GetInstance().WriteStart("ClearKey RemoveNode", message);
         KeyBackup::GetInstance().RemoveNode(backupDir);
         HiAudit::GetInstance().WriteEnd("ClearKey RemoveNode", 0);
-        auto startTime5 = StorageService::StorageRadar::RecordCurrentTime();
+        startTime5 = StorageService::StorageRadar::RecordCurrentTime();
         message = "startTime5: " + std::to_string(startTime5);
         HiAudit::GetInstance().WriteStart("ClearKey ForceRemoveDirectory backupDir", message);
         LOGI("[L4:BaseKey] ClearKey: force remove backupDir, %{public}s", backupDir.c_str());
         OHOS::ForceRemoveDirectory(backupDir);
         HiAudit::GetInstance().WriteEnd("ClearKey ForceRemoveDirectory backupDir", 0);
-        auto startTime6 = StorageService::StorageRadar::RecordCurrentTime();
+        startTime6 = StorageService::StorageRadar::RecordCurrentTime();
         message = "startTime6: " + std::to_string(startTime6);
         HiAudit::GetInstance().WriteStart("ClearKey ForceRemoveDirectory dir_", message);
         LOGI("[L4:BaseKey] ClearKey: force remove dir_, %{public}s", dir_.c_str());
