@@ -1034,7 +1034,7 @@ bool BaseKey::ClearKey(const std::string &mnt)
     }
     LOGI("[L4:BaseKey] ClearKey: <<< EXIT SUCCESS <<< dir=%{public}s", dir_.c_str());
     auto startTime7 = StorageService::StorageRadar::RecordCurrentTime();
-    HiAudit::GetInstance().WriteEnd("ClearKey", E_OK, message);
+    HiAudit::GetInstance().WriteEnd("ClearKey", E_OK);
     std::string reportDuration = "startTime1: " + std::to_string(startTime1)
         + ", startTime2: " + std::to_string(startTime2)
         + ", startTime3: " + std::to_string(startTime3)
