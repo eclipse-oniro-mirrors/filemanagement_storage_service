@@ -148,6 +148,13 @@ void HiAudit::WriteEnd(const std::string &funcName, int32_t ret, const std::stri
     Write(auditLog);
 }
 
+void HiAudit::WriteFuncName(const std::string &funcName)
+{
+    int tid = syscall(SYS_gettid);
+    AuditLog auditLog = {false, 1, HIAUDIT_SUCC, HIAUDIT_OP_TYPE, funcName, "FUNCTION, tid = " + std::to_string(tid), ""};
+    Write(auditLog);
+}
+
 void HiAudit::GetWriteFilePath()
 {
     if (writeLogSize_ < HIAUDIT_CONFIG.fileSize) {

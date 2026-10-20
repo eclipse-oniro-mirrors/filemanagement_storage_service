@@ -974,8 +974,7 @@ bool BaseKey::ClearKey(const std::string &mnt)
 {
     LOGI("[L4:BaseKey] ClearKey: >>> ENTER <<< dir=%{public}s", dir_.c_str());
     auto startTime1 = StorageService::StorageRadar::RecordCurrentTime();
-    std::string message = "startTime1: " + std::to_string(startTime1);
-    HiAudit::GetInstance().WriteStart("ClearKey InactiveKey Start", message);
+    HiAudit::GetInstance().WriteStart("ClearKey");
     auto ret = InactiveKey(USER_DESTROY, mnt);
     if (ret != E_OK) {
         LOGE("[L4:BaseKey] ClearKey: InactiveKey failed, ret=%{public}d", ret);
@@ -1007,34 +1006,24 @@ bool BaseKey::ClearKey(const std::string &mnt)
             return (ret == E_OK);
         }
         startTime2 = StorageService::StorageRadar::RecordCurrentTime();
-        message = "startTime2: " + std::to_string(startTime2);
-        HiAudit::GetInstance().WriteStart("ClearKey WipingActionDir", message);
+        HiAudit::GetInstance().WriteFuncName("ClearKey WipingActionDir Dir");
         WipingActionDir(dir_);
-        HiAudit::GetInstance().WriteEnd("ClearKey WipingActionDir", 0);
         startTime3 = StorageService::StorageRadar::RecordCurrentTime();
-        message = "startTime3: " + std::to_string(startTime3);
-        HiAudit::GetInstance().WriteStart("ClearKey GetBackupDir", message);
+        HiAudit::GetInstance().WriteFuncName("ClearKey WipingActionDir BackupDir");
         std::string backupDir;
         KeyBackup::GetInstance().GetBackupDir(dir_, backupDir);
         WipingActionDir(backupDir);
-        HiAudit::GetInstance().WriteEnd("ClearKey GetBackupDir", 0);
         startTime4 = StorageService::StorageRadar::RecordCurrentTime();
-        message = "startTime4: " + std::to_string(startTime4);
-        HiAudit::GetInstance().WriteStart("ClearKey RemoveNode", message);
+        HiAudit::GetInstance().WriteFuncName("ClearKey RemoveNode BackupDir");
         KeyBackup::GetInstance().RemoveNode(backupDir);
-        HiAudit::GetInstance().WriteEnd("ClearKey RemoveNode", 0);
         startTime5 = StorageService::StorageRadar::RecordCurrentTime();
-        message = "startTime5: " + std::to_string(startTime5);
-        HiAudit::GetInstance().WriteStart("ClearKey ForceRemoveDirectory backupDir", message);
+        HiAudit::GetInstance().WriteFuncName("ClearKey ForceRemoveDirectory BackupDir");
         LOGI("[L4:BaseKey] ClearKey: force remove backupDir, %{public}s", backupDir.c_str());
         OHOS::ForceRemoveDirectory(backupDir);
-        HiAudit::GetInstance().WriteEnd("ClearKey ForceRemoveDirectory backupDir", 0);
         startTime6 = StorageService::StorageRadar::RecordCurrentTime();
-        message = "startTime6: " + std::to_string(startTime6);
-        HiAudit::GetInstance().WriteStart("ClearKey ForceRemoveDirectory dir_", message);
+        HiAudit::GetInstance().WriteFuncName("ClearKey ForceRemoveDirectory Dir");
         LOGI("[L4:BaseKey] ClearKey: force remove dir_, %{public}s", dir_.c_str());
         bool removeRet = OHOS::ForceRemoveDirectory(dir_);
-        HiAudit::GetInstance().WriteEnd("ClearKey ForceRemoveDirectory dir_", 0);
         if (!removeRet) {
             LOGE("[L4:BaseKey] ClearKey: ForceRemoveDirectory failed");
             StorageService::StorageRadar::ReportUserKeyResult("ClearKey", 0, removeRet, "",
@@ -1045,15 +1034,14 @@ bool BaseKey::ClearKey(const std::string &mnt)
     }
     LOGI("[L4:BaseKey] ClearKey: <<< EXIT SUCCESS <<< dir=%{public}s", dir_.c_str());
     auto startTime7 = StorageService::StorageRadar::RecordCurrentTime();
-    message = "startTime7: " + std::to_string(startTime7);
     HiAudit::GetInstance().WriteEnd("ClearKey", E_OK, message);
     std::string reportDuration = "startTime1: " + std::to_string(startTime1)
-        + ", startTime1: " + std::to_string(startTime1)
-        + ", startTime1: " + std::to_string(startTime1)
-        + ", startTime1: " + std::to_string(startTime1)
-        + ", startTime1: " + std::to_string(startTime1)
-        + ", startTime1: " + std::to_string(startTime1)
-        + ", startTime1: " + std::to_string(startTime1);
+        + ", startTime2: " + std::to_string(startTime2)
+        + ", startTime3: " + std::to_string(startTime3)
+        + ", startTime4: " + std::to_string(startTime4)
+        + ", startTime5: " + std::to_string(startTime5)
+        + ", startTime6: " + std::to_string(startTime6)
+        + ", startTime7: " + std::to_string(startTime7);
     StorageService::StorageRadar::ReportUserKeyResult("ClearKey", 0, E_OK, "", reportDuration);
     return (ret == E_OK);
 }

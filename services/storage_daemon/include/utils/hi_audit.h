@@ -50,6 +50,7 @@ public:
     void Write(const AuditLog& auditLog);
     void WriteStart(const std::string &funcName, const std::string &extend = "");
     void WriteEnd(const std::string &funcName, int32_t ret, const std::string &extend = "");
+    void WriteFuncName(const std::string &funcName);
 
 private:
     HiAudit();
