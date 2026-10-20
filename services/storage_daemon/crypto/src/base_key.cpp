@@ -21,6 +21,7 @@
 #include "directory_ex.h"
 #include "fbex.h"
 #include "file_ex.h"
+#include "hi_audit.h"
 #include "huks_master.h"
 #include "iam_client.h"
 #include "key_backup.h"
@@ -972,6 +973,9 @@ int32_t BaseKey::Decrypt(const UserAuth &auth)
 bool BaseKey::ClearKey(const std::string &mnt)
 {
     LOGI("[L4:BaseKey] ClearKey: >>> ENTER <<< dir=%{public}s", dir_.c_str());
+    auto startTime1 = StorageService::StorageRadar::RecordCurrentTime();
+    std::string message = "startTime1: " + std::to_string(startTime1);
+    HiAudit::GetInstance().WriteStart("ClearKey InactiveKey Start", message);
     auto ret = InactiveKey(USER_DESTROY, mnt);
     if (ret != E_OK) {
         LOGE("[L4:BaseKey] ClearKey: InactiveKey failed, ret=%{public}d", ret);
@@ -997,13 +1001,28 @@ bool BaseKey::ClearKey(const std::string &mnt)
             LOGE("[L4:BaseKey] ClearKey: dir not exist, do not need to remove dir");
             return (ret == E_OK);
         }
+        auto startTime2 = StorageService::StorageRadar::RecordCurrentTime();
+        message = "startTime2: " + std::to_string(startTime2);
+        HiAudit::GetInstance().WriteStart("ClearKey WipingActionDir", message);
         WipingActionDir(dir_);
+        auto startTime3 = StorageService::StorageRadar::RecordCurrentTime();
+        message = "startTime3: " + std::to_string(startTime3);
+        HiAudit::GetInstance().WriteStart("ClearKey GetBackupDir", message);
         std::string backupDir;
         KeyBackup::GetInstance().GetBackupDir(dir_, backupDir);
         WipingActionDir(backupDir);
+        auto startTime4 = StorageService::StorageRadar::RecordCurrentTime();
+        message = "startTime4: " + std::to_string(startTime4);
+        HiAudit::GetInstance().WriteStart("ClearKey RemoveNode", message);
         KeyBackup::GetInstance().RemoveNode(backupDir);
+        auto startTime5 = StorageService::StorageRadar::RecordCurrentTime();
+        message = "startTime5: " + std::to_string(startTime5);
+        HiAudit::GetInstance().WriteStart("ClearKey ForceRemoveDirectory", message);
         LOGI("[L4:BaseKey] ClearKey: force remove backupDir, %{public}s", backupDir.c_str());
         OHOS::ForceRemoveDirectory(backupDir);
+        auto startTime6 = StorageService::StorageRadar::RecordCurrentTime();
+        message = "startTime6: " + std::to_string(startTime6);
+        HiAudit::GetInstance().WriteStart("ClearKey ForceRemoveDirectory", message);
         LOGI("[L4:BaseKey] ClearKey: force remove dir_, %{public}s", dir_.c_str());
         bool removeRet = OHOS::ForceRemoveDirectory(dir_);
         if (!removeRet) {
@@ -1015,6 +1034,17 @@ bool BaseKey::ClearKey(const std::string &mnt)
         // use F2FS_IOC_SEC_TRIM_FILE
     }
     LOGI("[L4:BaseKey] ClearKey: <<< EXIT SUCCESS <<< dir=%{public}s", dir_.c_str());
+    auto startTime7 = StorageService::StorageRadar::RecordCurrentTime();
+    message = "startTime7: " + std::to_string(startTime7);
+    HiAudit::GetInstance().WriteStart("ClearKey", message);
+    std::string reportDuration = "startTime1: " + std::to_string(startTime1)
+        + ", startTime1: " + std::to_string(startTime1)
+        + ", startTime1: " + std::to_string(startTime1)
+        + ", startTime1: " + std::to_string(startTime1)
+        + ", startTime1: " + std::to_string(startTime1)
+        + ", startTime1: " + std::to_string(startTime1)
+        + ", startTime1: " + std::to_string(startTime1);
+    StorageService::StorageRadar::ReportUserKeyResult("ClearKey", 0, E_OK, "", reportDuration.c_str());
     return (ret == E_OK);
 }
 

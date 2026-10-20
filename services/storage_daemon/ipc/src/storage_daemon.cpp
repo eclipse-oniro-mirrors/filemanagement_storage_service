@@ -349,6 +349,7 @@ int32_t StorageDaemon::DestroyUserDirs(int32_t userId, uint32_t flags)
     // CRYPTO_FLAG_EL3 destroy el3,  CRYPTO_FLAG_EL4 destroy el4
     flags = flags | IStorageDaemonEnum::CRYPTO_FLAG_EL3 | IStorageDaemonEnum::CRYPTO_FLAG_EL4 |
             IStorageDaemonEnum::CRYPTO_FLAG_EL5;
+    HiAudit::GetInstance().WriteStart("DestroyUserDirs UserManager", "userId: " + std::to_string(userId));
     int32_t destroyUserRet = UserManager::GetInstance().DestroyUserDirs(userId, flags);
     if (destroyUserRet != E_OK) {
         errCode = destroyUserRet;
@@ -359,6 +360,7 @@ int32_t StorageDaemon::DestroyUserDirs(int32_t userId, uint32_t flags)
     }
 
 #ifdef USER_CRYPTO_MANAGER
+    HiAudit::GetInstance().WriteStart("DestroyUserDirs KeyManager", "userId: " + std::to_string(userId));
     destroyUserRet = KeyManager::GetInstance().DeleteUserKeys(userId);
     if (destroyUserRet != E_OK) {
         errCode = destroyUserRet;
@@ -368,6 +370,7 @@ int32_t StorageDaemon::DestroyUserDirs(int32_t userId, uint32_t flags)
         StorageRadar::ReportUserManager("DestroyUserDirs::DeleteUserKeys", userId, errCode, extraData);
     }
     if (destroyUserRet == E_OK) {
+        HiAudit::GetInstance().WriteStart("DestroyUserDirs KeyManagerExt", "userId: " + std::to_string(userId));
         int32_t result = KeyManagerExt::GetInstance().DeleteUserKeys(userId);
         if (result != E_OK) {
             LOGE("[L1:StorageDaemon] DestroyUserDirs: KeyManagerExt DeleteUserKeys failed, userId=%{public}u,"
@@ -380,6 +383,7 @@ int32_t StorageDaemon::DestroyUserDirs(int32_t userId, uint32_t flags)
         LOGE("[L1:StorageDaemon] DestroyUserDirs: <<< EXIT FAILED <<< userId=%{public}d, ret=%{public}d",
             userId, errCode);
     }
+    HiAudit::GetInstance().WriteEnd("DestroyUserDirs UserCryptoManager", errCode);
     return errCode;
 #else
     if (errCode == E_OK) {
@@ -388,6 +392,7 @@ int32_t StorageDaemon::DestroyUserDirs(int32_t userId, uint32_t flags)
         LOGE("[L1:StorageDaemon] DestroyUserDirs: <<< EXIT FAILED <<< userId=%{public}d, ret=%{public}d",
             userId, errCode);
     }
+    HiAudit::GetInstance().WriteEnd("DestroyUserDirs", errCode);
     return errCode;
 #endif
 }
