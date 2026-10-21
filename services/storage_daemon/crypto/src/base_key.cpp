@@ -1028,7 +1028,7 @@ bool BaseKey::ClearKey(const std::string &mnt)
         // use F2FS_IOC_SEC_TRIM_FILE
     }
     LOGI("[L4:BaseKey] ClearKey: <<< EXIT SUCCESS <<< dir=%{public}s", dir_.c_str());
-    StorageService::StorageRadar::ReportDuration("ClearKey ForceRemoveDirectory Dir", startTime);
+    StorageService::StorageRadar::ReportDuration("ClearKey", startTime);
     return (ret == E_OK);
 }
 
