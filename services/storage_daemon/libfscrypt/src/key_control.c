@@ -212,5 +212,5 @@ uint8_t KeyCtrlLoadVersion(const char *keyPath)
 {
     (void)keyPath;
     LOGD("load key control version enter.");
-    return FSCRYPT_V1;
+    return FSCRYPT_V2;
 }
