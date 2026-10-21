@@ -119,7 +119,6 @@ public:
                                           const std::vector<std::string> &, bool));
 
     MOCK_METHOD3(GetBlockInfoByType, int32_t(const std::string &, const std::string &, std::string &));
-    MOCK_METHOD1(EjectCD, int32_t(const std::string &));
     MOCK_METHOD1(Erase, int32_t(const std::string &));
     MOCK_METHOD1(Eject, int32_t(const std::string &));
     MOCK_METHOD4(CreateIsoImage, int32_t(const std::string &, const std::string &,
