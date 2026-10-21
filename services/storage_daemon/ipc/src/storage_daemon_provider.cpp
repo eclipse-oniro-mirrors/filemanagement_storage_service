@@ -105,6 +105,7 @@ constexpr int32_t DFX_STAGE_GET_PARTITION_TABLE = 46;
 constexpr int32_t DFX_STAGE_CREATE_PARTITION = 47;
 constexpr int32_t DFX_STAGE_DELETE_PARTITION = 48;
 constexpr int32_t DFX_STAGE_FORMAT_PARTITION = 49;
+
 constexpr int32_t VOL_OP_MOUNT = 0;
 constexpr int32_t VOL_OP_UNMOUNT = 1;
 constexpr int32_t VOL_OP_FORMAT = 2;
@@ -114,6 +115,7 @@ constexpr int32_t VOL_OP_GET_PARTITION_TABLE = 5;
 constexpr int32_t VOL_OP_CREATE_PARTITION = 6;
 constexpr int32_t VOL_OP_DELETE_PARTITION = 7;
 constexpr int32_t VOL_OP_FORMAT_PARTITION = 8;
+
 
 
 VolumeOpDiagContext MakeOpDiagContext(const char *funcName, int32_t bizStage, int32_t opType,
