@@ -2577,37 +2577,6 @@ int32_t StorageDaemonProvider::QueryCDStatus(const std::string &devPath, int32_t
 #endif
 }
 
-int32_t StorageDaemonProvider::EjectCD(const std::string &devPath)
-{
-    LOGI("[L1:StorageDaemonProvider] EjectCD: >>> ENTER <<< devPath=%{public}s", devPath.c_str());
-#ifdef DISK_MANAGER
-    auto uid = IPCSkeleton::GetCallingUid();
-    if (uid != DISK_MANAGER_UID) {
-        LOGE("[L1:StorageDaemonProvider] EjectCD: <<< EXIT FAILED <<< uid=%{public}d is invalid", uid);
-        return E_PERMISSION_DENIED;
-    }
-    VolumeOpDiagBegin(MakeOpDiagContext("StorageDaemonProvider::EjectCD",
-                                        DFX_STAGE_EJECT, VOL_OP_EJECT, devPath, ""));
-    std::string verifiedPath;
-    int32_t ret = ValidateMountPath(devPath, verifiedPath);
-    if (ret != E_OK) {
-        LOGE("[L1:StorageDaemonProvider] EjectCD: <<< EXIT FAILED <<< devPath is invalid");
-        return ReturnWithOpDiag(ret);
-    }
-    ret = DiskUtils::EjectCD(verifiedPath);
-    if (ret != E_OK) {
-        LOGE("[L1:StorageDaemonProvider] EjectCD: <<< EXIT FAILED <<< ret=%{public}d", ret);
-        return ReturnWithOpDiag(ret);
-    }
-
-    LOGI("[L1:StorageDaemonProvider] EjectCD: <<< EXIT SUCCESS <<<");
-    return ReturnWithOpDiag(E_OK);
-#else
-    LOGI("[L1:StorageDaemonProvider] EjectCD: <<< EXIT NOT_SUPPORT <<<");
-    return E_NOT_SUPPORT;
-#endif
-}
-
 int32_t StorageDaemonProvider::FormatVolume(const std::string &devPath,
                                             const std::string &fsType,
                                             const std::string &diskPath,
