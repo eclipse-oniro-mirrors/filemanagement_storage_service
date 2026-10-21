@@ -62,7 +62,7 @@ ohos_shared_library("storage_manager") {
     defines += [ "USER_CRYPTO_MANAGER" ]
   }
 
-  if (pc_device_enable) {
+  if (pc_2in1_tablet_device_enable) {
     defines += [ "PC_USER_MANAGER" ]
   }
 

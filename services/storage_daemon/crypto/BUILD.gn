@@ -126,7 +126,7 @@ ohos_static_library("libsdcrypto") {
     defines += [ "GLASSES_DEVICE" ]
   }
 
-  if (enable_pc_encryption_extension) {
+  if (pc_device_enable) {
     defines += [ "PC_ENCRYPTION_EXTENSION" ]
   }
 
