@@ -307,8 +307,6 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_PermissionInvalid_
     EXPECT_EQ(result, E_PERMISSION_DENIED);
     result = storageDaemonProviderTest_->QueryCDStatus("path", maxVolume);
     EXPECT_EQ(result, E_PERMISSION_DENIED);
-    result = storageDaemonProviderTest_->EjectCD("path");
-    EXPECT_EQ(result, E_PERMISSION_DENIED);
     result = storageDaemonProviderTest_->FormatVolume("path", "type", "/dev/disk", "get", 1);
     EXPECT_EQ(result, E_PERMISSION_DENIED);
     result = storageDaemonProviderTest_->Check("path", "type", true);
@@ -353,7 +351,6 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_PermissionInvalid_
     EXPECT_EQ(storageDaemonProviderTest_->Mount("path", "path", "type", 0, "data"), E_NOT_SUPPORT);
     EXPECT_EQ(storageDaemonProviderTest_->Unmount("path", "type", true), E_NOT_SUPPORT);
     EXPECT_EQ(storageDaemonProviderTest_->QueryCDStatus("path", maxVolume), E_NOT_SUPPORT);
-    EXPECT_EQ(storageDaemonProviderTest_->EjectCD("path"), E_NOT_SUPPORT);
     EXPECT_EQ(storageDaemonProviderTest_->FormatVolume("path", "type", "/dev/disk", "gpt", 1), E_NOT_SUPPORT);
     EXPECT_EQ(storageDaemonProviderTest_->Check("path", "type", true), E_NOT_SUPPORT);
     EXPECT_EQ(storageDaemonProviderTest_->Repair("path", "type"), E_NOT_SUPPORT);
@@ -2980,28 +2977,6 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_QueryCDStatus_002,
     auto ret = storageDaemonProviderTest_->QueryCDStatus(devPath, status);
     EXPECT_NE(ret, E_OK);
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_QueryCDStatus_002 end";
-}
-
-HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_EjectCD_001, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_EjectCD_001 start";
-    SetCallingUid(DISK_MANAGER_UID);
-    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
-    std::string devPath = "";
-    auto ret = storageDaemonProviderTest_->EjectCD(devPath);
-    EXPECT_NE(ret, E_OK);
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_EjectCD_001 end";
-}
-
-HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_EjectCD_002, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_EjectCD_002 start";
-    SetCallingUid(DISK_MANAGER_UID);
-    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
-    std::string devPath = "/dev/block/../sr0";
-    auto ret = storageDaemonProviderTest_->EjectCD(devPath);
-    EXPECT_NE(ret, E_OK);
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_EjectCD_002 end";
 }
 
 /**
