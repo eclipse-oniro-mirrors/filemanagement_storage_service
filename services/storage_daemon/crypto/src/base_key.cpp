@@ -972,10 +972,7 @@ int32_t BaseKey::Decrypt(const UserAuth &auth)
 bool BaseKey::ClearKey(const std::string &mnt)
 {
     LOGI("[L4:BaseKey] ClearKey: >>> ENTER <<< dir=%{public}s", dir_.c_str());
-    auto startTime = StorageService::StorageRadar::RecordCurrentTime();
-    int64_t time = startTime;
     auto ret = InactiveKey(USER_DESTROY, mnt);
-    StorageService::StorageRadar::ReportDuration("ClearKey InactiveKey", time);
     if (ret != E_OK) {
         LOGE("[L4:BaseKey] ClearKey: InactiveKey failed, ret=%{public}d", ret);
         StorageService::StorageRadar::ReportUserKeyResult("ClearKey", 0, ret, "",
@@ -994,6 +991,8 @@ bool BaseKey::ClearKey(const std::string &mnt)
         LOGI("[L4:BaseKey] ClearKey: needRestore flag exist, do not remove secret");
     }
 #endif
+    auto startTime = StorageService::StorageRadar::RecordCurrentTime();
+    int64_t time = startTime;
     if (needClearFlag) {
         LOGI("[L4:BaseKey] ClearKey: do clear key");
         if (!IsDir(dir_)) {
