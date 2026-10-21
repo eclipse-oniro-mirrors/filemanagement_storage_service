@@ -1050,6 +1050,10 @@ HWTEST_F(MountManagerTest, Storage_Daemon_MountManagerExtTest_MountPointToList_0
     MountManager::GetInstance().MountPointToList(hmdfsList, hmdfsLists, sharefsList, line, userId);
     line = "s destination sharefs";
     MountManager::GetInstance().MountPointToList(hmdfsList, hmdfsLists, sharefsList, line, userId);
+    line = "source destinationdestinationdestinationdestinationdestination sharefs";
+    MountManager::GetInstance().MountPointToList(hmdfsList, hmdfsLists, sharefsList, line, userId);
+    line = "source /mnt/user/100/docs sharefs";
+    MountManager::GetInstance().MountPointToList(hmdfsList, hmdfsLists, sharefsList, line, userId);
 
     line = "source destination hmfs";
     MountManager::GetInstance().MountPointToList(hmdfsList, hmdfsLists, sharefsList, line, userId);
