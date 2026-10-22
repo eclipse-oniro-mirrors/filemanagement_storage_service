@@ -204,6 +204,7 @@ void StorageDaemonProvider::StorageRadarThd(void)
         }
         LOGI("Storage statistic update, intervalMinutes:%{public}" PRId64, intervalMinutes);
         isNeedUpdateRadarFile_ = false;
+        std::lock_guard<std::mutex> lockStatistic(mutexStats_);
         StorageStatisticRadar::GetInstance().UpdateStatisticFile(opStatistics_);
     }
 }
@@ -1028,22 +1029,6 @@ int32_t StorageDaemonProvider::RegisterUeceActivationCallback(
 int32_t StorageDaemonProvider::UnregisterUeceActivationCallback()
 {
     return StorageDaemon::GetInstance().UnregisterUeceActivationCallback();
-}
-
-int32_t StorageDaemonProvider::CreateUserDir(const std::string &path, mode_t mode, uid_t uid, gid_t gid)
-{
-    if (IsFilePathInvalid(path)) {
-        return E_PARAMS_INVALID;
-    }
-    return UserManager::GetInstance().CreateUserDir(path, mode, uid, gid);
-}
-
-int32_t StorageDaemonProvider::DeleteUserDir(const std::string &path)
-{
-    if (IsFilePathInvalid(path)) {
-        return E_PARAMS_INVALID;
-    }
-    return UserManager::GetInstance().DeleteUserDir(path);
 }
 
 int32_t StorageDaemonProvider::GetDqBlkSpacesByUids(const std::vector<int32_t> &uids,

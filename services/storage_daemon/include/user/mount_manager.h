@@ -103,7 +103,8 @@ private:
     void CheckSymlinkForMulti(const std::string &fdPath, const std::string &path, std::set<std::string> &occupyFiles);
     int32_t FindMountsByNetworkId(const std::string &networkId, std::list<std::string> &mounts);
     int32_t FilterNotMountedPath(std::map<std::string, std::string> &notMountPaths);
-    int32_t HandleDisDstPath(const std::string &dstPath);
+    bool MatchesDisSharePath(const std::string &dstPath);
+    bool RemoveDisSharePath(const std::string &dstPath, const std::string &networkId);
 
     DISALLOW_COPY_AND_MOVE(MountManager);
 

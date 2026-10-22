@@ -194,60 +194,6 @@ void UserManager::CheckDirsFromVec(int32_t userId)
     }
 }
 
-int32_t UserManager::CreateUserDir(const std::string &path, mode_t mode, uid_t uid, gid_t gid)
-{
-    LOGI("CreateUserDir path: %{public}s, %{public}d, %{public}d, %{public}d", path.c_str(), mode, uid, gid);
-    std::string prefix = "/data/virt_service/rgm_hmos/anco_hmos_data/";
-    if (path.compare(0, prefix.size(), prefix) != 0) {
-        LOGE("The path: %{public}s is invalid", path.c_str());
-        return E_PARAMS_INVALID;
-    }
-
-    auto ret = PrepareDirSimple(path, mode, uid, gid);
-    if (ret != E_OK) {
-        LOGE("Failed to prepareDir %{public}s, ret: %{public}d", path.c_str(), ret);
-    } else {
-        LOGI("CreateUserDir end. ret: %{public}d", ret);
-    }
-    std::string extraData = "path=" + path + ", mode=" + std::to_string(mode) +
-        ", uid=" + std::to_string(uid) + ", gid=" + std::to_string(gid);
-    StorageRadar::ReportUserManager("CreateUserDir", 0, ret, extraData);
-    return ret;
-}
-
-int32_t UserManager::DeleteUserDir(const std::string &path)
-{
-    LOGE("DeleteUserDir path: %{public}s", path.c_str());
-    std::string prefix = "/data/virt_service/rgm_hmos/anco_hmos_data/";
-    if (path.compare(0, prefix.size(), prefix) != 0) {
-        LOGE("The path: %{public}s is invalid", path.c_str());
-        return E_PARAMS_INVALID;
-    }
-
-    struct stat pathStat;
-    if (TEMP_FAILURE_RETRY(lstat(path.c_str(), &pathStat)) != 0) {
-        if (errno == ENOENT) {
-            LOGE("The path: %{public}s does not exist.", path.c_str());
-            return E_DELETE_USER_DIR_NOEXIST;
-        }
-        LOGE("The path: %{public}s cannot be accessed. errno: %{public}d", path.c_str(), errno);
-        return E_DELETE_USER_DIR_LSTAT;
-    }
-
-    if (!S_ISDIR(pathStat.st_mode)) {
-        LOGE("The path: %{public}s is not a directory.", path.c_str());
-        return E_DELETE_USER_DIR_NOTDIR;
-    }
-
-    bool isPathEmpty = true;
-    auto ret = DestroyDir(path, isPathEmpty);
-
-    std::string extraData = "path=" + path + ", isPathEmpty=" + std::to_string(isPathEmpty);
-    LOGE("DeleteUserDir end, ret=%{public}d, %{public}s", ret, extraData.c_str());
-    StorageRadar::ReportUserManager("DeleteUserDir", 0, ret, extraData);
-    return ret;
-}
-
 int32_t UserManager::SetElDirFscryptPolicy(int32_t userId, const std::string &path)
 {
 #ifdef USER_CRYPTO_MANAGER
