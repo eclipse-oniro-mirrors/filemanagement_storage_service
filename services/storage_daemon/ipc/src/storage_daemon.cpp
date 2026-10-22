@@ -349,6 +349,7 @@ int32_t StorageDaemon::DestroyUserDirs(int32_t userId, uint32_t flags)
     // CRYPTO_FLAG_EL3 destroy el3,  CRYPTO_FLAG_EL4 destroy el4
     flags = flags | IStorageDaemonEnum::CRYPTO_FLAG_EL3 | IStorageDaemonEnum::CRYPTO_FLAG_EL4 |
             IStorageDaemonEnum::CRYPTO_FLAG_EL5;
+    HiAudit::GetInstance().WriteStart("DestroyUserDirs UserManager", "userId: " + std::to_string(userId));
     int32_t destroyUserRet = UserManager::GetInstance().DestroyUserDirs(userId, flags);
     if (destroyUserRet != E_OK) {
         errCode = destroyUserRet;
@@ -359,7 +360,9 @@ int32_t StorageDaemon::DestroyUserDirs(int32_t userId, uint32_t flags)
     }
 
 #ifdef USER_CRYPTO_MANAGER
+    HiAudit::GetInstance().WriteStart("DestroyUserDirs KeyManager", "userId: " + std::to_string(userId));
     destroyUserRet = KeyManager::GetInstance().DeleteUserKeys(userId);
+    HiAudit::GetInstance().WriteEnd("DestroyUserDirs KeyManager", destroyUserRet);
     if (destroyUserRet != E_OK) {
         errCode = destroyUserRet;
         LOGW("[L1:StorageDaemon] DestroyUserDirs: DeleteUserKeys failed, userId=%{public}d, ret=%{public}d",
@@ -368,7 +371,9 @@ int32_t StorageDaemon::DestroyUserDirs(int32_t userId, uint32_t flags)
         StorageRadar::ReportUserManager("DestroyUserDirs::DeleteUserKeys", userId, errCode, extraData);
     }
     if (destroyUserRet == E_OK) {
+        HiAudit::GetInstance().WriteStart("DestroyUserDirs KeyManagerExt", "userId: " + std::to_string(userId));
         int32_t result = KeyManagerExt::GetInstance().DeleteUserKeys(userId);
+        HiAudit::GetInstance().WriteEnd("DestroyUserDirs KeyManagerExt", result);
         if (result != E_OK) {
             LOGE("[L1:StorageDaemon] DestroyUserDirs: KeyManagerExt DeleteUserKeys failed, userId=%{public}u,"
                 "ret=%{public}d", userId, result);
@@ -380,6 +385,7 @@ int32_t StorageDaemon::DestroyUserDirs(int32_t userId, uint32_t flags)
         LOGE("[L1:StorageDaemon] DestroyUserDirs: <<< EXIT FAILED <<< userId=%{public}d, ret=%{public}d",
             userId, errCode);
     }
+    HiAudit::GetInstance().WriteEnd("DestroyUserDirs UserManager UserCryptoManager", errCode);
     return errCode;
 #else
     if (errCode == E_OK) {
@@ -388,6 +394,7 @@ int32_t StorageDaemon::DestroyUserDirs(int32_t userId, uint32_t flags)
         LOGE("[L1:StorageDaemon] DestroyUserDirs: <<< EXIT FAILED <<< userId=%{public}d, ret=%{public}d",
             userId, errCode);
     }
+    HiAudit::GetInstance().WriteEnd("DestroyUserDirs UserManager", errCode);
     return errCode;
 #endif
 }
