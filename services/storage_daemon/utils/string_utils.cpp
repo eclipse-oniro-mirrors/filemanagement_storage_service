@@ -412,6 +412,10 @@ bool IsDlpPathValid(const std::string &dstPath)
 
 bool IsUdmfClipPathValid(int32_t userId, const std::string &dstPath)
 {
+    if (dstPath.empty()) {
+        LOGE("IsUdmfClipPathValid: dstPath is empty");
+        return false;
+    }
     std::string realPath;
     if (!GetRealPath(dstPath, realPath)) {
         LOGE("IsUdmfClipPathValid: realpath failed for %{public}s", dstPath.c_str());

@@ -366,6 +366,58 @@ HWTEST_F(StringUtilsTest, StringUtilsTest_IsUdmfClipPathValid_005, testing::ext:
     OHOS::ForceRemoveDirectory(path);
     GTEST_LOG_(INFO) << "StringUtilsTest_IsUdmfClipPathValid_005 end";
 }
+
+/**
+ * @tc.name: StringUtilsTest_IsUdmfClipPathValid_006
+ * @tc.desc: Verify IsUdmfClipPathValid returns false when realpath differs from dstPath (extra slash).
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(StringUtilsTest, StringUtilsTest_IsUdmfClipPathValid_006, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StringUtilsTest_IsUdmfClipPathValid_006 start";
+    int32_t userId = 100;
+    std::string canonicalPath = "/mnt/data/100/udmf_fuse/test_realpath_diff";
+    OHOS::ForceCreateDirectory(canonicalPath);
+    // Add an extra slash so realpath() resolves to a different string than dstPath
+    std::string path = "/mnt/data/100/udmf_fuse//test_realpath_diff";
+    EXPECT_FALSE(IsUdmfClipPathValid(userId, path));
+    OHOS::ForceRemoveDirectory(canonicalPath);
+    GTEST_LOG_(INFO) << "StringUtilsTest_IsUdmfClipPathValid_006 end";
+}
+
+/**
+ * @tc.name: StringUtilsTest_IsUdmfClipPathValid_007
+ * @tc.desc: Verify IsUdmfClipPathValid returns false when realpath differs from dstPath (dot segment).
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(StringUtilsTest, StringUtilsTest_IsUdmfClipPathValid_007, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StringUtilsTest_IsUdmfClipPathValid_007 start";
+    int32_t userId = 100;
+    std::string canonicalPath = "/mnt/data/100/clipboard_fuse/test_dot_segment";
+    OHOS::ForceCreateDirectory(canonicalPath);
+    // Use a "." segment so realpath() resolves to a different string than dstPath
+    std::string path = "/mnt/data/100/clipboard_fuse/./test_dot_segment";
+    EXPECT_FALSE(IsUdmfClipPathValid(userId, path));
+    OHOS::ForceRemoveDirectory(canonicalPath);
+    GTEST_LOG_(INFO) << "StringUtilsTest_IsUdmfClipPathValid_007 end";
+}
+
+/**
+ * @tc.name: StringUtilsTest_IsUdmfClipPathValid_008
+ * @tc.desc: Verify IsUdmfClipPathValid returns false for empty path.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(StringUtilsTest, StringUtilsTest_IsUdmfClipPathValid_008, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StringUtilsTest_IsUdmfClipPathValid_008 start";
+    int32_t userId = 100;
+    EXPECT_FALSE(IsUdmfClipPathValid(userId, ""));
+    GTEST_LOG_(INFO) << "StringUtilsTest_IsUdmfClipPathValid_008 end";
+}
 } // Test
 } // STORAGE_DAEMON
 } // OHOS

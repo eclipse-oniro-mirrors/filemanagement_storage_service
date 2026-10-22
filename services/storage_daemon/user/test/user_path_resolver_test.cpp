@@ -467,7 +467,7 @@ HWTEST_F(UserPathResolverTest, UserPathResolverTest_GetVirtualPath_001, TestSize
 HWTEST_F(UserPathResolverTest, UserPathResolverTest_GetVirtualPath_UdmfClipFuse, TestSize.Level1)
 {
     std::vector<DirInfo> dirInfoList;
-    EXPECT_EQ(UserPathResolver::GetVirtualPath(userId_, dirInfoList), E_OK);
+    EXPECT_EQ(UserPathResolver::GetAppdataPath(userId_, dirInfoList), E_OK);
     bool hasUdmfFuse = false;
     bool hasClipboardFuse = false;
     for (const auto &dirInfo : dirInfoList) {

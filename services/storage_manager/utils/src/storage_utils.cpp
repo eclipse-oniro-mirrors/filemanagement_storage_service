@@ -164,6 +164,10 @@ bool IsPathStartWithCloudDisk(int32_t userId, const std::string &dstPath)
 
 bool IsPathStartWithUdmfClip(int32_t userId, const std::string &dstPath)
 {
+    if (dstPath.empty()) {
+        LOGE("IsPathStartWithUdmfClip: dstPath is empty");
+        return false;
+    }
     const std::string udmfDir = "/mnt/data/" + std::to_string(userId) + "/udmf_fuse";
     if (dstPath.compare(0, udmfDir.size(), udmfDir) == 0) {
         return true;
