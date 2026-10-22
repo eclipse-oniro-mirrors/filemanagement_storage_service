@@ -1282,7 +1282,7 @@ uint64_t GetFileSize(const string &filename)
     return st.st_size;
 }
 
-bool StorageDaemonProvider::IsFilePathInvalid(const std::string &filePath)
+bool IsFilePathInvalid(const std::string &filePath)
 {
     constexpr const char *PATH_INVALID_FLAG1 = "../";
     constexpr const char *PATH_INVALID_FLAG2 = "/..";
