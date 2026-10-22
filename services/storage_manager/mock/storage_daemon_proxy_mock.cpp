@@ -381,11 +381,6 @@ int32_t StorageDaemonProxy::QueryCDStatus(const std::string &devPath, int32_t &s
     return E_OK;
 }
 
-int32_t StorageDaemonProxy::EjectCD(const std::string &devPath)
-{
-    return E_OK;
-}
-
 int32_t StorageDaemonProxy::Mount(const std::string &devPath, const std::string &mountPath,
                                   const std::string &fsType, uint64_t mountFlags,
                                   const std::string &mountData)
