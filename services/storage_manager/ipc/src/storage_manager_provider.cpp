@@ -1690,43 +1690,6 @@ int32_t StorageManagerProvider::UnregisterUeceActivationCallback()
     return err;
 }
 
-int32_t StorageManagerProvider::CreateUserDir(const std::string &path, mode_t mode, uid_t uid, gid_t gid)
-{
-    std::string message = "CreateUserDir Begin, path: " + GetAnonyString(path) + ", mode: " + std::to_string(mode) +
-                          ", uid: " + std::to_string(uid) + ", gid: " + std::to_string(gid);
-    StorageRadar::ReportFucBehavior("CreateUserDir", DEFAULT_USERID, message, E_OK);
-    if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER_CRYPT)) {
-        LOGE("Permission check failed, for storage_manager_crypt");
-        StorageRadar::ReportCommonResult("CreateUserDir", E_PERMISSION_DENIED, 0, "CheckClientPermission failed");
-        return E_PERMISSION_DENIED;
-    }
-
-    auto callingUid = IPCSkeleton::GetCallingUid();
-    if (callingUid != AOCO_UID) {
-        LOGE("Permission check failed, the UID is not in the trustlist, uid: %{public}d", callingUid);
-        StorageRadar::ReportCommonResult("CreateUserDir", E_PERMISSION_DENIED, 0, "callingUid not in trustlist");
-        return E_PERMISSION_DENIED;
-    }
-
-    if (IsFilePathInvalid(path)) {
-        LOGE("The path: %{public}s is invalid.", path.c_str());
-        StorageRadar::ReportCommonResult("CreateUserDir", E_PARAMS_INVALID, 0, "path invalid");
-        return E_PARAMS_INVALID;
-    }
-    
-    auto& sdCommunication = StorageDaemonCommunication::GetInstance();
-    auto ret = sdCommunication.CreateUserDir(path, mode, uid, gid);
-    LOGW("CreateUserDir end, uid: %{public}d, ret: %{public}d", callingUid, ret);
-
-    std::string extraData = "path=" + path + ", mode=" + std::to_string(mode) +
-        ", uid=" + std::to_string(uid) + ", gid=" + std::to_string(gid) +
-        ", callingUid=" + std::to_string(callingUid);
-    if (ret != E_OK) {
-        StorageRadar::ReportUserManager("CreateUserDir", 0, ret, extraData);
-    }
-    return ret;
-}
-
 int32_t StorageManagerProvider::NotifyUserChangedEvent(uint32_t userId, uint32_t eventType)
 {
     StorageDaemon::IncreaseThreadPriority("storage_manager");

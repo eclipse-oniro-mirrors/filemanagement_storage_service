@@ -2195,33 +2195,6 @@ int32_t StorageDaemonProvider::UnregisterUeceActivationCallback()
     return ret;
 }
 
-int32_t StorageDaemonProvider::CreateUserDir(const std::string &path, mode_t mode, uid_t uid, gid_t gid)
-{
-    LOGI("[L1:StorageDaemonProvider] CreateUserDir: >>> ENTER <<< path=%{public}s, mode=%{public}u, uid=%{public}u,"
-        "gid=%{public}u", path.c_str(), mode, uid, gid);
-    std::string message = "path: " + GetAnonyString(path) + " mode: " + std::to_string(mode)
-        + " uid: " + std::to_string(uid) + " gid: " + std::to_string(gid);
-    HiAudit::GetInstance().WriteStart("CreateUserDir", message);
-    auto callUid = IPCSkeleton::GetCallingUid();
-    if (callUid != STORAGE_MANAGER_UID) {
-        LOGE("[L1:StorageDaemonProvider] CreateUserDir: <<< EXIT FAILED <<< uid=%{public}d is invalid", callUid);
-        return E_PERMISSION_DENIED;
-    }
-    if (IsFilePathInvalid(path)) {
-        LOGE("[L1:StorageDaemonProvider] CreateUserDir: <<< EXIT FAILED <<< path is invalid");
-        return E_PARAMS_INVALID;
-    }
-    int32_t ret = UserManager::GetInstance().CreateUserDir(path, mode, uid, gid);
-    HiAudit::GetInstance().WriteEnd("CreateUserDir", ret);
-    if (ret == E_OK) {
-        LOGI("[L1:StorageDaemonProvider] CreateUserDir: <<< EXIT SUCCESS <<< path=%{public}s", path.c_str());
-    } else {
-        LOGE("[L1:StorageDaemonProvider] CreateUserDir: <<< EXIT FAILED <<< path=%{public}s, ret=%{public}d",
-            path.c_str(), ret);
-    }
-    return ret;
-}
-
 int32_t StorageDaemonProvider::GetDqBlkSpacesByUids(const std::vector<int32_t> &uids,
     std::vector<NextDqBlk> &dqBlks)
 {

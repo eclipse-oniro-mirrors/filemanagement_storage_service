@@ -277,31 +277,6 @@ void UserManager::CheckDirsFromVec(int32_t userId)
     LOGI("[L2:UserManager] CheckDirsFromVec: <<< EXIT SUCCESS <<< userId=%{public}d", userId);
 }
 
-int32_t UserManager::CreateUserDir(const std::string &path, mode_t mode, uid_t uid, gid_t gid)
-{
-    LOGI("[L2:UserManager] CreateUserDir: >>> ENTER <<< path=%{public}s, mode=%{public}d, uid=%{public}d,"
-        "gid=%{public}d", path.c_str(), mode, uid, gid);
-    bool valid = false;
-    for (const auto &prefix : ALLOWED_USER_DIR_PREFIXES) {
-        if (path.compare(0, prefix.size(), prefix) == 0) {
-            valid = true;
-            break;
-        }
-    }
-    if (!valid) {
-        LOGE("[L2:UserManager] CreateUserDir: <<< EXIT FAILED <<< The path is invalid, path=%{public}s", path.c_str());
-        return E_PARAMS_INVALID;
-    }
-
-    auto ret = PrepareDirSimple(path, mode, uid, gid);
-    if (ret != E_OK) {
-        LOGE("[L2:UserManager] CreateUserDir: <<< EXIT FAILED <<< Failed to prepareDir, ret=%{public}d", ret);
-    } else {
-        LOGI("[L2:UserManager] CreateUserDir: <<< EXIT SUCCESS <<< ret=%{public}d", ret);
-    }
-    return ret;
-}
-
 int32_t UserManager::SetElDirFscryptPolicy(int32_t userId, const std::string &path)
 {
     LOGI("[L2:UserManager] SetElDirFscryptPolicy: >>> ENTER <<< userId=%{public}d, path=%{public}s",

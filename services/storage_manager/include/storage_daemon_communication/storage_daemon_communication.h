@@ -118,8 +118,6 @@ public:
     int32_t SetDirEncryptionPolicyWithKeyDesc(const std::string &dirPath, uint32_t level,
                                               const std::string &keyDesc);
 
-    int32_t CreateUserDir(const std::string &path, mode_t mode, uid_t uid, gid_t gid);
-
     // stats radar
     int32_t GetDqBlkSpacesByUids(const std::vector<int32_t> &uids, std::vector<NextDqBlk> &dqBlks);
     int32_t GetDirListSpace(const std::vector<DirSpaceInfo> &inDirs, std::vector<DirSpaceInfo> &outDirs);
