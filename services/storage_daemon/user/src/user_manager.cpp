@@ -25,6 +25,7 @@
 #include "storage_service_constant.h"
 #include "storage_service_errno.h"
 #include "storage_service_log.h"
+#include "utils/hi_audit.h"
 #include "user/mount_constant.h"
 #include "utils/storage_radar.h"
 #include "utils/string_utils.h"
@@ -84,6 +85,8 @@ int32_t UserManager::PrepareUserDirsForUpdate(int32_t userId, uint32_t flags)
 {
     LOGI("[L2:UserManager] PrepareUserDirsForUpdate: >>> ENTER <<< ,"
         "userId:%{public}d, flags:%{public}u", userId, flags);
+    HiAudit::GetInstance().WriteStart("PrepareUserDirsForUpdate",
+        "userId=" + std::to_string(userId) + ", flags=" + std::to_string(flags));
     std::lock_guard<std::mutex> lock(mutex_);
 
     int32_t err = CheckUserIdRange(userId);
@@ -122,6 +125,7 @@ int32_t UserManager::PrepareUserDirsForUpdate(int32_t userId, uint32_t flags)
                 dirInfo.path.c_str());
         }
     }
+    HiAudit::GetInstance().WriteEnd("PrepareUserDirsForUpdate", E_OK);
     return CreateServiceDirs(userId, flags);
 }
 
@@ -161,6 +165,7 @@ int32_t UserManager::PrepareUserDirs(int32_t userId, uint32_t flags)
 int32_t UserManager::PrepareAllUserEl1Dirs()
 {
     LOGI("[L2:UserManager] PrepareAllUserEl1Dirs: >>> ENTER <<<");
+    HiAudit::GetInstance().WriteStart("PrepareAllUserEl1Dirs");
     std::vector<int32_t> userIds {GLOBAL_USER_ID};
     MountManager::GetInstance().GetAllUserId(userIds);
     int32_t ret = E_OK;
@@ -172,6 +177,7 @@ int32_t UserManager::PrepareAllUserEl1Dirs()
         }
     }
     LOGI("[L2:UserManager] PrepareAllUserEl1Dirs: <<< EXIT SUCCESS <<< ret=%{public}d", ret);
+    HiAudit::GetInstance().WriteEnd("PrepareAllUserEl1Dirs", ret);
     return ret;
 }
 

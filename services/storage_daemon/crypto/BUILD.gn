@@ -122,10 +122,6 @@ ohos_static_library("libsdcrypto") {
     defines += [ "EL2_INACTIVE_SPECIAL_HANDLING" ]
   }
 
-  if (storage_service_glasses_device) {
-    defines += [ "GLASSES_DEVICE" ]
-  }
-
   if (enable_pc_encryption_extension) {
     defines += [ "PC_ENCRYPTION_EXTENSION" ]
   }

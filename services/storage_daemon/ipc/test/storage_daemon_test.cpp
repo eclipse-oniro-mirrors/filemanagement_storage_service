@@ -1366,6 +1366,7 @@ HWTEST_F(StorageDaemonTest, StorageDaemonTest_ActiveUserKeyAndPrepare_003, TestS
 
 #ifdef USER_CRYPTO_MANAGER
     EXPECT_CALL(*keyManagerMock_, ActiveCeSceSeceUserKey(_, _, _, _)).WillRepeatedly(Return(-ENOENT));
+    EXPECT_CALL(*keyManagerMock_, DoDeleteUserCeEceSeceKeys(_, _, _)).WillRepeatedly(Return(E_OK));
     EXPECT_CALL(*keyManagerMock_, GenerateUserKeyByType(_, _, _, _)).WillOnce(Return(E_ERR)).WillOnce(Return(E_OK));
     EXPECT_CALL(*userManagerMock_, PrepareUserDirs(_, _)).WillOnce(Return(E_OK));
  
@@ -2001,6 +2002,23 @@ HWTEST_F(StorageDaemonTest, StorageDaemonTest_EraseAllUserEncryptedKeys_002, Tes
     GTEST_LOG_(INFO) << "StorageDaemonTest_EraseAllUserEncryptedKeys_002 end";
 }
 #endif
+
+/**
+ * @tc.name: StorageDaemon_GetNeedRestoreVersion_FileNotExist_DefaultVersion3
+ * @tc.desc: GetNeedRestoreVersion returns default "3" when file not exist
+ * @tc.type: FUNC
+ */
+HWTEST_F(StorageDaemonTest, StorageDaemon_GetNeedRestoreVersion_FileNotExist_DefaultVersion3,
+    TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemon_GetNeedRestoreVersion_FileNotExist_DefaultVersion3 start";
+
+    // need_restore file does not exist, should return default "3"
+    std::string result = storageDaemon_->GetNeedRestoreVersion(userId_, EL1_KEY);
+    EXPECT_EQ(result, "3");
+
+    GTEST_LOG_(INFO) << "StorageDaemon_GetNeedRestoreVersion_FileNotExist_DefaultVersion3 end";
+}
 } // Test
 } // STORAGE_DAEMON
 } // namespace OHOS

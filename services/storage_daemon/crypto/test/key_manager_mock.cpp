@@ -311,6 +311,14 @@ int KeyManager::GenerateUserKeyByType(unsigned int user, KeyType type,
     return KeyManagerMock::iKeyManagerMock_->GenerateUserKeyByType(user, type, token, secret);
 }
 
+int KeyManager::DoDeleteUserCeEceSeceKeys(unsigned int user, const std::string userDir, KeyType type)
+{
+    if (KeyManagerMock::iKeyManagerMock_ == nullptr) {
+        return E_OK;
+    }
+    return KeyManagerMock::iKeyManagerMock_->DoDeleteUserCeEceSeceKeys(user, userDir, type);
+}
+
 int KeyManager::ActiveCeSceSeceUserKey(unsigned int user, KeyType type,
                                        const std::vector<uint8_t> &token,
                                        const std::vector<uint8_t> &secret)

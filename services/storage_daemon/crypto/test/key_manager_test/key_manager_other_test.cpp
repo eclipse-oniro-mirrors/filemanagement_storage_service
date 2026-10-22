@@ -959,4 +959,57 @@ HWTEST_F(KeyManagerOtherTest,
     GTEST_LOG_(INFO) <<
         "KeyManager_UpdateCeEceSeceUserAuth_needFixFiles_001 end";
 }
+
+/**
+ * @tc.name: KeyManager_LoadAllUsersEl1Key_RestoreUserKeyRetry
+ * @tc.desc: Verify RestoreUserKey retries on first failure then succeeds
+ * @tc.type: FUNC
+ * @tc.require: IAHHWW
+ */
+HWTEST_F(KeyManagerOtherTest, KeyManager_LoadAllUsersEl1Key_RestoreUserKeyRetry,
+    TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "KeyManager_LoadAllUsersEl1Key_RestoreUserKeyRetry Start";
+
+    EXPECT_CALL(*fscryptControlMock_, GetFscryptVersionFromPolicy()).WillRepeatedly(Return(FSCRYPT_V2));
+    EXPECT_CALL(*keyControlMock_, KeyCtrlGetFscryptVersion(_)).WillRepeatedly(Return(FSCRYPT_V2));
+    EXPECT_CALL(*baseKeyMock_, UpgradeKeys()).WillRepeatedly(Return(true));
+    EXPECT_CALL(*baseKeyMock_, InitKey(_)).WillRepeatedly(Return(true));
+    // RestoreKey fails first, then succeeds on retry
+    EXPECT_CALL(*baseKeyMock_, RestoreKey(_, _, _))
+        .WillOnce(Return(E_ELX_KEY_STORE_ERROR))
+        .WillRepeatedly(Return(E_OK));
+    EXPECT_CALL(*fscryptKeyMock_, ActiveKey(_, _, _)).WillRepeatedly(Return(E_OK));
+
+    // LoadAllUsersEl1Key should return E_OK even if first RestoreUserKey fails
+    // (retry mechanism kicks in)
+    EXPECT_EQ(KeyManager::GetInstance().LoadAllUsersEl1Key(), E_OK);
+
+    GTEST_LOG_(INFO) << "KeyManager_LoadAllUsersEl1Key_RestoreUserKeyRetry end";
+}
+
+/**
+ * @tc.name: KeyManager_LoadAllUsersEl1Key_RestoreUserKeyRetryFail
+ * @tc.desc: Verify RestoreUserKey retries on failure and still fails
+ * @tc.type: FUNC
+ * @tc.require: IAHHWW
+ */
+HWTEST_F(KeyManagerOtherTest, KeyManager_LoadAllUsersEl1Key_RestoreUserKeyRetryFail,
+    TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "KeyManager_LoadAllUsersEl1Key_RestoreUserKeyRetryFail Start";
+
+    EXPECT_CALL(*fscryptControlMock_, GetFscryptVersionFromPolicy()).WillRepeatedly(Return(FSCRYPT_V2));
+    EXPECT_CALL(*keyControlMock_, KeyCtrlGetFscryptVersion(_)).WillRepeatedly(Return(FSCRYPT_V2));
+    EXPECT_CALL(*baseKeyMock_, UpgradeKeys()).WillRepeatedly(Return(true));
+    EXPECT_CALL(*baseKeyMock_, InitKey(_)).WillRepeatedly(Return(true));
+    // RestoreKey always fails
+    EXPECT_CALL(*baseKeyMock_, RestoreKey(_, _, _)).WillRepeatedly(Return(E_ELX_KEY_STORE_ERROR));
+    EXPECT_CALL(*fscryptKeyMock_, ActiveKey(_, _, _)).WillRepeatedly(Return(E_OK));
+
+    // LoadAllUsersEl1Key still returns E_OK (individual user failures don't block)
+    EXPECT_EQ(KeyManager::GetInstance().LoadAllUsersEl1Key(), E_OK);
+
+    GTEST_LOG_(INFO) << "KeyManager_LoadAllUsersEl1Key_RestoreUserKeyRetryFail end";
+}
 }
