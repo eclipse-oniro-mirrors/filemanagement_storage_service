@@ -558,7 +558,7 @@ int32_t StorageDaemonCommunication::CreateRecoverKey(uint32_t userId,
     return proxy->CreateRecoverKey(userId, userType, token, secret);
 }
 
-int32_t StorageDaemonCommunication::SetRecoverKey(const std::vector<uint8_t> &key)
+int32_t StorageDaemonCommunication::SetRecoverKey(const std::vector<uint8_t> &key, bool needMountPath)
 {
     LOGI("enter");
     int32_t err = Connect();
@@ -571,7 +571,7 @@ int32_t StorageDaemonCommunication::SetRecoverKey(const std::vector<uint8_t> &ke
         LOGE("StorageDaemonCommunication::Connect service nullptr");
         return E_SERVICE_IS_NULLPTR;
     }
-    return proxy->SetRecoverKey(key);
+    return proxy->SetRecoverKey(key, needMountPath);
 }
 
 int32_t StorageDaemonCommunication::ResetSecretWithRecoveryKey(uint32_t userId,

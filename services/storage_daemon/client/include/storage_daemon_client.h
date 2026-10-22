@@ -66,7 +66,7 @@ public:
                                     uint32_t userType,
                                     const std::vector<uint8_t> &token,
                                     const std::vector<uint8_t> &secret);
-    static int32_t SetRecoverKey(const std::vector<uint8_t> &key);
+    static int32_t SetRecoverKey(const std::vector<uint8_t> &key, bool needMountPath = false);
     // file mgr fuse
     static int32_t MountFileMgrFuse(int32_t userId, const std::string &path, int32_t &fuseFd);
     static int32_t UMountFileMgrFuse(int32_t userId, const std::string &path);

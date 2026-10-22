@@ -92,7 +92,7 @@ public:
     int GetFileEncryptStatus(uint32_t userId, bool &isEncrypted, bool needCheckDirMount = false);
     int CreateRecoverKey(uint32_t userId, uint32_t userType, const std::vector<uint8_t> &token,
                          const std::vector<uint8_t> &secret);
-    int SetRecoverKey(const std::vector<uint8_t> &key);
+    int SetRecoverKey(const std::vector<uint8_t> &key, bool needMountPath = false);
     int32_t ResetSecretWithRecoveryKey(uint32_t userId, uint32_t rkType, const std::vector<uint8_t> &key);
 #ifdef EL5_FILEKEY_MANAGER
     int RegisterUeceActivationCallback(const sptr<StorageManager::IUeceActivationCallback> &ueceCallback);
@@ -195,6 +195,9 @@ private:
 #ifdef RECOVER_KEY_TEE_ENVIRONMENT
     int32_t FileBasedEncryptfsMount();
     int32_t InstallEmptyUserKeyForRecovery(uint32_t userId);
+#if defined(PC_ENCRYPTION_EXTENSION)
+    int32_t MountRecoverPaths();
+#endif
 #endif
     using KeyMap = std::map<KeyType, std::shared_ptr<BaseKey>>;
     std::map<unsigned int, KeyMap> userElKeys_;

@@ -1675,11 +1675,11 @@ int32_t StorageDaemon::CreateRecoverKey(uint32_t userId,
 #endif
 }
 
-int32_t StorageDaemon::SetRecoverKey(const std::vector<uint8_t> &key)
+int32_t StorageDaemon::SetRecoverKey(const std::vector<uint8_t> &key, bool needMountPath)
 {
     LOGI("[L1:StorageDaemon] SetRecoverKey: >>> ENTER <<< keySize=%{public}zu", key.size());
 #if defined(USER_CRYPTO_MANAGER) && defined(PC_USER_MANAGER)
-    int32_t ret = KeyManager::GetInstance().SetRecoverKey(key);
+    int32_t ret = KeyManager::GetInstance().SetRecoverKey(key, needMountPath);
     if (ret == E_OK) {
         LOGI("[L1:StorageDaemon] SetRecoverKey: <<< EXIT SUCCESS <<<");
     } else {

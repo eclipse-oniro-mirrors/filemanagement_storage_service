@@ -76,7 +76,7 @@ public:
     MOCK_METHOD2(GetUserNeedActiveStatus, int32_t(uint32_t, bool &));
     MOCK_METHOD4(CreateRecoverKey, int32_t (uint32_t, uint32_t, const std::vector<uint8_t> &,
                                             const std::vector<uint8_t> &));
-    MOCK_METHOD1(SetRecoverKey, int32_t (const std::vector<uint8_t> &));
+    MOCK_METHOD2(SetRecoverKey, int32_t (const std::vector<uint8_t> &, bool));
     MOCK_METHOD3(ResetSecretWithRecoveryKey, int32_t(uint32_t, uint32_t, const std::vector<uint8_t> &));
     MOCK_METHOD2(MountMediaFuse, int32_t (int32_t, int32_t &));
     MOCK_METHOD1(UMountMediaFuse, int32_t (int32_t));

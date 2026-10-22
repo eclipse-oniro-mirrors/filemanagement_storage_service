@@ -921,7 +921,7 @@ HWTEST_F(StorageDaemonClientTest, Storage_Service_StorageDaemonClientTest_SetRec
     EXPECT_CALL(*sam, CheckSystemAbility(An<int32_t>(), An<bool&>()))
         .WillOnce(DoAll(SetArgReferee<1>(true), Return(sd)));
     EXPECT_CALL(*sam, GetSystemAbility(_)).WillOnce(Return(sd));
-    EXPECT_CALL(*sd, SetRecoverKey(_)).WillOnce(Return(E_OK));
+    EXPECT_CALL(*sd, SetRecoverKey(_, _)).WillOnce(Return(E_OK));
     ret = StorageDaemonClient::SetRecoverKey(key);
     EXPECT_EQ(ret, E_OK);
     GTEST_LOG_(INFO) << "Storage_Service_StorageDaemonClientTest_SetRecoverKey_001 end";
@@ -1294,7 +1294,7 @@ HWTEST_F(StorageDaemonClientTest, Storage_Service_StorageDaemonClientTest_NewErr
     EXPECT_CALL(*sd, CreateRecoverKey(_, _, _, _)).WillOnce(Return(E_ERR));
     EXPECT_EQ(StorageDaemonClient::CreateRecoverKey(TEST_USER_ID, TEST_USER_TYPE, token, newSecret), E_ERR);
 
-    EXPECT_CALL(*sd, SetRecoverKey(_)).WillOnce(Return(E_ERR));
+    EXPECT_CALL(*sd, SetRecoverKey(_, _)).WillOnce(Return(E_ERR));
     EXPECT_EQ(StorageDaemonClient::SetRecoverKey(newSecret), E_ERR);
 
     EXPECT_CALL(*sd, GenerateAppkey(_, _, _, _)).WillOnce(Return(E_ERR));

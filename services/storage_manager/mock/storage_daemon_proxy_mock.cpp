@@ -160,7 +160,7 @@ int32_t StorageDaemonProxy::CreateRecoverKey(uint32_t userId,
     return E_OK;
 }
 
-int32_t StorageDaemonProxy::SetRecoverKey(const std::vector<uint8_t> &key)
+int32_t StorageDaemonProxy::SetRecoverKey(const std::vector<uint8_t> &key, bool needMountPath)
 {
     return E_OK;
 }

@@ -776,7 +776,7 @@ HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_SetRecoverKey_00
     GTEST_LOG_(INFO) << "StorageManagerProviderTest_SetRecoverKey_002 start";
     ASSERT_TRUE(storageManagerProviderTest_ != nullptr);
     std::vector<uint8_t> key = {0x01, 0x02, 0x03};
-    auto ret = storageManagerProviderTest_->SetRecoverKey(key);
+    auto ret = storageManagerProviderTest_->SetRecoverKey(key, false);
     EXPECT_EQ(ret, E_SERVICE_IS_NULLPTR);
     GTEST_LOG_(INFO) << "StorageManagerProviderTest_SetRecoverKey_002 end";
 }

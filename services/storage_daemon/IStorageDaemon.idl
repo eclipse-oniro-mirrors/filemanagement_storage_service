@@ -51,7 +51,7 @@ interface OHOS.StorageDaemon.IStorageDaemon{
      [ipccode 34] void DeleteAppkey([in] unsigned int userId, [in] String keyId);
      [ipccode 38] void CreateRecoverKey([in] unsigned int userId, [in] unsigned int userType,
                                         [in] unsigned char[] token,[in] unsigned char[] secret);
-     [ipccode 39] void SetRecoverKey([in] unsigned char[] key);
+     [ipccode 39] void SetRecoverKey([in] unsigned char[] key, [in] boolean needMountPath);
      // app file share api
      [ipccode 24] int[] CreateShareFile([in] StorageFileRawData rawData,
                                         [in] unsigned int tokenId, [in] unsigned int flag);

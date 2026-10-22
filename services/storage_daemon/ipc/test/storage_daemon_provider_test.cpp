@@ -185,7 +185,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_PermissionInvalid_
     EXPECT_EQ(result, E_PERMISSION_DENIED);
     result = storageDaemonProviderTest_->CreateRecoverKey(100, 1, {100}, {100});
     EXPECT_EQ(result, E_PERMISSION_DENIED);
-    result = storageDaemonProviderTest_->SetRecoverKey({100});
+    result = storageDaemonProviderTest_->SetRecoverKey({100}, false);
     EXPECT_EQ(result, E_PERMISSION_DENIED);
     std::vector<uint8_t> binaryData = {3, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0};
     StorageFileRawData fileRawData {
@@ -1105,7 +1105,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_SetRecoverKey_001,
                                              0x98, 0x76, 0x54, 0x32, 0x10, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66,
                                              0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x00};
     ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
-    int32_t result = storageDaemonProviderTest_->SetRecoverKey(testKey_32);
+    int32_t result = storageDaemonProviderTest_->SetRecoverKey(testKey_32, false);
     EXPECT_EQ(result, E_OK);
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_SetRecoverKey_001 end";
 }

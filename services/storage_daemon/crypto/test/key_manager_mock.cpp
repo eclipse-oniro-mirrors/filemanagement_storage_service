@@ -240,12 +240,12 @@ int KeyManager::RegisterUeceActivationCallback(const sptr<StorageManager::IUeceA
 }
 #endif
 
-int32_t KeyManager::SetRecoverKey(const std::vector<uint8_t> &key)
+int32_t KeyManager::SetRecoverKey(const std::vector<uint8_t> &key, bool needMountPath)
 {
     if (KeyManagerMock::iKeyManagerMock_ == nullptr) {
         return E_OK;
     }
-    return KeyManagerMock::iKeyManagerMock_->SetRecoverKey(key);
+    return KeyManagerMock::iKeyManagerMock_->SetRecoverKey(key, needMountPath);
 }
 
 #if defined(USER_CRYPTO_MANAGER) && defined(PC_USER_MANAGER)
