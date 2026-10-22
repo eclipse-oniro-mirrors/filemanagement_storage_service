@@ -1230,6 +1230,11 @@ int32_t StorageDaemonProvider::MountMediaFuse(int32_t userId, int32_t &devFd)
 int32_t StorageDaemonProvider::UMountMediaFuse(int32_t userId)
 {
     HiAudit::GetInstance().WriteStart("UMountMediaFuse", "userId: " + std::to_string(userId));
+    auto uid = IPCSkeleton::GetCallingUid();
+    if (uid != STORAGE_MANAGER_UID) {
+        LOGE("[L1:StorageDaemonProvider] UMountMediaFuse: <<< EXIT FAILED <<< uid=%{public}d is invalid", uid);
+        return E_PERMISSION_DENIED;
+    }
     int32_t err = CheckUserIdRange(userId);
     if (err != E_OK) {
         LOGE("[L1:StorageDaemonProvider] UMountMediaFuse: <<< EXIT FAILED <<< userId=%{public}d out of range", userId);
@@ -1294,6 +1299,11 @@ int32_t StorageDaemonProvider::UMountFileMgrFuse(int32_t userId, const std::stri
         userId, path.c_str());
     std::string message = "userId: " + std::to_string(userId) + " path: " + GetAnonyString(path);
     HiAudit::GetInstance().WriteStart("UMountFileMgrFuse", message);
+    auto uid = IPCSkeleton::GetCallingUid();
+    if (uid != STORAGE_MANAGER_UID) {
+        LOGE("[L1:StorageDaemonProvider] UMountFileMgrFuse: <<< EXIT FAILED <<< uid=%{public}d is invalid", uid);
+        return E_PERMISSION_DENIED;
+    }
     if (IsFilePathInvalid(path)) {
         LOGE("[L1:StorageDaemonProvider] UMountFileMgrFuse: <<< EXIT FAILED <<< path is invalid");
         return E_PARAMS_INVALID;
