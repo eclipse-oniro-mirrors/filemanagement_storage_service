@@ -179,7 +179,7 @@ void FinishOpDiag(int32_t ret)
 
 int32_t ReturnWithOpDiag_optical(int32_t ret, const std::string &devPath)
 {
-    if (devPath.rfind("disk-11-", 0) == 0 || devPath.rfind("vol-11-", 0) == 0) {
+    if (devPath.find("disk-11-") != std::string::npos || devPath.find("vol-11-") != std::string::npos) {
         VolumeOpDiagEnd();
         return ret;
     }
