@@ -25,6 +25,7 @@
 #include "storage_service_errno.h"
 #include "string_utils.h"
 #include "utils/mount_argument_utils.h"
+#include "utils/file_utils.h"
 
 using namespace std;
 namespace {
