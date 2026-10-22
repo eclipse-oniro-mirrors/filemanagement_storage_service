@@ -3499,7 +3499,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_UMountCloudDiskFus
  * @tc.name: StorageDaemonProviderTest_OpticalEraseDfx_001
  * @tc.desc: Erase failure on non-optical device keeps return and flushes op diag.
  * @tc.type: FUNC
- * @tc.require: RR-30093408
+ * @tc.require: AR000H09L6
  */
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_OpticalEraseDfx_001, TestSize.Level1)
 {
@@ -3515,7 +3515,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_OpticalEraseDfx_00
  * @tc.name: StorageDaemonProviderTest_OpticalEjectDfx_001
  * @tc.desc: Eject failure on non-exist sr device keeps return and flushes op diag.
  * @tc.type: FUNC
- * @tc.require: RR-30093408
+ * @tc.require: AR000H09L6
  */
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_OpticalEjectDfx_001, TestSize.Level1)
 {
@@ -3531,7 +3531,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_OpticalEjectDfx_00
  * @tc.name: StorageDaemonProviderTest_OpticalEjectInvalidNameDfx_001
  * @tc.desc: Eject with invalid dev name returns E_PARAMS_INVALID via op diag.
  * @tc.type: FUNC
- * @tc.require: RR-30093408
+ * @tc.require: AR000H09L6
  */
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_OpticalEjectInvalidNameDfx_001, TestSize.Level1)
 {
@@ -3547,7 +3547,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_OpticalEjectInvali
  * @tc.name: StorageDaemonProviderTest_OpticalBurnDfx_001
  * @tc.desc: Burn with empty fsType returns E_PARAMS_INVALID via op diag.
  * @tc.type: FUNC
- * @tc.require: RR-30093408
+ * @tc.require: AR000H09L6
  */
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_OpticalBurnDfx_001, TestSize.Level1)
 {
@@ -3563,7 +3563,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_OpticalBurnDfx_001
  * @tc.name: StorageDaemonProviderTest_OpticalCreateIsoImageDfx_001
  * @tc.desc: CreateIsoImage with empty fsType returns E_PARAMS_INVALID via op diag.
  * @tc.type: FUNC
- * @tc.require: RR-30093408
+ * @tc.require: AR000H09L6
  */
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_OpticalCreateIsoImageDfx_001, TestSize.Level1)
 {
@@ -3580,7 +3580,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_OpticalCreateIsoIm
  * @tc.name: StorageDaemonProviderTest_OpticalQueryCDStatusDfx_001
  * @tc.desc: QueryCDStatus on non-cd device fails and keeps return via op diag.
  * @tc.type: FUNC
- * @tc.require: RR-30093408
+ * @tc.require: AR000H09L6
  */
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_OpticalQueryCDStatusDfx_001, TestSize.Level1)
 {
