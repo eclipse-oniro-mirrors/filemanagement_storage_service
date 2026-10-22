@@ -465,7 +465,7 @@ int32_t MountManager::MountUdmfClipFuse(int32_t userId, const std::string &path,
         "fscontext=u:object_r:hmdfs:s0",
         fuseFd);
     startTime = StorageService::StorageRadar::RecordCurrentTime();
-    int ret = Mount("/dev/fuse", path.c_str(), "fuse", MS_NOSUID | MS_NODEV, opt.c_str());
+    int ret = Mount("/dev/fuse", path.c_str(), "fuse", MS_NOSUID | MS_NODEV | MS_NOEXEC, opt.c_str());
     if (ret) {
         LOGE("[L2:MountManager] MountUdmfClipFuse: <<< EXIT FAILED <<< mount fuse failed, ret=%{public}d,"
             "errno=%{public}d, path=%{public}s", ret, errno, path.c_str());
