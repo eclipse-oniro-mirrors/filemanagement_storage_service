@@ -925,6 +925,11 @@ int32_t StorageDaemonProvider::MountMediaFuse(int32_t userId, int32_t &devFd)
 
 int32_t StorageDaemonProvider::UMountMediaFuse(int32_t userId)
 {
+    auto uid = IPCSkeleton::GetCallingUid();
+    if (uid != STORAGE_MANAGER_UID) {
+        LOGE("StorageDaemon::UMountMediaFuse: <<< EXIT FAILED <<< uid=%{public}d is invalid", uid);
+        return E_PERMISSION_DENIED;
+    }
     int32_t err = CheckUserIdRange(userId);
     if (err != E_OK) {
         LOGE("StorageDaemon::UMountMediaFuse userId %{public}d out of range", userId);
@@ -960,6 +965,11 @@ int32_t StorageDaemonProvider::MountFileMgrFuse(int32_t userId, const std::strin
 
 int32_t StorageDaemonProvider::UMountFileMgrFuse(int32_t userId, const std::string &path)
 {
+    auto uid = IPCSkeleton::GetCallingUid();
+    if (uid != STORAGE_MANAGER_UID) {
+        LOGE("StorageDaemon::UMountFileMgrFuse: <<< EXIT FAILED <<< uid=%{public}d is invalid", uid);
+        return E_PERMISSION_DENIED;
+    }
     if (IsFilePathInvalid(path)) {
         return E_PARAMS_INVALID;
     }
