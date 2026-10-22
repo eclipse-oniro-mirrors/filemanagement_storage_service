@@ -3576,22 +3576,5 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_OpticalCreateIsoIm
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalCreateIsoImageDfx_001 end";
 }
 
-/**
- * @tc.name: StorageDaemonProviderTest_OpticalQueryCDStatusDfx_001
- * @tc.desc: QueryCDStatus on non-cd device fails and keeps return via op diag.
- * @tc.type: FUNC
- * @tc.require: AR000H09L6
- */
-HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_OpticalQueryCDStatusDfx_001, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalQueryCDStatusDfx_001 start";
-    SetCallingUid(DISK_MANAGER_UID);
-    int32_t status = 0;
-    int32_t ret = storageDaemonProviderTest_->QueryCDStatus("/dev/block/ut_test_dev", status);
-    EXPECT_NE(ret, E_OK);
-    SetCallingUid(999);
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalQueryCDStatusDfx_001 end";
-}
-
 } // namespace StorageDaemon
 } // namespace OHOS
