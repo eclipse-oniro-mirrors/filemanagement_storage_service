@@ -2555,22 +2555,20 @@ int32_t StorageDaemonProvider::QueryCDStatus(const std::string &devPath, int32_t
         LOGE("[L1:StorageDaemonProvider] QueryCDStatus: <<< EXIT FAILED <<< uid=%{public}d is invalid", uid);
         return E_PERMISSION_DENIED;
     }
-    VolumeOpDiagBegin(MakeOpDiagContext("StorageDaemonProvider::QueryCDStatus",
-                                        DFX_STAGE_QUERY_CD_STATUS, VOL_OP_QUERY_CD_STATUS, devPath, ""));
     std::string verifiedPath;
     int32_t ret = ValidateMountPath(devPath, verifiedPath);
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemonProvider] QueryCDStatus: <<< EXIT FAILED <<< devPath is invalid");
-        return ReturnWithOpDiag(ret);
+        return ret;
     }
     ret = DiskUtils::QueryCDStatus(verifiedPath, status);
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemonProvider] QueryCDStatus: <<< EXIT FAILED <<< ret=%{public}d", ret);
-        return ReturnWithOpDiag(ret);
+        return ret;
     }
 
     LOGI("[L1:StorageDaemonProvider] QueryCDStatus: <<< EXIT SUCCESS <<< status=%{public}d", status);
-    return ReturnWithOpDiag(E_OK);
+    return E_OK;
 #else
     LOGI("[L1:StorageDaemonProvider] QueryCDStatus: <<< EXIT NOT_SUPPORT <<<");
     return E_NOT_SUPPORT;
