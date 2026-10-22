@@ -128,7 +128,6 @@ using namespace testing;
 using namespace testing::ext;
 constexpr pid_t DFS_UID = 1009;
 constexpr pid_t ACCOUNT_UID = 3058;
-constexpr pid_t AOCO_UID = 7558;
 constexpr pid_t FOUNDATION_UID = 5523;
 constexpr pid_t DLP_UID = 3553;
 constexpr int32_t USER_ID = 100;
