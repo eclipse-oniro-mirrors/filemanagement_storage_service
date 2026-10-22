@@ -87,6 +87,7 @@ uint64_t GetFileSize(const std::string &filename);
 bool IsFolder(const std::string &filename);
 bool IsFileExist(const std::string &path);
 std::string MaskSensitiveInfo(const std::string &input);
+bool IsFilePathInvalid(const std::string &filePath);
 } // namespace StorageDaemon
 } // namespace OHOS
 
