@@ -176,7 +176,7 @@ bool IsPathStartWithUdmfClip(int32_t userId, const std::string &dstPath)
     if (dstPath.compare(0, clipDir.size(), clipDir) == 0) {
         return true;
     }
-    LOGE("path %{public}s is not start with udmf_fuse or clipboard_fuse", dstPath.c_str());
+    LOGE("IsPathStartWithUdmfClip: path %{public}s is not start with udmf_fuse or clipboard_fuse", dstPath.c_str());
     return false;
 }
 
