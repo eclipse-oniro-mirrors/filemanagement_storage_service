@@ -110,8 +110,7 @@ constexpr int32_t DFX_STAGE_ERASE = 60;
 constexpr int32_t DFX_STAGE_EJECT = 61;
 constexpr int32_t DFX_STAGE_BURN = 62;
 constexpr int32_t DFX_STAGE_CREATE_ISO_IMAGE = 63;
-// Daemon-side only: cdrom disc state query (disc discovery), no disk_manager counterpart.
-constexpr int32_t DFX_STAGE_QUERY_CD_STATUS = 64;
+
 constexpr int32_t VOL_OP_MOUNT = 0;
 constexpr int32_t VOL_OP_UNMOUNT = 1;
 constexpr int32_t VOL_OP_FORMAT = 2;
@@ -126,9 +125,6 @@ constexpr int32_t VOL_OP_ERASE = 20;
 constexpr int32_t VOL_OP_EJECT = 21;
 constexpr int32_t VOL_OP_BURN = 22;
 constexpr int32_t VOL_OP_CREATE_ISO_IMAGE = 23;
-// Daemon-side only: cdrom disc state query, no disk_manager counterpart.
-constexpr int32_t VOL_OP_QUERY_CD_STATUS = 24;
-
 
 VolumeOpDiagContext MakeOpDiagContext(const char *funcName, int32_t bizStage, int32_t opType,
                                       const std::string &devPath, const std::string &fsType)
@@ -179,6 +175,16 @@ void FinishOpDiag(int32_t ret)
         VolumeOpDiagFlushFailureReport(ret);
     }
     VolumeOpDiagEnd();
+}
+
+int32_t ReturnWithOpDiag_optical(int32_t ret, const std::string &devPath)
+{
+    if (devPath.rfind("disk-11-", 0) == 0 || devPath.rfind("vol-11-", 0) == 0) {
+        VolumeOpDiagEnd();
+        return ret;
+    }
+    FinishOpDiag(ret);
+    return ret;
 }
 
 int32_t ReturnWithOpDiag(int32_t ret)
@@ -2782,7 +2788,7 @@ int32_t StorageDaemonProvider::ReadMetadata(const std::string &devPath,
     std::string verifiedPath;
     int32_t ret = ValidateBlockDevicePath(devPath, verifiedPath);
     if (ret != E_OK) {
-        return ReturnWithOpDiag(ret);
+        return ReturnWithOpDiag_optical(ret, devPath);
     }
 
     ret = VolumeUtils::ReadMetadata(verifiedPath, uuid, type, label);
@@ -2791,11 +2797,11 @@ int32_t StorageDaemonProvider::ReadMetadata(const std::string &devPath,
             ret = E_READMETADATA;
         }
         LOGE("[L1:StorageDaemonProvider] ReadMetadata: <<< EXIT FAILED <<< ret=%{public}d", ret);
-        return ReturnWithOpDiag(ret);
+        return ReturnWithOpDiag_optical(ret, devPath);
     }
 
     LOGI("[L1:StorageDaemonProvider] ReadMetadata: <<< EXIT SUCCESS <<<");
-    return ReturnWithOpDiag(E_OK);
+    return ReturnWithOpDiag_optical(ret, devPath);
 #else
     return E_NOT_SUPPORT;
 #endif
