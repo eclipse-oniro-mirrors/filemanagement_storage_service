@@ -80,7 +80,6 @@ public:
     int32_t ResetSecretWithRecoveryKey(uint32_t userId, uint32_t rkType, const std::vector<uint8_t> &key) override;
     int32_t RegisterUeceActivationCallback(const sptr<IUeceActivationCallback>& callback) override;
     int32_t UnregisterUeceActivationCallback() override;
-    int32_t CreateUserDir(const std::string &path, uint32_t mode, uint32_t uid, uint32_t gid) override;
     int32_t CreateShareFile(const StorageFileRawData &rawData,
                             uint32_t tokenId,
                             uint32_t flag,

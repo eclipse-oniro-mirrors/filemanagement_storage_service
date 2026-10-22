@@ -15,7 +15,6 @@
 
 #include <gtest/gtest.h>
 
-#include "directory_ex.h"
 #include "istorage_daemon.h"
 #include "storage_service_errno.h"
 #include "storage_service_log.h"
@@ -494,40 +493,6 @@ HWTEST_F(UserManagerTest, Storage_Manager_MountManagerTest_MountMediaFuse_001, T
     GTEST_LOG_(INFO) << "Storage_Manager_MountManagerTest_MountMediaFuse_001 end";
 }
 #endif
-
-/**
- * @tc.name: Storage_Manager_MountManagerTest_CreateUserDir_001
- * @tc.desc: Verify the CreateUserDir function.
- * @tc.type: FUNC
- */
-HWTEST_F(UserManagerTest, Storage_Manager_MountManagerTest_CreateUserDir_001, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "Storage_Manager_MountManagerTest_CreateUserDir_001 start";
-    std::string path;
-    mode_t mode = 771;
-    uid_t uid = 0;
-    gid_t gid = 0;
-
-    int32_t ret = UserManager::GetInstance().CreateUserDir(path, mode, uid, gid);
-    EXPECT_EQ(ret, E_PARAMS_INVALID);
-
-    path = "/data/virt_service/rgm_hmos/anco_hmos_data";
-    std::error_code errCode;
-    if (!std::filesystem::exists(path, errCode)) {
-        std::filesystem::create_directories(path, errCode);
-    }
-    
-    ret = UserManager::GetInstance().CreateUserDir(path + "/testDir", mode, uid, gid);
-    EXPECT_EQ(ret, E_OK);
-    ret = UserManager::GetInstance().CreateUserDir(path  + "/testDir", mode, uid, gid);
-    EXPECT_EQ(ret, E_CREATE_USER_DIR_EXIST);
-
-    ret = UserManager::GetInstance().CreateUserDir(path + "/testDir/testDir/testDir", mode, uid, gid);
-    EXPECT_NE(ret, E_OK);
-
-    OHOS::ForceRemoveDirectory(path + "/testDir");
-    GTEST_LOG_(INFO) << "Storage_Manager_MountManagerTest_CreateUserDir_001 end";
-}
 
 /**
  * @tc.name: Storage_Manager_MountManagerTest_CreateElxBundleDataDir_001
