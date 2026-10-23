@@ -26,6 +26,7 @@
 #include "storage_service_errno.h"
 #include "storage_service_log.h"
 #include "user/mount_constant.h"
+#include "utils/file_utils.h"
 #include "utils/mount_argument_utils.h"
 #include "utils/string_utils.h"
 #include "user/user_path_resolver.h"
@@ -843,6 +844,10 @@ int32_t MountManager::MountDfsDocs(int32_t userId, const std::string &relativePa
     LOGI("[L2:MountManager] MountDfsDocs: >>> ENTER <<< userId=%{public}d, relativePath=%{public}s",
         userId, relativePath.c_str());
     std::string dstPath = StringPrintf("/mnt/data/%d/hmdfs/%s/", userId, deviceId.c_str());
+    if (IsFilePathInvalid(dstPath)) {
+        LOGE("[L2:MountManager] MountDfsDocs: <<< EXIT FAILED <<< dstPath invalid");
+        return E_PARAMS_INVALID;
+    }
     if (!PrepareDir(dstPath, MODE_0711, OID_FILE_MANAGER, OID_FILE_MANAGER)) {
         LOGE("[L2:MountManager] MountDfsDocs: <<< EXIT FAILED <<< PrepareDir failed");
         return E_PREPARE_DIR;
@@ -856,6 +861,10 @@ int32_t MountManager::MountDfsDocs(int32_t userId, const std::string &relativePa
 
     Utils::MountArgument hmdfsMntArgs(Utils::MountArgumentDescriptors::Alpha(userId, relativePath));
     std::string srcPath = hmdfsMntArgs.GetFullDst() + "/device_view/" + networkId + "/files/Docs/";
+    if (IsFilePathInvalid(srcPath)) {
+        LOGE("[L2:MountManager] MountDfsDocs: <<< EXIT FAILED <<< srcPath invalid");
+        return E_PARAMS_INVALID;
+    }
     auto startTime = StorageService::StorageRadar::RecordCurrentTime();
     int32_t ret = Mount(srcPath, dstPath, nullptr, MS_BIND, nullptr);
     if (ret != 0 && errno != EEXIST && errno != EBUSY) {
