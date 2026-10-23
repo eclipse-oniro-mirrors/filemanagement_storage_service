@@ -59,7 +59,6 @@ constexpr pid_t ACCOUNT_UID = 3058;
 constexpr pid_t BACKUP_SA_UID = 1089;
 constexpr pid_t FOUNDATION_UID = 5523;
 constexpr pid_t DFS_UID = 1009;
-constexpr pid_t AOCO_UID = 7558;
 constexpr pid_t ROOT_UID = 0;
 constexpr pid_t SPACE_ABILITY_SERVICE_UID = 7014;
 constexpr pid_t UPDATE_SERVICE_UID = 6666;
@@ -1736,64 +1735,6 @@ int32_t StorageManagerProvider::UnregisterUeceActivationCallback()
     StorageRadar::ReportFucBehavior("UnregisterUeceActivationCallback", DEFAULT_USERID,
                                     "UnregisterUeceActivationCallback End", err);
     return err;
-}
-
-int32_t StorageManagerProvider::CreateUserDir(const std::string &path, mode_t mode, uid_t uid, gid_t gid)
-{
-    StorageRadar::ReportFucBehavior("CreateUserDir", DEFAULT_USERID, "CreateUserDir Begin", E_OK);
-    if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER_CRYPT)) {
-        LOGE("Permission check failed, for storage_manager_crypt");
-        return E_PERMISSION_DENIED;
-    }
-
-    auto callingUid = IPCSkeleton::GetCallingUid();
-    if (callingUid != AOCO_UID) {
-        LOGE("Permission check failed, the UID is not in the trustlist, uid: %{public}d", callingUid);
-        return E_PERMISSION_DENIED;
-    }
-
-    if (IsFilePathInvalid(path)) {
-        LOGE("The path: %{public}s is invalid.", path.c_str());
-        return E_PARAMS_INVALID;
-    }
-
-    std::shared_ptr<StorageDaemonCommunication> sdCommunication = nullptr;
-    sdCommunication = DelayedSingleton<StorageDaemonCommunication>::GetInstance();
-    auto ret = sdCommunication->CreateUserDir(path, mode, uid, gid);
-    LOGW("CreateUserDir end, uid: %{public}d, ret: %{public}d", callingUid, ret);
-
-    std::string extraData = "path=" + path + "callingUid=" + std::to_string(callingUid);
-    StorageRadar::ReportUserManager("CreateUserDir", 0, ret, extraData);
-    return ret;
-}
-
-int32_t StorageManagerProvider::DeleteUserDir(const std::string &path)
-{
-    StorageRadar::ReportFucBehavior("DeleteUserDir", DEFAULT_USERID, "DeleteUserDir Begin", E_OK);
-    if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER_CRYPT)) {
-        LOGE("Permission check failed, for storage_manager_crypt");
-        return E_PERMISSION_DENIED;
-    }
-
-    auto callingUid = IPCSkeleton::GetCallingUid();
-    LOGE("DeleteUserDir begin, path: %{public}s, uid: %{public}d", path.c_str(), callingUid);
-    if (callingUid != AOCO_UID) {
-        LOGE("Permission check failed, the UID is not in the trustlist, uid: %{public}d", callingUid);
-        return E_PERMISSION_DENIED;
-    }
-
-    if (IsFilePathInvalid(path)) {
-        LOGE("The path: %{public}s is invalid.", path.c_str());
-        return E_PARAMS_INVALID;
-    }
-
-    std::shared_ptr<StorageDaemonCommunication> sdCommunication = nullptr;
-    sdCommunication = DelayedSingleton<StorageDaemonCommunication>::GetInstance();
-    auto ret = sdCommunication->DeleteUserDir(path);
-    LOGE("DeleteUserDir end, path: %{public}s, uid: %{public}d, ret: %{public}d", path.c_str(), callingUid, ret);
-    std::string extraData = "path=" + path + "callingUid=" + std::to_string(callingUid);
-    StorageRadar::ReportUserManager("DeleteUserDir", 0, ret, extraData);
-    return ret;
 }
 
 int32_t StorageManagerProvider::NotifyUserChangedEvent(uint32_t userId, uint32_t eventType)

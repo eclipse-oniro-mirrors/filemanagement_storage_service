@@ -232,34 +232,6 @@ bool UMountDfsDocsFuzzTest(const uint8_t *data, size_t size)
     storageManagerProvider->OnRemoteRequest(code, datas, reply, option);
     return true;
 }
-
-bool CreateUserDirFuzzTest(const uint8_t *data, size_t size)
-{
-    uint32_t code = static_cast<uint32_t>(IStorageManagerIpcCode::COMMAND_CREATE_USER_DIR);
-    MessageParcel datas;
-    datas.WriteInterfaceToken(StorageManagerStub::GetDescriptor());
-    datas.WriteBuffer(data, size);
-    datas.RewindRead(0);
-    MessageParcel reply;
-    MessageOption option;
-
-    storageManagerProvider->OnRemoteRequest(code, datas, reply, option);
-    return true;
-}
-
-bool DeleteUserDirFuzzTest(const uint8_t *data, size_t size)
-{
-    uint32_t code = static_cast<uint32_t>(IStorageManagerIpcCode::COMMAND_DELETE_USER_DIR);
-    MessageParcel datas;
-    datas.WriteInterfaceToken(StorageManagerStub::GetDescriptor());
-    datas.WriteBuffer(data, size);
-    datas.RewindRead(0);
-    MessageParcel reply;
-    MessageOption option;
-
-    storageManagerProvider->OnRemoteRequest(code, datas, reply, option);
-    return true;
-}
 } // namespace OHOS::StorageManager
 
 void FuzzerTest1(const uint8_t *data, size_t size)
@@ -278,8 +250,6 @@ void FuzzerTest2(const uint8_t *data, size_t size)
 {
     OHOS::StorageManager::GetUserStorageStatsByTypeFuzzTest(data, size);
     OHOS::StorageManager::UMountDfsDocsFuzzTest(data, size);
-    OHOS::StorageManager::CreateUserDirFuzzTest(data, size);
-    OHOS::StorageManager::DeleteUserDirFuzzTest(data, size);
 }
 
 /* Fuzzer entry point */

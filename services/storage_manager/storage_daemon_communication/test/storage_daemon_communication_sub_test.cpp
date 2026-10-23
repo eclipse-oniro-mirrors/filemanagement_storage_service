@@ -1404,54 +1404,6 @@ HWTEST_F(StorageDaemonCommunicationTest, Daemon_communication_UnregisterUeceActi
 }
 
 /**
- * @tc.number: SUB_STORAGE_Daemon_communication_CreateUserDir_001
- * @tc.name: Daemon_communication_CreateUserDir_001
- * @tc.desc: Test function of CreateUserDir interface for SUCCESS.
- * @tc.size: MEDIUM
- * @tc.type: FUNC
- * @tc.level Level 1
- * @tc.require: issueI9G5A0
- */
-HWTEST_F(StorageDaemonCommunicationTest, Daemon_communication_CreateUserDir_001, TestSize.Level1)
-{
-    ASSERT_TRUE(sdCommunication != nullptr);
-
-    MockConnectFail();
-    EXPECT_EQ(sdCommunication->CreateUserDir("", 0, 0, 0), E_SA_IS_NULLPTR);
-
-    MockStorageDaemonNullptr();
-    EXPECT_EQ(sdCommunication->CreateUserDir("", 0, 0, 0), E_SERVICE_IS_NULLPTR);
-
-    MockAllSuccess();
-    EXPECT_CALL(*sd, CreateUserDir(_, _, _, _)).WillOnce(Return(E_OK));
-    EXPECT_EQ(sdCommunication->CreateUserDir("", 0, 0, 0), E_OK);
-}
-
-/**
- * @tc.number: SUB_STORAGE_Daemon_communication_DeleteUserDir_001
- * @tc.name: Daemon_communication_DeleteUserDir_001
- * @tc.desc: Test function of DeleteUserDir interface for SUCCESS.
- * @tc.size: MEDIUM
- * @tc.type: FUNC
- * @tc.level Level 1
- * @tc.require: issueI9G5A0
- */
-HWTEST_F(StorageDaemonCommunicationTest, Daemon_communication_DeleteUserDir_001, TestSize.Level1)
-{
-    ASSERT_TRUE(sdCommunication != nullptr);
-
-    MockConnectFail();
-    EXPECT_EQ(sdCommunication->DeleteUserDir(""), E_SA_IS_NULLPTR);
-
-    MockStorageDaemonNullptr();
-    EXPECT_EQ(sdCommunication->DeleteUserDir(""), E_SERVICE_IS_NULLPTR);
-
-    MockAllSuccess();
-    EXPECT_CALL(*sd, DeleteUserDir(_)).WillOnce(Return(E_OK));
-    EXPECT_EQ(sdCommunication->DeleteUserDir(""), E_OK);
-}
-
-/**
  * @tc.number: SUB_STORAGE_Daemon_communication_ResetSecretWithRecoveryKey_001
  * @tc.name: Daemon_communication_ResetSecretWithRecoveryKey_001
  * @tc.desc: Test function of ResetSecretWithRecoveryKey interface for SUCCESS.
