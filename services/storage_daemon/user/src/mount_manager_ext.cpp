@@ -460,7 +460,7 @@ int32_t MountManager::MountUdmfClipFuse(int32_t userId, const std::string &path,
     }
     auto delay = StorageService::StorageRadar::ReportDuration("OPEN: UDMF CLIP FUSE", startTime,
         StorageService::DELAY_TIME_THRESH_HIGH, userId);
-    LOGI("[L2:MountManager] MountUdmfClipFuse: open fuse end.");
+    LOGI("[L2:MountManager] MountUdmfClipFuse: open fuse end, delayTime = %{public}s.", delay.c_str());
     string opt = StringPrintf("fd=%i,"
         "rootmode=40000,"
         "default_permissions,"
@@ -481,7 +481,8 @@ int32_t MountManager::MountUdmfClipFuse(int32_t userId, const std::string &path,
     }
     delay = StorageService::StorageRadar::ReportDuration("MOUNT: UDMF CLIP FUSE", startTime,
         StorageService::DELAY_TIME_THRESH_HIGH, userId);
-    LOGI("[L2:MountManager] MountUdmfClipFuse: <<< EXIT SUCCESS <<< fuseFd=%{public}d", fuseFd);
+    LOGI("[L2:MountManager] MountUdmfClipFuse: <<< EXIT SUCCESS <<< fuseFd=%{public}d, delayTime = %{public}s",
+         fuseFd, delay.c_str());
     return E_OK;
 }
 
@@ -500,7 +501,7 @@ int32_t MountManager::UMountUdmfClipFuse(int32_t userId, const std::string &path
     }
     auto delay = StorageService::StorageRadar::ReportDuration("UMOUNT2: UMOUNT UDMF CLIP FUSE",
         startTime, StorageService::DELAY_TIME_THRESH_HIGH, userId);
-    LOGI("[L2:MountManager] UMountUdmfClipFuse: <<< EXIT SUCCESS <<<");
+    LOGI("[L2:MountManager] UMountUdmfClipFuse: <<< EXIT SUCCESS <<< delayTime = %{public}s", delay.c_str());
     return E_OK;
 }
 } // namespace StorageDaemon
