@@ -271,9 +271,14 @@ bool MountManager::MatchesDisSharePath(const std::string &dstPath)
         R"(/\.remote_share/)" + networkIdPattern + R"(/Photo$)";
     std::string otherPattern = R"(^/data/service/el2/)" + userIdPattern + R"(/hmdfs/account/data/)" + bundlePattern +
         R"(/\.remote_share/)" + networkIdPattern + R"(/data/storage/)" + levelPattern + R"(/base$)";
+    std::string docsPattern = R"(^/data/service/el2/)" + userIdPattern +
+        R"(/hmdfs/account/data/com\.ohos\.filemanager/\.remote_share/)" + networkIdPattern +
+        R"(/storage/Users/currentUser$)";
     std::regex mediaRegex(mediaPattern);
     std::regex otherRegex(otherPattern);
-    return std::regex_match(dstPath, mediaRegex) || std::regex_match(dstPath, otherRegex);
+    std::regex docsRegex(docsPattern);
+    return std::regex_match(dstPath, mediaRegex) || std::regex_match(dstPath, otherRegex) ||
+        std::regex_match(dstPath, docsRegex);
 }
 
 bool MountManager::RemoveDisSharePath(const std::string &dstPath, const std::string &networkId)

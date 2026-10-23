@@ -106,3 +106,9 @@ int32_t UserIdmClientImpl::UnRegistCredChangeEventListener(const std::shared_ptr
 {
     return IUserIdmClientMoc::userIdmClientMoc->UnRegistCredChangeEventListener(listener);
 }
+
+int32_t UserIdmClientImpl::GetLatestEnrollmentTime(int32_t userId, AuthType authType,
+    uint64_t &latestEnrollmentTime)
+{
+    return IUserIdmClientMoc::userIdmClientMoc->GetLatestEnrollmentTime(userId, authType, latestEnrollmentTime);
+}

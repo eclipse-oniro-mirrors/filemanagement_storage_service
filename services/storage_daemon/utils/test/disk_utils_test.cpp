@@ -871,14 +871,14 @@ HWTEST_F(DiskUtilsTest, DiskUtilsTest_SendScsiCmd_SenseBuf_Success, TestSize.Lev
 }
 
 /**
- * @tc.name: DiskUtilsTest_GetCdUsedCapacity_IllegalRequest_DiscInfoFail
- * @tc.desc: Verify GetCdUsedCapacity when senseKey is ILLEGAL_REQUEST and HandleFinalizedDisc's
+ * @tc.name: DiskUtilsTest_GetDiscUsedCapacity_IllegalRequest_DiscInfoFail
+ * @tc.desc: Verify GetDiscUsedCapacity when senseKey is ILLEGAL_REQUEST and HandleFinalizedDisc's
  *           SendScsiCmd for disc info also fails.
  * @tc.type: FUNC
  */
-HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetCdUsedCapacity_IllegalRequest_DiscInfoFail, TestSize.Level1)
+HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetDiscUsedCapacity_IllegalRequest_DiscInfoFail, TestSize.Level1)
 {
-    GTEST_LOG_(INFO) << "DiskUtilsTest_GetCdUsedCapacity_IllegalRequest_DiscInfoFail start";
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetDiscUsedCapacity_IllegalRequest_DiscInfoFail start";
     int64_t cdUsedCapacity = 0;
 
     // First ioctl: READ TRACK INFORMATION fails with ILLEGAL_REQUEST sense key
@@ -895,20 +895,20 @@ HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetCdUsedCapacity_IllegalRequest_DiscInfoF
         })
         .WillOnce(Return(-1));
 
-    int ret = GetCdUsedCapacity(0, cdUsedCapacity);
+    int ret = GetDiscUsedCapacity(0, 0, cdUsedCapacity);
     EXPECT_EQ(ret, E_ERR);
-    GTEST_LOG_(INFO) << "DiskUtilsTest_GetCdUsedCapacity_IllegalRequest_DiscInfoFail end";
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetDiscUsedCapacity_IllegalRequest_DiscInfoFail end";
 }
 
 /**
- * @tc.name: DiskUtilsTest_GetCdUsedCapacity_IllegalRequest_DiscNotComplete
- * @tc.desc: Verify GetCdUsedCapacity when senseKey is ILLEGAL_REQUEST, disc info succeeds
+ * @tc.name: DiskUtilsTest_GetDiscUsedCapacity_IllegalRequest_DiscNotComplete
+ * @tc.desc: Verify GetDiscUsedCapacity when senseKey is ILLEGAL_REQUEST, disc info succeeds
  *           but discStatus != DISC_STATUS_COMPLETE.
  * @tc.type: FUNC
  */
-HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetCdUsedCapacity_IllegalRequest_DiscNotComplete, TestSize.Level1)
+HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetDiscUsedCapacity_IllegalRequest_DiscNotComplete, TestSize.Level1)
 {
-    GTEST_LOG_(INFO) << "DiskUtilsTest_GetCdUsedCapacity_IllegalRequest_DiscNotComplete start";
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetDiscUsedCapacity_IllegalRequest_DiscNotComplete start";
     int64_t cdUsedCapacity = 0;
 
     // First ioctl: READ TRACK INFORMATION fails with ILLEGAL_REQUEST
@@ -934,24 +934,25 @@ HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetCdUsedCapacity_IllegalRequest_DiscNotCo
             return 0;
         });
 
-    int ret = GetCdUsedCapacity(0, cdUsedCapacity);
+    int ret = GetDiscUsedCapacity(0, 0, cdUsedCapacity);
     EXPECT_EQ(ret, E_ERR);
-    GTEST_LOG_(INFO) << "DiskUtilsTest_GetCdUsedCapacity_IllegalRequest_DiscNotComplete end";
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetDiscUsedCapacity_IllegalRequest_DiscNotComplete end";
 }
 
 /**
- * @tc.name: DiskUtilsTest_GetCdUsedCapacity_IllegalRequest_Finalized_GetTotalCapFail
- * @tc.desc: Verify GetCdUsedCapacity when disc is finalized but GetCdTotalCapacity fails.
+ * @tc.name: DiskUtilsTest_GetDiscUsedCapacity_IllegalRequest_Finalized_GetTotalCapFail
+ * @tc.desc: Verify GetDiscUsedCapacity when disc is finalized but GetCdTotalCapacity fails.
  * @tc.type: FUNC
  */
-HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetCdUsedCapacity_IllegalRequest_Finalized_GetTotalCapFail, TestSize.Level1)
+HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetDiscUsedCapacity_IllegalRequest_Finalized_GetTotalCapFail, TestSize.Level1)
 {
-    GTEST_LOG_(INFO) << "DiskUtilsTest_GetCdUsedCapacity_IllegalRequest_Finalized_GetTotalCapFail start";
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetDiscUsedCapacity_IllegalRequest_Finalized_GetTotalCapFail start";
     int64_t cdUsedCapacity = 0;
 
     // 1st ioctl: READ TRACK INFORMATION fails with ILLEGAL_REQUEST
     // 2nd ioctl: READ DISC INFORMATION succeeds, discStatus = COMPLETE
-    // 3rd & 4th ioctl: GetCdTotalCapacity -> SendScsiCmd fails both calls
+    // 3rd ioctl: GetCdTotalCapacity -> SendScsiCmd fails
+    // 4th ioctl: GetDvdTotalCapacity -> GetDvdConfiguration -> SendScsiCmd also fails
     EXPECT_CALL(*diskFuncMock_, ioctl(_, SG_IO, _))
         .WillOnce([](int, int, void* arg) {
             auto* ioHdr = static_cast<sg_io_hdr_t*>(arg);
@@ -971,21 +972,125 @@ HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetCdUsedCapacity_IllegalRequest_Finalized
             }
             return 0;
         })
+        .WillOnce(Return(-1))
         .WillOnce(Return(-1));
 
-    int ret = GetCdUsedCapacity(0, cdUsedCapacity);
+    int ret = GetDiscUsedCapacity(0, 0, cdUsedCapacity);
     EXPECT_EQ(ret, E_ERR);
-    GTEST_LOG_(INFO) << "DiskUtilsTest_GetCdUsedCapacity_IllegalRequest_Finalized_GetTotalCapFail end";
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetDiscUsedCapacity_IllegalRequest_Finalized_GetTotalCapFail end";
 }
 
 /**
- * @tc.name: DiskUtilsTest_GetCdUsedCapacity_IllegalRequest_Finalized_Success
- * @tc.desc: Verify GetCdUsedCapacity when disc is finalized and GetCdTotalCapacity succeeds.
+ * @tc.name: DiskUtilsTest_GetDiscUsedCapacity_Finalized_WithTotalSize
+ * @tc.desc: Verify GetDiscUsedCapacity when disc is finalized and totalSize > 0,
+ *           should skip GetCdTotalCapacity/GetDvdTotalCapacity and use totalSize directly.
  * @tc.type: FUNC
  */
-HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetCdUsedCapacity_IllegalRequest_Finalized_Success, TestSize.Level1)
+HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetDiscUsedCapacity_Finalized_WithTotalSize, TestSize.Level1)
 {
-    GTEST_LOG_(INFO) << "DiskUtilsTest_GetCdUsedCapacity_IllegalRequest_Finalized_Success start";
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetDiscUsedCapacity_Finalized_WithTotalSize start";
+    int64_t cdUsedCapacity = 0;
+
+    // 1st ioctl: READ TRACK INFORMATION fails with ILLEGAL_REQUEST
+    // 2nd ioctl: READ DISC INFORMATION succeeds, discStatus = COMPLETE
+    // totalSize > 0 -> skip GetCdTotalCapacity/GetDvdTotalCapacity -> usedCapacity = totalSize
+    EXPECT_CALL(*diskFuncMock_, ioctl(_, SG_IO, _))
+        .WillOnce([](int, int, void* arg) {
+            auto* ioHdr = static_cast<sg_io_hdr_t*>(arg);
+            ioHdr->info = SG_INFO_CHECK;
+            ioHdr->sb_len_wr = SENSE_BUFF_LEN;
+            if (ioHdr->sbp != nullptr) {
+                ioHdr->sbp[SCSI_SENSE_KEY_OFFSET] = SCSI_SENSE_KEY_ILLEGAL_REQUEST;
+            }
+            return 0;
+        })
+        .WillOnce([](int, int, void* arg) {
+            auto* ioHdr = static_cast<sg_io_hdr_t*>(arg);
+            ioHdr->info = SG_INFO_OK;
+            if (ioHdr->dxferp != nullptr) {
+                auto* buf = static_cast<uint8_t*>(ioHdr->dxferp);
+                buf[DISC_STATUS_BYTE_INDEX] = DISC_STATUS_COMPLETE;
+            }
+            return 0;
+        });
+
+    int64_t totalSize = 4707319808L;
+    int ret = GetDiscUsedCapacity(0, totalSize, cdUsedCapacity);
+    EXPECT_EQ(ret, E_OK);
+    EXPECT_EQ(cdUsedCapacity, totalSize);
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetDiscUsedCapacity_Finalized_WithTotalSize end";
+}
+
+/**
+ * @tc.name: DiskUtilsTest_GetDiscUsedCapacity_IllegalRequest_Finalized_DvdTotalCapSuccess
+ * @tc.desc: Verify GetDiscUsedCapacity when disc is finalized, GetCdTotalCapacity fails
+ *           but GetDvdTotalCapacity succeeds (DVD disc path).
+ * @tc.type: FUNC
+ */
+HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetDiscUsedCapacity_IllegalRequest_Finalized_DvdTotalCapSuccess, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetDiscUsedCapacity_IllegalRequest_Finalized_DvdTotalCapSuccess start";
+    int64_t cdUsedCapacity = 0;
+    EXPECT_CALL(*diskFuncMock_, ioctl(_, SG_IO, _))
+        .WillOnce([](int, int, void* arg) {
+            auto* ioHdr = static_cast<sg_io_hdr_t*>(arg);
+            ioHdr->info = SG_INFO_CHECK;
+            ioHdr->sb_len_wr = SENSE_BUFF_LEN;
+            if (ioHdr->sbp != nullptr) {
+                ioHdr->sbp[SCSI_SENSE_KEY_OFFSET] = SCSI_SENSE_KEY_ILLEGAL_REQUEST;
+            }
+            return 0;
+        })
+        .WillOnce([](int, int, void* arg) {
+            auto* ioHdr = static_cast<sg_io_hdr_t*>(arg);
+            ioHdr->info = SG_INFO_OK;
+            if (ioHdr->dxferp != nullptr) {
+                auto* buf = static_cast<uint8_t*>(ioHdr->dxferp);
+                buf[DISC_STATUS_BYTE_INDEX] = DISC_STATUS_COMPLETE;
+            }
+            return 0;
+        })
+        .WillOnce(Return(-1))
+        .WillOnce([](int, int, void* arg) {
+            auto* ioHdr = static_cast<sg_io_hdr_t*>(arg);
+            ioHdr->info = SG_INFO_OK;
+            if (ioHdr->dxferp != nullptr) {
+                auto* buf = static_cast<uint8_t*>(ioHdr->dxferp);
+                // dvd_media = (buf[6] << 8) | buf[7] = 0x0013 (DVD-RW restricted overwrite)
+                buf[6] = 0x00; buf[7] = 0x13;
+            }
+            return 0;
+        })
+        .WillOnce([](int, int, void* arg) {
+            auto* ioHdr = static_cast<sg_io_hdr_t*>(arg);
+            ioHdr->info = SG_INFO_OK;
+            if (ioHdr->dxferp != nullptr) {
+                auto* buf = static_cast<uint8_t*>(ioHdr->dxferp);
+                // (buf[6] & 0x60) == 0 -> phys_end from bytes 13-15
+                // phys_start = (buf[9] << 16) | (buf[10] << 8) | buf[11] = 0
+                buf[6] = 0x00; buf[9] = 0; buf[10] = 0; buf[11] = 0;
+                // phys_end = (buf[13] << 16) | (buf[14] << 8) | buf[15] = 2295104
+                buf[13] = (2295104 >> 16) & 0xFF;
+                buf[14] = (2295104 >> 8) & 0xFF;
+                buf[15] = 2295104 & 0xFF;
+            }
+            return 0;
+        });
+    int ret = GetDiscUsedCapacity(0, 0, cdUsedCapacity);
+    EXPECT_EQ(ret, E_OK);
+    // dvdTotalCapacity = (2295104 - 0 + 1) * 2048 = 4702973952
+    EXPECT_GT(cdUsedCapacity, 0);
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetDiscUsedCapacity_IllegalRequest_Finalized_DvdTotalCapSuccess end";
+}
+
+/**
+ * @tc.name: DiskUtilsTest_GetDiscUsedCapacity_IllegalRequest_Finalized_Success
+ * @tc.desc: Verify GetDiscUsedCapacity when disc is finalized and GetCdTotalCapacity succeeds.
+ * @tc.type: FUNC
+ */
+HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetDiscUsedCapacity_IllegalRequest_Finalized_Success, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetDiscUsedCapacity_IllegalRequest_Finalized_Success start";
     int64_t cdUsedCapacity = 0;
 
     // 1st ioctl: READ TRACK INFORMATION fails with ILLEGAL_REQUEST
@@ -1035,22 +1140,22 @@ HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetCdUsedCapacity_IllegalRequest_Finalized
             return 0;
         });
 
-    int ret = GetCdUsedCapacity(0, cdUsedCapacity);
+    int ret = GetDiscUsedCapacity(0, 0, cdUsedCapacity);
     EXPECT_EQ(ret, E_OK);
     // total_seconds = 1 * 60 + 0 + 0/75 = 60
     // cdTotalCapacity = 60 * 75 * 2048 = 9216000
     EXPECT_GT(cdUsedCapacity, 0);
-    GTEST_LOG_(INFO) << "DiskUtilsTest_GetCdUsedCapacity_IllegalRequest_Finalized_Success end";
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetDiscUsedCapacity_IllegalRequest_Finalized_Success end";
 }
 
 /**
- * @tc.name: DiskUtilsTest_GetCdUsedCapacity_NonIllegalRequest
- * @tc.desc: Verify GetCdUsedCapacity when senseKey is not ILLEGAL_REQUEST.
+ * @tc.name: DiskUtilsTest_GetDiscUsedCapacity_NonIllegalRequest
+ * @tc.desc: Verify GetDiscUsedCapacity when senseKey is not ILLEGAL_REQUEST.
  * @tc.type: FUNC
  */
-HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetCdUsedCapacity_NonIllegalRequest, TestSize.Level1)
+HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetDiscUsedCapacity_NonIllegalRequest, TestSize.Level1)
 {
-    GTEST_LOG_(INFO) << "DiskUtilsTest_GetCdUsedCapacity_NonIllegalRequest start";
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetDiscUsedCapacity_NonIllegalRequest start";
     int64_t cdUsedCapacity = 0;
 
     // ioctl: READ TRACK INFORMATION fails with non-ILLEGAL_REQUEST sense key
@@ -1065,22 +1170,24 @@ HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetCdUsedCapacity_NonIllegalRequest, TestS
             return 0;
         });
 
-    int ret = GetCdUsedCapacity(0, cdUsedCapacity);
+    int ret = GetDiscUsedCapacity(0, 0, cdUsedCapacity);
     EXPECT_EQ(ret, E_ERR);
-    GTEST_LOG_(INFO) << "DiskUtilsTest_GetCdUsedCapacity_NonIllegalRequest end";
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetDiscUsedCapacity_NonIllegalRequest end";
 }
 
 /**
- * @tc.name: DiskUtilsTest_GetCdUsedCapacity_NwaInvalid
- * @tc.desc: Verify GetCdUsedCapacity when SendScsiCmd succeeds but NWA valid bit is 0.
+ * @tc.name: DiskUtilsTest_GetDiscUsedCapacity_NwaInvalid
+ * @tc.desc: Verify GetDiscUsedCapacity when SendScsiCmd succeeds but NWA valid bit is 0
+ *           and Track Size - Free Blocks also invalid (all zeros).
  * @tc.type: FUNC
  */
-HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetCdUsedCapacity_NwaInvalid, TestSize.Level1)
+HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetDiscUsedCapacity_NwaInvalid, TestSize.Level1)
 {
-    GTEST_LOG_(INFO) << "DiskUtilsTest_GetCdUsedCapacity_NwaInvalid start";
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetDiscUsedCapacity_NwaInvalid start";
     int64_t cdUsedCapacity = 0;
 
-    // ioctl: READ TRACK INFORMATION succeeds but data_buf is all zeros -> NWA valid = 0
+    // ioctl: READ TRACK INFORMATION succeeds but data_buf is all zeros
+    // -> NWA valid = 0 -> fallback: trackSize=0, freeBlocks=0 -> trackSize <= freeBlocks -> E_ERR
     EXPECT_CALL(*diskFuncMock_, ioctl(_, SG_IO, _))
         .WillOnce([](int, int, void* arg) {
             auto* ioHdr = static_cast<sg_io_hdr_t*>(arg);
@@ -1088,19 +1195,56 @@ HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetCdUsedCapacity_NwaInvalid, TestSize.Lev
             return 0;
         });
 
-    int ret = GetCdUsedCapacity(0, cdUsedCapacity);
+    int ret = GetDiscUsedCapacity(0, 0, cdUsedCapacity);
     EXPECT_EQ(ret, E_ERR);
-    GTEST_LOG_(INFO) << "DiskUtilsTest_GetCdUsedCapacity_NwaInvalid end";
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetDiscUsedCapacity_NwaInvalid end";
 }
 
 /**
- * @tc.name: DiskUtilsTest_GetCdUsedCapacity_NwaNegative
- * @tc.desc: Verify GetCdUsedCapacity when NWA valid bit is 1 but nextAddr is negative.
+ * @tc.name: DiskUtilsTest_GetDiscUsedCapacity_NwaInvalid_FallbackTrackSize
+ * @tc.desc: Verify GetDiscUsedCapacity when NWA is invalid but Track Size - Free Blocks
+ *           is valid (e.g. Windows quick-erase + partial format scenario).
  * @tc.type: FUNC
  */
-HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetCdUsedCapacity_NwaNegative, TestSize.Level1)
+HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetDiscUsedCapacity_NwaInvalid_FallbackTrackSize, TestSize.Level1)
 {
-    GTEST_LOG_(INFO) << "DiskUtilsTest_GetCdUsedCapacity_NwaNegative start";
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetDiscUsedCapacity_NwaInvalid_FallbackTrackSize start";
+    int64_t cdUsedCapacity = 0;
+
+    // READ TRACK INFORMATION succeeds, NWA valid=0, but track_size > free_blocks
+    // track_size = 100000 (offset 20-23), free_blocks = 80000 (offset 16-19)
+    // used = (100000 - 80000) * 2048 = 40960000
+    EXPECT_CALL(*diskFuncMock_, ioctl(_, SG_IO, _))
+        .WillOnce([](int, int, void* arg) {
+            auto* ioHdr = static_cast<sg_io_hdr_t*>(arg);
+            ioHdr->info = SG_INFO_OK;
+            if (ioHdr->dxferp != nullptr) {
+                auto* buf = static_cast<uint8_t*>(ioHdr->dxferp);
+                // NWA valid bit = 0 (buf[7] & 0x01 == 0)
+                buf[7] = 0x00;
+                // free_blocks = 80000 at offset 16-19 (big-endian)
+                buf[16] = 0x00; buf[17] = 0x01; buf[18] = 0x38; buf[19] = 0x80; // 80000
+                // track_size = 100000 at offset 20-23 (big-endian)
+                buf[20] = 0x00; buf[21] = 0x01; buf[22] = 0x86; buf[23] = 0xA0; // 100000
+            }
+            return 0;
+        });
+
+    int ret = GetDiscUsedCapacity(0, 0, cdUsedCapacity);
+    EXPECT_EQ(ret, E_OK);
+    // (100000 - 80000) * 2048 = 40960000
+    EXPECT_EQ(cdUsedCapacity, 40960000);
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetDiscUsedCapacity_NwaInvalid_FallbackTrackSize end";
+}
+
+/**
+ * @tc.name: DiskUtilsTest_GetDiscUsedCapacity_NwaNegative
+ * @tc.desc: Verify GetDiscUsedCapacity when NWA valid bit is 1 but nextAddr is negative.
+ * @tc.type: FUNC
+ */
+HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetDiscUsedCapacity_NwaNegative, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetDiscUsedCapacity_NwaNegative start";
     int64_t cdUsedCapacity = -1;
 
     // ioctl: READ TRACK INFORMATION succeeds, NWA valid = 1, but NWA value is negative (0x80000000)
@@ -1120,21 +1264,21 @@ HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetCdUsedCapacity_NwaNegative, TestSize.Le
             return 0;
         });
 
-    int ret = GetCdUsedCapacity(0, cdUsedCapacity);
+    int ret = GetDiscUsedCapacity(0, 0, cdUsedCapacity);
     EXPECT_EQ(ret, E_OK);
     // nextAddr was negative, clamped to 0, so cdUsedCapacity = 0
     EXPECT_EQ(cdUsedCapacity, 0);
-    GTEST_LOG_(INFO) << "DiskUtilsTest_GetCdUsedCapacity_NwaNegative end";
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetDiscUsedCapacity_NwaNegative end";
 }
 
 /**
- * @tc.name: DiskUtilsTest_GetCdUsedCapacity_Success
- * @tc.desc: Verify GetCdUsedCapacity when SendScsiCmd succeeds and NWA is valid and positive.
+ * @tc.name: DiskUtilsTest_GetDiscUsedCapacity_Success
+ * @tc.desc: Verify GetDiscUsedCapacity when SendScsiCmd succeeds and NWA is valid and positive.
  * @tc.type: FUNC
  */
-HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetCdUsedCapacity_Success, TestSize.Level1)
+HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetDiscUsedCapacity_Success, TestSize.Level1)
 {
-    GTEST_LOG_(INFO) << "DiskUtilsTest_GetCdUsedCapacity_Success start";
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetDiscUsedCapacity_Success start";
     int64_t cdUsedCapacity = 0;
 
     // ioctl: READ TRACK INFORMATION succeeds, NWA valid = 1, NWA = 100
@@ -1154,29 +1298,29 @@ HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetCdUsedCapacity_Success, TestSize.Level1
             return 0;
         });
 
-    int ret = GetCdUsedCapacity(0, cdUsedCapacity);
+    int ret = GetDiscUsedCapacity(0, 0, cdUsedCapacity);
     EXPECT_EQ(ret, E_OK);
     // cdUsedCapacity = 100 * 2048 = 204800
     EXPECT_EQ(cdUsedCapacity, 100 * ODD_LOGICAL_SECTOR_SIZE);
-    GTEST_LOG_(INFO) << "DiskUtilsTest_GetCdUsedCapacity_Success end";
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetDiscUsedCapacity_Success end";
 }
 
 /**
- * @tc.name: DiskUtilsTest_GetCdUsedCapacity_IoctlFail
- * @tc.desc: Verify GetCdUsedCapacity when ioctl itself fails (returns < 0).
+ * @tc.name: DiskUtilsTest_GetDiscUsedCapacity_IoctlFail
+ * @tc.desc: Verify GetDiscUsedCapacity when ioctl itself fails (returns < 0).
  * @tc.type: FUNC
  */
-HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetCdUsedCapacity_IoctlFail, TestSize.Level1)
+HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetDiscUsedCapacity_IoctlFail, TestSize.Level1)
 {
-    GTEST_LOG_(INFO) << "DiskUtilsTest_GetCdUsedCapacity_IoctlFail start";
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetDiscUsedCapacity_IoctlFail start";
     int64_t cdUsedCapacity = 0;
 
     EXPECT_CALL(*diskFuncMock_, ioctl(_, SG_IO, _))
         .WillOnce(Return(-1));
 
-    int ret = GetCdUsedCapacity(0, cdUsedCapacity);
+    int ret = GetDiscUsedCapacity(0, 0, cdUsedCapacity);
     EXPECT_EQ(ret, E_ERR);
-    GTEST_LOG_(INFO) << "DiskUtilsTest_GetCdUsedCapacity_IoctlFail end";
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetDiscUsedCapacity_IoctlFail end";
 }
 } // STORAGE_DAEMON
 } // OHOS

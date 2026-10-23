@@ -96,6 +96,8 @@ constexpr uint8_t DISC_STATUS_COMPLETE = 2;
 constexpr uint8_t TRACK_INFO_NWA_VALID_OFFSET = 7;
 constexpr uint8_t TRACK_INFO_NWA_VALID_MASK = 0x01;
 constexpr uint8_t TRACK_INFO_NWA_OFFSET = 12;
+constexpr uint8_t TRACK_INFO_FREE_BLOCKS_OFFSET = 16;
+constexpr uint8_t TRACK_INFO_TRACK_SIZE_OFFSET = 20;
 constexpr int32_t READ_DISC_INFO_CMD_LEN = 10;
 
 int GetMaxVolume(dev_t device)
@@ -610,7 +612,7 @@ int GetCdTotalCapacity(int fd, int64_t &cdTotalCapacity)
  * ILLEGAL_REQUEST 错误。此时通过 READ DISC INFORMATION (0x51) 检查盘片状态，
  * 若 disc_status == DS_COMPLETE(2) 则确认为封盘，已用容量等于总容量。
  */
-static int HandleFinalizedDisc(int fd, int64_t &cdUsedCapacity)
+static int HandleFinalizedDisc(int fd, int64_t totalSize, int64_t &discUsedCapacity)
 {
     unsigned char discInfoBuf[MAX_BUF] = {0};
     unsigned char discCmd[READ_DISC_INFO_CMD_LEN] = {0};
@@ -627,81 +629,107 @@ static int HandleFinalizedDisc(int fd, int64_t &cdUsedCapacity)
 
     uint8_t discStatus = discInfoBuf[DISC_STATUS_BYTE_INDEX] & DISC_STATUS_MASK;
     if (discStatus != DISC_STATUS_COMPLETE) {
-        LOGE("cd is not finalized but read track info failed, discStatus=%{public}d", discStatus);
+        LOGE("disc is not finalized but read track info failed, discStatus=%{public}d", discStatus);
         return E_ERR;
     }
 
-    int64_t totalCapacity = 0;
-    if (GetCdTotalCapacity(fd, totalCapacity) == E_OK && totalCapacity > 0) {
-        cdUsedCapacity = totalCapacity;
-        LOGI("cd is finalized, used_capacity equals total_capacity: %{public}" PRId64, cdUsedCapacity);
+    if (totalSize > 0) {
+        discUsedCapacity = totalSize;
+        LOGI("disc is finalized, used_capacity equals total_capacity: %{public}" PRId64, discUsedCapacity);
         return E_OK;
     }
-    LOGE("cd is finalized but failed to get total capacity");
+    int64_t totalCapacity = 0;
+    if (GetCdTotalCapacity(fd, totalCapacity) == E_OK && totalCapacity > 0) {
+        discUsedCapacity = totalCapacity;
+        LOGI("cd is finalized, used_capacity equals total_capacity: %{public}" PRId64, discUsedCapacity);
+        return E_OK;
+    }
+    if (GetDvdTotalCapacity(fd, totalCapacity) == E_OK && totalCapacity > 0) {
+        discUsedCapacity = totalCapacity;
+        LOGI("dvd is finalized, used_capacity equals total_capacity: %{public}" PRId64, discUsedCapacity);
+        return E_OK;
+    }
+    LOGE("disc is finalized but failed to get total capacity");
     return E_ERR;
 }
 
 /*
- * 从 READ TRACK INFORMATION 返回数据中解析 next_writable_addr
- * 读取偏移 12-15 的大端序 4 字节，等价于 cdrkit 的 a_to_4_byte()
- * 负值保护：SAO 模式或固件异常时 NWA 可能为负值，归零处理
+ * 从 READ TRACK INFORMATION 返回数据中解析已用容量
+ * 优先使用 NWA (Next Writable Address)，NWA 之前的区域即为已写入区域
+ * 当 NWA 无效时（如 Windows 擦除后部分格式化的盘片），fallback 到
+ * Track Size - Free Blocks 计算已用容量
  */
-static int ParseNextWritableAddr(const unsigned char *dataBuf, int64_t &cdUsedCapacity)
+static int ParseNextWritableAddr(const unsigned char *dataBuf, int64_t &discUsedCapacity)
 {
-    if (!(dataBuf[TRACK_INFO_NWA_VALID_OFFSET] & TRACK_INFO_NWA_VALID_MASK)) {
-        LOGE("next writable address is not valid, nwa_valid=0");
+    if (dataBuf[TRACK_INFO_NWA_VALID_OFFSET] & TRACK_INFO_NWA_VALID_MASK) {
+        int32_t nextAddr = static_cast<int32_t>(
+            (static_cast<uint32_t>(dataBuf[TRACK_INFO_NWA_OFFSET]) << 24) |
+            (static_cast<uint32_t>(dataBuf[TRACK_INFO_NWA_OFFSET + 1]) << 16) |
+            (static_cast<uint32_t>(dataBuf[TRACK_INFO_NWA_OFFSET + 2]) << 8) |
+            (static_cast<uint32_t>(dataBuf[TRACK_INFO_NWA_OFFSET + 3])));
+        if (nextAddr < 0) {
+            LOGW("next writable address is negative (%{public}d), clamping to 0", nextAddr);
+            nextAddr = 0;
+        }
+        discUsedCapacity = static_cast<int64_t>(nextAddr) * ODD_LOGICAL_SECTOR_SIZE;
+        LOGI("disc used_capacity (NWA): %{public}" PRId64, discUsedCapacity);
+        return E_OK;
+    }
+
+    LOGW("NWA is not valid, fallback to Track Size - Free Blocks");
+    uint32_t freeBlocks = (static_cast<uint32_t>(dataBuf[TRACK_INFO_FREE_BLOCKS_OFFSET]) << 24) |
+                          (static_cast<uint32_t>(dataBuf[TRACK_INFO_FREE_BLOCKS_OFFSET + 1]) << 16) |
+                          (static_cast<uint32_t>(dataBuf[TRACK_INFO_FREE_BLOCKS_OFFSET + 2]) << 8) |
+                          static_cast<uint32_t>(dataBuf[TRACK_INFO_FREE_BLOCKS_OFFSET + 3]);
+    uint32_t trackSize = (static_cast<uint32_t>(dataBuf[TRACK_INFO_TRACK_SIZE_OFFSET]) << 24) |
+                         (static_cast<uint32_t>(dataBuf[TRACK_INFO_TRACK_SIZE_OFFSET + 1]) << 16) |
+                         (static_cast<uint32_t>(dataBuf[TRACK_INFO_TRACK_SIZE_OFFSET + 2]) << 8) |
+                         static_cast<uint32_t>(dataBuf[TRACK_INFO_TRACK_SIZE_OFFSET + 3]);
+    if (trackSize <= freeBlocks) {
+        LOGE("track_size=%{public}u <= free_blocks=%{public}u, invalid data", trackSize, freeBlocks);
         return E_ERR;
     }
-
-    int32_t nextAddr = static_cast<int32_t>(
-        (static_cast<uint32_t>(dataBuf[TRACK_INFO_NWA_OFFSET]) << 24) |
-        (static_cast<uint32_t>(dataBuf[TRACK_INFO_NWA_OFFSET + 1]) << 16) |
-        (static_cast<uint32_t>(dataBuf[TRACK_INFO_NWA_OFFSET + 2]) << 8) |
-        (static_cast<uint32_t>(dataBuf[TRACK_INFO_NWA_OFFSET + 3])));
-    if (nextAddr < 0) {
-        LOGW("next writable address is negative (%{public}d), clamping to 0", nextAddr);
-        nextAddr = 0;
-    }
-
-    cdUsedCapacity = static_cast<int64_t>(nextAddr) * ODD_LOGICAL_SECTOR_SIZE;
-    LOGI("cd used_capacity: %{public}" PRId64, cdUsedCapacity);
+    discUsedCapacity = static_cast<int64_t>(trackSize - freeBlocks) * ODD_LOGICAL_SECTOR_SIZE;
+    LOGI("disc used_capacity (TrackSize-FreeBlocks): trackSize=%{public}u, freeBlocks=%{public}u, "
+         "used=%{public}" PRId64, trackSize, freeBlocks, discUsedCapacity);
     return E_OK;
 }
 
-int GetCdUsedCapacity(int fd, int64_t &cdUsedCapacity)
+int GetDiscUsedCapacity(int fd, int64_t totalSize, int64_t &discUsedCapacity)
 {
-    unsigned char cmd_buf[GET_CAPACITY_CMD_BUF_LEN] = {0};
-    unsigned char data_buf[GET_CAPACITY_DATA_BUF_LEN] = {0};
+    unsigned char cmdBuf[GET_CAPACITY_CMD_BUF_LEN] = {0};
+    unsigned char dataBuf[GET_CAPACITY_DATA_BUF_LEN] = {0};
     uint8_t senseBuf[SENSE_BUFF_LEN] = {0};
     unsigned int dataLen = GET_CD_USED_CAPACITY_DATA_LEN;
     /*
-    * 使用 SCSI READ TRACK INFORMATION 指令 (0x52) 获取cd光盘轨道/逻辑分区信息
-    * cmd_buf[0]: 指令操作码 0x52 (READ TRACK/RZONE INFORMATION)
-    * cmd_buf[1]: 设置为 1，表示通过轨道编号 (Track Number) 寻址
-    * cmd_buf[5]: 设置为 0xff，通常用于请求最后一条轨道 (Invisible Track) 或特定状态信息
-    * cmd_buf[7-8]: 分别填充 data_len 的高8位和低8位，告知驱动器返回数据的长度限制
+    * 使用 SCSI READ TRACK INFORMATION 指令 (0x52) 获取光盘轨道/逻辑分区信息
+    * 适用于 CD 和 DVD 光盘，通过 NWA 或 Track Size - Free Blocks 计算已用容量
+    * cmdBuf[0]: 指令操作码 0x52 (READ TRACK/RZONE INFORMATION)
+    * cmdBuf[1]: 设置为 1，表示通过轨道编号 (Track Number) 寻址
+    * cmdBuf[5]: 设置为 0xff，通常用于请求最后一条轨道 (Invisible Track) 或特定状态信息
+    * cmdBuf[7-8]: 分别填充 dataLen 的高8位和低8位，告知驱动器返回数据的长度限制
     */
-    cmd_buf[0] = GPCMD_READ_TRACK_RZONE_INFO;
-    cmd_buf[1] = 1;
-    cmd_buf[5] = 0xff;
-    cmd_buf[CDB_ALLOCATION_LENGTH_HIGH] = (dataLen >> BYTE_SHIFT_8) & 0xff;
-    cmd_buf[CDB_ALLOCATION_LENGTH_LOW] = dataLen & 0xff;
-    ScsiCmdInfo cmdInfo = { cmd_buf, GET_CD_USED_CAPACITY_CMD_LEN, data_buf,
+    cmdBuf[0] = GPCMD_READ_TRACK_RZONE_INFO;
+    cmdBuf[1] = 1;
+    cmdBuf[BLOCK_SIZE_BYTE_1] = 0xff;
+    cmdBuf[CDB_ALLOCATION_LENGTH_HIGH] = (dataLen >> BYTE_SHIFT_8) & 0xff;
+    cmdBuf[CDB_ALLOCATION_LENGTH_LOW] = dataLen & 0xff;
+    ScsiCmdInfo cmdInfo = { cmdBuf, GET_CD_USED_CAPACITY_CMD_LEN, dataBuf,
                             GET_CD_USED_CAPACITY_DATA_LEN };
     int ret = SendScsiCmd(fd, cmdInfo, senseBuf, sizeof(senseBuf));
     if (ret != 0) {
         uint8_t senseKey = senseBuf[SCSI_SENSE_KEY_OFFSET] & 0x0F;
         uint8_t asc = senseBuf[SCSI_ASC_OFFSET];
         uint8_t ascq = senseBuf[SCSI_ASCQ_OFFSET];
-        LOGE("get cd used capacity failed, ret=%{public}d, senseKey=0x%{public}02X, "
+        LOGE("get disc used capacity failed, ret=%{public}d, senseKey=0x%{public}02X, "
              "asc=0x%{public}02X, ascq=0x%{public}02X", ret, senseKey, asc, ascq);
         if (senseKey == SCSI_SENSE_KEY_ILLEGAL_REQUEST) {
-            return HandleFinalizedDisc(fd, cdUsedCapacity);
+            return HandleFinalizedDisc(fd, totalSize, discUsedCapacity);
         }
         return E_ERR;
     }
  
-    return ParseNextWritableAddr(data_buf, cdUsedCapacity);
+    return ParseNextWritableAddr(dataBuf, discUsedCapacity);
 }
 
 int GetDvdTotalCapacity(int fd, int64_t &dvdTotalCapacity)

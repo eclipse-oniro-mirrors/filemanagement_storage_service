@@ -991,21 +991,33 @@ bool BaseKey::ClearKey(const std::string &mnt)
         LOGI("[L4:BaseKey] ClearKey: needRestore flag exist, do not remove secret");
     }
 #endif
+    auto startTime = StorageService::StorageRadar::RecordCurrentTime();
+    int64_t time = startTime;
     if (needClearFlag) {
         LOGI("[L4:BaseKey] ClearKey: do clear key");
         if (!IsDir(dir_)) {
             LOGE("[L4:BaseKey] ClearKey: dir not exist, do not need to remove dir");
             return (ret == E_OK);
         }
+        time = StorageService::StorageRadar::RecordCurrentTime();
         WipingActionDir(dir_);
+        StorageService::StorageRadar::ReportDuration("ClearKey WipingActionDir Dir", time);
+        time = StorageService::StorageRadar::RecordCurrentTime();
         std::string backupDir;
         KeyBackup::GetInstance().GetBackupDir(dir_, backupDir);
         WipingActionDir(backupDir);
+        StorageService::StorageRadar::ReportDuration("ClearKey WipingActionDir BackupDir", time);
+        time = StorageService::StorageRadar::RecordCurrentTime();
         KeyBackup::GetInstance().RemoveNode(backupDir);
+        StorageService::StorageRadar::ReportDuration("ClearKey RemoveNode BackupDir", time);
         LOGI("[L4:BaseKey] ClearKey: force remove backupDir, %{public}s", backupDir.c_str());
+        time = StorageService::StorageRadar::RecordCurrentTime();
         OHOS::ForceRemoveDirectory(backupDir);
+        StorageService::StorageRadar::ReportDuration("ClearKey ForceRemoveDirectory BackupDir", time);
         LOGI("[L4:BaseKey] ClearKey: force remove dir_, %{public}s", dir_.c_str());
+        time = StorageService::StorageRadar::RecordCurrentTime();
         bool removeRet = OHOS::ForceRemoveDirectory(dir_);
+        StorageService::StorageRadar::ReportDuration("ClearKey ForceRemoveDirectory Dir", time);
         if (!removeRet) {
             LOGE("[L4:BaseKey] ClearKey: ForceRemoveDirectory failed");
             StorageService::StorageRadar::ReportUserKeyResult("ClearKey", 0, removeRet, "",
@@ -1015,6 +1027,7 @@ bool BaseKey::ClearKey(const std::string &mnt)
         // use F2FS_IOC_SEC_TRIM_FILE
     }
     LOGI("[L4:BaseKey] ClearKey: <<< EXIT SUCCESS <<< dir=%{public}s", dir_.c_str());
+    StorageService::StorageRadar::ReportDuration("ClearKey", startTime);
     return (ret == E_OK);
 }
 

@@ -307,8 +307,6 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_PermissionInvalid_
     EXPECT_EQ(result, E_PERMISSION_DENIED);
     result = storageDaemonProviderTest_->QueryCDStatus("path", maxVolume);
     EXPECT_EQ(result, E_PERMISSION_DENIED);
-    result = storageDaemonProviderTest_->EjectCD("path");
-    EXPECT_EQ(result, E_PERMISSION_DENIED);
     result = storageDaemonProviderTest_->FormatVolume("path", "type", "/dev/disk", "get", 1);
     EXPECT_EQ(result, E_PERMISSION_DENIED);
     result = storageDaemonProviderTest_->Check("path", "type", true);
@@ -353,7 +351,6 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_PermissionInvalid_
     EXPECT_EQ(storageDaemonProviderTest_->Mount("path", "path", "type", 0, "data"), E_NOT_SUPPORT);
     EXPECT_EQ(storageDaemonProviderTest_->Unmount("path", "type", true), E_NOT_SUPPORT);
     EXPECT_EQ(storageDaemonProviderTest_->QueryCDStatus("path", maxVolume), E_NOT_SUPPORT);
-    EXPECT_EQ(storageDaemonProviderTest_->EjectCD("path"), E_NOT_SUPPORT);
     EXPECT_EQ(storageDaemonProviderTest_->FormatVolume("path", "type", "/dev/disk", "gpt", 1), E_NOT_SUPPORT);
     EXPECT_EQ(storageDaemonProviderTest_->Check("path", "type", true), E_NOT_SUPPORT);
     EXPECT_EQ(storageDaemonProviderTest_->Repair("path", "type"), E_NOT_SUPPORT);
@@ -2795,6 +2792,62 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_ValidateBlockDevic
 #endif
 }
 
+/**
+ * @tc.name: StorageDaemonProviderTest_CreateDmLinear_001
+ * @tc.desc: Verify CreateDmLinear returns E_PERMISSION_DENIED when calling uid is not DISK_MANAGER_UID.
+ * @tc.type: FUNC
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_CreateDmLinear_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_CreateDmLinear_001 start";
+    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
+    uint64_t dmDev = 0;
+    SetCallingUid(STORAGE_MANAGER_UID);
+#ifdef DISK_MANAGER
+    EXPECT_EQ(storageDaemonProviderTest_->CreateDmLinear("/dev/block/ut_test_dev", 0, 100, dmDev),
+              E_PERMISSION_DENIED);
+#else
+    EXPECT_EQ(storageDaemonProviderTest_->CreateDmLinear("/dev/block/ut_test_dev", 0, 100, dmDev),
+              E_NOT_SUPPORT);
+#endif
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_CreateDmLinear_001 end";
+}
+ 
+/**
+ * @tc.name: StorageDaemonProviderTest_CreateDmLinear_002
+ * @tc.desc: Verify CreateDmLinear rejects invalid sourceDevPath via ValidateBlockDevicePath.
+ * @tc.type: FUNC
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_CreateDmLinear_002, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_CreateDmLinear_002 start";
+    SetCallingUid(DISK_MANAGER_UID);
+    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
+    uint64_t dmDev = 0;
+#ifdef DISK_MANAGER
+    // empty path
+    EXPECT_EQ(storageDaemonProviderTest_->CreateDmLinear("", 0, 100, dmDev), E_PARAMS_INVALID);
+    // path traversal
+    EXPECT_EQ(storageDaemonProviderTest_->CreateDmLinear("/dev/block/../sda", 0, 100, dmDev),
+              E_PARAMS_INVALID);
+    // wrong prefix
+    EXPECT_EQ(storageDaemonProviderTest_->CreateDmLinear("/dev/invalid/sda1", 0, 100, dmDev),
+              E_PARAMS_INVALID);
+    // path length >= PATH_MAX
+    EXPECT_EQ(storageDaemonProviderTest_->CreateDmLinear(std::string(PATH_MAX, 'a'), 0, 100, dmDev),
+              E_PARAMS_INVALID);
+#else
+    EXPECT_EQ(storageDaemonProviderTest_->CreateDmLinear("", 0, 100, dmDev), E_NOT_SUPPORT);
+    EXPECT_EQ(storageDaemonProviderTest_->CreateDmLinear("/dev/block/../sda", 0, 100, dmDev),
+              E_NOT_SUPPORT);
+    EXPECT_EQ(storageDaemonProviderTest_->CreateDmLinear("/dev/invalid/sda1", 0, 100, dmDev),
+              E_NOT_SUPPORT);
+    EXPECT_EQ(storageDaemonProviderTest_->CreateDmLinear(std::string(PATH_MAX, 'a'), 0, 100, dmDev),
+              E_NOT_SUPPORT);
+#endif
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_CreateDmLinear_002 end";
+}
+
 HWTEST_F(StorageDaemonProviderTest, FormatPartition_CmdPathTraversal_001, TestSize.Level1)
 {
     SetCallingUid(DISK_MANAGER_UID);
@@ -2924,28 +2977,6 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_QueryCDStatus_002,
     auto ret = storageDaemonProviderTest_->QueryCDStatus(devPath, status);
     EXPECT_NE(ret, E_OK);
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_QueryCDStatus_002 end";
-}
-
-HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_EjectCD_001, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_EjectCD_001 start";
-    SetCallingUid(DISK_MANAGER_UID);
-    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
-    std::string devPath = "";
-    auto ret = storageDaemonProviderTest_->EjectCD(devPath);
-    EXPECT_NE(ret, E_OK);
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_EjectCD_001 end";
-}
-
-HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_EjectCD_002, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_EjectCD_002 start";
-    SetCallingUid(DISK_MANAGER_UID);
-    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
-    std::string devPath = "/dev/block/../sr0";
-    auto ret = storageDaemonProviderTest_->EjectCD(devPath);
-    EXPECT_NE(ret, E_OK);
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_EjectCD_002 end";
 }
 
 /**
@@ -3664,5 +3695,87 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_UMountUdmfClipFuse
     OHOS::ForceRemoveDirectory(path);
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_UMountUdmfClipFuse_005 end";
 }
+
+/**
+ * @tc.name: StorageDaemonProviderTest_OpticalEraseDfx_001
+ * @tc.desc: Erase failure on non-optical device keeps return and flushes op diag.
+ * @tc.type: FUNC
+ * @tc.require: AR000H09L6
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_OpticalEraseDfx_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalEraseDfx_001 start";
+    SetCallingUid(DISK_MANAGER_UID);
+    int32_t ret = storageDaemonProviderTest_->Erase("/dev/block/ut_test_dev");
+    EXPECT_NE(ret, E_OK);
+    SetCallingUid(999);
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalEraseDfx_001 end";
+}
+
+/**
+ * @tc.name: StorageDaemonProviderTest_OpticalEjectDfx_001
+ * @tc.desc: Eject failure on non-exist sr device keeps return and flushes op diag.
+ * @tc.type: FUNC
+ * @tc.require: AR000H09L6
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_OpticalEjectDfx_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalEjectDfx_001 start";
+    SetCallingUid(DISK_MANAGER_UID);
+    int32_t ret = storageDaemonProviderTest_->Eject("sr99");
+    EXPECT_NE(ret, E_OK);
+    SetCallingUid(999);
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalEjectDfx_001 end";
+}
+
+/**
+ * @tc.name: StorageDaemonProviderTest_OpticalEjectInvalidNameDfx_001
+ * @tc.desc: Eject with invalid dev name returns E_PARAMS_INVALID via op diag.
+ * @tc.type: FUNC
+ * @tc.require: AR000H09L6
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_OpticalEjectInvalidNameDfx_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalEjectInvalidNameDfx_001 start";
+    SetCallingUid(DISK_MANAGER_UID);
+    int32_t ret = storageDaemonProviderTest_->Eject("invalid_name");
+    EXPECT_EQ(ret, E_PARAMS_INVALID);
+    SetCallingUid(999);
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalEjectInvalidNameDfx_001 end";
+}
+
+/**
+ * @tc.name: StorageDaemonProviderTest_OpticalBurnDfx_001
+ * @tc.desc: Burn with empty fsType returns E_PARAMS_INVALID via op diag.
+ * @tc.type: FUNC
+ * @tc.require: AR000H09L6
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_OpticalBurnDfx_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalBurnDfx_001 start";
+    SetCallingUid(DISK_MANAGER_UID);
+    int32_t ret = storageDaemonProviderTest_->Burn("/dev/block/ut_test_dev", "{}", "");
+    EXPECT_EQ(ret, E_PARAMS_INVALID);
+    SetCallingUid(999);
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalBurnDfx_001 end";
+}
+
+/**
+ * @tc.name: StorageDaemonProviderTest_OpticalCreateIsoImageDfx_001
+ * @tc.desc: CreateIsoImage with empty fsType returns E_PARAMS_INVALID via op diag.
+ * @tc.type: FUNC
+ * @tc.require: AR000H09L6
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_OpticalCreateIsoImageDfx_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalCreateIsoImageDfx_001 start";
+    SetCallingUid(DISK_MANAGER_UID);
+    int32_t ret = storageDaemonProviderTest_->CreateIsoImage("/dev/block/ut_test_dev", "/data/local/tmp/iso.img",
+                                                             "", "/mnt/data/ut_test_mnt");
+    EXPECT_EQ(ret, E_PARAMS_INVALID);
+    SetCallingUid(999);
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalCreateIsoImageDfx_001 end";
+}
+
 } // namespace StorageDaemon
 } // namespace OHOS

@@ -1050,6 +1050,10 @@ HWTEST_F(MountManagerTest, Storage_Daemon_MountManagerExtTest_MountPointToList_0
     MountManager::GetInstance().MountPointToList(hmdfsList, hmdfsLists, sharefsList, line, userId);
     line = "s destination sharefs";
     MountManager::GetInstance().MountPointToList(hmdfsList, hmdfsLists, sharefsList, line, userId);
+    line = "source destinationdestinationdestinationdestinationdestination sharefs";
+    MountManager::GetInstance().MountPointToList(hmdfsList, hmdfsLists, sharefsList, line, userId);
+    line = "source /mnt/user/100/docs sharefs";
+    MountManager::GetInstance().MountPointToList(hmdfsList, hmdfsLists, sharefsList, line, userId);
 
     line = "source destination hmfs";
     MountManager::GetInstance().MountPointToList(hmdfsList, hmdfsLists, sharefsList, line, userId);
@@ -1160,6 +1164,32 @@ HWTEST_F(MountManagerTest, Storage_Daemon_MountManagerExtTest_MatchesDisSharePat
     ret = MountManager::GetInstance().MatchesDisSharePath(path);
     EXPECT_TRUE(ret);
     GTEST_LOG_(INFO) << "Storage_Daemon_MountManagerExtTest_MatchesDisSharePath_001 end";
+}
+
+/**
+ * @tc.name: Storage_Daemon_MountManagerExtTest_MatchesDisSharePath_002
+ * @tc.desc: Verify the MatchesDisSharePath function for docs path.
+ * @tc.type: FUNC
+ * @tc.require: IB49AM
+ */
+HWTEST_F(MountManagerTest, Storage_Daemon_MountManagerExtTest_MatchesDisSharePath_002, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "Storage_Daemon_MountManagerExtTest_MatchesDisSharePath_002 start";
+    std::string path =
+        "/data/service/el2/100/hmdfs/account/data/com.ohos.filemanager/.remote_share/qwert1245/storage/Users/currentUser";
+    bool ret = MountManager::GetInstance().MatchesDisSharePath(path);
+    EXPECT_TRUE(ret);
+
+    path =
+        "/data/service/el2/100/hmdfs/account/data/com.ohos.filemanager/.remote_share/qwert1245/storage/Users/currentUser/";
+    ret = MountManager::GetInstance().MatchesDisSharePath(path);
+    EXPECT_FALSE(ret);
+
+    path =
+        "/data/service/el2/100/hmdfs/account/data/com.ohos.filemanager/.remote_share/qwert1245/storage/Users/otherUser";
+    ret = MountManager::GetInstance().MatchesDisSharePath(path);
+    EXPECT_FALSE(ret);
+    GTEST_LOG_(INFO) << "Storage_Daemon_MountManagerExtTest_MatchesDisSharePath_002 end";
 }
 
 /**

@@ -41,7 +41,7 @@ public:
     virtual int GetOpticalDriveMaxWriteSpeed(const std::string &diskPath, int32_t &maxWriteSpeed) = 0;
     virtual int GetCDStatus(const char *device, int &status) = 0;
     virtual int GetCdTotalCapacity(int fd, int64_t &cdTotalCapacity) = 0;
-    virtual int GetCdUsedCapacity(int fd, int64_t &cdUsedCapacity) = 0;
+    virtual int GetDiscUsedCapacity(int fd, int64_t totalSize, int64_t &discUsedCapacity) = 0;
     virtual int GetDvdTotalCapacity(int fd, int64_t &dvdTotalCapacity) = 0;
     virtual int GetDvdUsedCapacity(int fd, int64_t &dvdUsedCapacity) = 0;
     virtual int GetDvdPlusRwTotalCapacity(int fd, int64_t &dvdTotalCapacity) = 0;
@@ -68,7 +68,6 @@ public:
     virtual int32_t GetIncBurnAddr(const std::string &devPath, std::string &incBurnAddr) = 0;
     virtual std::string GetOpticalDriveNode(const std::string &devPath) = 0;
     virtual int64_t GetDiscCapacity(int cmdFd, const std::string &discType) = 0;
-    virtual bool IsDvdRwRestrictedOverwrite(int cmdFd) = 0;
     virtual void AdjustBlankDiscCapacity(const std::string &devPath, const std::string &discType,
                                          int64_t &totalSize, int64_t &usedSize) = 0;
     virtual int64_t GetUsedSizeFromSysfs(const std::string &devPath) = 0;
@@ -93,7 +92,7 @@ public:
     MOCK_METHOD2(GetOpticalDriveMaxWriteSpeed, int(const std::string &diskPath, int32_t &maxWriteSpeed));
     MOCK_METHOD2(GetCDStatus, int(const char *device, int &status));
     MOCK_METHOD2(GetCdTotalCapacity, int(int fd, int64_t &cdTotalCapacity));
-    MOCK_METHOD2(GetCdUsedCapacity, int(int fd, int64_t &cdUsedCapacity));
+    MOCK_METHOD3(GetDiscUsedCapacity, int(int fd, int64_t totalSize, int64_t &discUsedCapacity));
     MOCK_METHOD2(GetDvdTotalCapacity, int(int fd, int64_t &dvdTotalCapacity));
     MOCK_METHOD2(GetDvdUsedCapacity, int(int fd, int64_t &dvdUsedCapacity));
     MOCK_METHOD2(GetDvdPlusRwTotalCapacity, int(int fd, int64_t &dvdTotalCapacity));
@@ -120,7 +119,6 @@ public:
     MOCK_METHOD2(GetIncBurnAddr, int32_t(const std::string &devPath, std::string &incBurnAddr));
     MOCK_METHOD1(GetOpticalDriveNode, std::string(const std::string &devPath));
     MOCK_METHOD2(GetDiscCapacity, int64_t(int cmdFd, const std::string &discType));
-    MOCK_METHOD1(IsDvdRwRestrictedOverwrite, bool(int cmdFd));
     MOCK_METHOD4(AdjustBlankDiscCapacity, void(const std::string &devPath, const std::string &discType,
                                                int64_t &totalSize, int64_t &usedSize));
     MOCK_METHOD1(GetUsedSizeFromSysfs, int64_t(const std::string &devPath));

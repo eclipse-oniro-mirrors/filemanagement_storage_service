@@ -35,7 +35,8 @@ public:
         : sourceDevPath_(sourceDevPath), dmName_(GetDmName(sourceDevPath)),
           sourceStartSector_(sourceStartSector), sectors_(sectorCount)
     {
-        if (sourceDevPath_.empty() || sourceDevPath_.find(' ') != std::string::npos) {
+        if (sourceDevPath_.empty() || sourceDevPath_.find(' ') != std::string::npos ||
+            sourceDevPath.size() > PATH_MAX) {
             LOGE("invalid sourceDevPath: %{public}s", sourceDevPath_.c_str());
             return;
         }

@@ -163,7 +163,6 @@ public:
                                     const std::string &volumeName,
                                     const std::vector<std::string> &cmd, bool quickFormat = true) override;
     virtual int32_t QueryCDStatus(const std::string &devPath, int32_t &status) override;
-    virtual int32_t EjectCD(const std::string &devPath) override;
     virtual int32_t Erase(const std::string &devPath) override;
     virtual int32_t Eject(const std::string &devName) override;
     virtual int32_t CreateIsoImage(const std::string &devPath,
