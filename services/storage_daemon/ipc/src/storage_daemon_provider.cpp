@@ -311,6 +311,7 @@ void StorageDaemonProvider::StorageRadarThd(void)
         LOGI("[L1:StorageDaemonProvider] Storage statistic update, intervalMinutes:%{public}" PRId64,
             intervalMinutes);
         isNeedUpdateRadarFile_ = false;
+        std::lock_guard<std::mutex> lockStatistic(mutexStats_);
         StorageStatisticRadar::GetInstance().UpdateStatisticFile(opStatistics_);
     }
     LOGI("[L1:StorageDaemonProvider] StorageRadarThd: <<< EXIT SUCCESS <<< thread ended");
@@ -1580,28 +1581,6 @@ int32_t StorageDaemonProvider::UnregisterUeceActivationCallback()
         LOGD("[L1:StorageDaemonProvider] UnregisterUeceActivationCallback: <<< EXIT SUCCESS <<<");
     } else {
         LOGE("[L1:StorageDaemonProvider] UnregisterUeceActivationCallback: <<< EXIT FAILED <<< ret=%{public}d", ret);
-    }
-    return ret;
-}
-
-int32_t StorageDaemonProvider::CreateUserDir(const std::string &path, mode_t mode, uid_t uid, gid_t gid)
-{
-    LOGI("[L1:StorageDaemonProvider] CreateUserDir: >>> ENTER <<< path=%{public}s, mode=%{public}u, uid=%{public}u,"
-        "gid=%{public}u", path.c_str(), mode, uid, gid);
-    std::string message = "path: " + GetAnonyString(path) + " mode: " + std::to_string(mode)
-        + " uid: " + std::to_string(uid) + " gid: " + std::to_string(gid);
-    HiAudit::GetInstance().WriteStart("CreateUserDir", message);
-    if (IsFilePathInvalid(path)) {
-        LOGE("[L1:StorageDaemonProvider] CreateUserDir: <<< EXIT FAILED <<< path is invalid");
-        return E_PARAMS_INVALID;
-    }
-    int32_t ret = UserManager::GetInstance().CreateUserDir(path, mode, uid, gid);
-    HiAudit::GetInstance().WriteEnd("CreateUserDir", ret);
-    if (ret == E_OK) {
-        LOGI("[L1:StorageDaemonProvider] CreateUserDir: <<< EXIT SUCCESS <<< path=%{public}s", path.c_str());
-    } else {
-        LOGE("[L1:StorageDaemonProvider] CreateUserDir: <<< EXIT FAILED <<< path=%{public}s, ret=%{public}d",
-            path.c_str(), ret);
     }
     return ret;
 }

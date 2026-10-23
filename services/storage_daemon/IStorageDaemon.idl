@@ -82,8 +82,6 @@ interface OHOS.StorageDaemon.IStorageDaemon{
          [in] OrderedMap<int, String> bundleNameAndUid, [in] int type);
      [ipccode 55] void RegisterUeceActivationCallback([in] IUeceActivationCallback ueceCallback);
      [ipccode 56] void UnregisterUeceActivationCallback();
-     [ipccode 57] void CreateUserDir([in] String path, [in] unsigned int mode,
-                                     [in] unsigned int uid, [in] unsigned int gid);
      [ipccode 59] void SetDirEncryptionPolicy([in] unsigned int userId, [in] String dirPath, [in] unsigned int level);
      [ipccode 60] void UpdateUserPublicDirPolicy([in] unsigned int userId);
      [ipccode 61] void GetDqBlkSpacesByUids([in] int[] uids, [out] NextDqBlk[] dqBlks);

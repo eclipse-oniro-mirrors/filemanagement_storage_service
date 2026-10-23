@@ -250,38 +250,6 @@ bool MkDirRecurse(const std::string& path, mode_t mode)
     return TEMP_FAILURE_RETRY(access(path.c_str(), F_OK)) == 0;
 }
 
-int32_t PrepareDirSimple(const std::string &path, mode_t mode, uid_t uid, gid_t gid)
-{
-    LOGI("[L8:FileUtils] PrepareDirSimple: >>> ENTER <<< path=%{public}s", path.c_str());
-    if (MkDir(path, mode) != 0) {
-        if (errno == EEXIST) {
-            LOGE("[L8:FileUtils] PrepareDirSimple: path already exists, path=%{public}s", path.c_str());
-            return E_CREATE_USER_DIR_EXIST;
-        }
-        LOGE("[L8:FileUtils] PrepareDirSimple: <<< EXIT FAILED <<< mkdir failed, errno=%{public}d", errno);
-        return E_MKDIR_ERROR;
-    }
-    if (ChMod(path, mode) != 0) {
-        LOGE("[L8:FileUtils] PrepareDirSimple: <<< EXIT FAILED <<< chmod failed, errno=%{public}d", errno);
-        return E_CHMOD_ERROR;
-    }
-
-    if (ChOwn(path, uid, gid) != 0) {
-        LOGE("[L8:FileUtils] PrepareDirSimple: <<< EXIT FAILED <<< chown failed, errno=%{public}d", errno);
-        return E_CHOWN_ERROR;
-    }
-
-#ifdef USE_LIBRESTORECON
-    auto ret = Restorecon(path.c_str());
-    if (ret != E_OK) {
-        LOGE("[L8:FileUtils] PrepareDirSimple: RestoreconDir failed, errno=%{public}d", errno);
-    }
-    return ret;
-#endif
-    LOGI("[L8:FileUtils] PrepareDirSimple: <<< EXIT SUCCESS <<< path=%{public}s", path.c_str());
-    return E_OK;
-}
-
 // On success, true is returned.  On error, false is returned, and errno is set appropriately.
 bool PrepareDir(const std::string &path, mode_t mode, uid_t uid, gid_t gid)
 {

@@ -517,22 +517,6 @@ HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_EraseAllUserEncr
 }
 
 /**
- * @tc.name: StorageManagerProviderTest_CreateUserDir_001
- * @tc.desc: Verify the CreateUserDir function.
- * @tc.type: FUNC
- */
-HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_CreateUserDir_001, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "StorageManagerProviderTest_CreateUserDir_001 start";
-    ASSERT_TRUE(storageManagerProviderTest_ != nullptr);
-    g_returnUpdateService = false;
-    SetCallingUid(AOCO_UID);
-    auto ret = storageManagerProviderTest_->CreateUserDir("", 0, 0, 0);
-    EXPECT_NE(ret, E_OK);
-    GTEST_LOG_(INFO) << "StorageManagerProviderTest_CreateUserDir_001 end";
-}
-
-/**
  * @tc.name: StorageManagerProviderTest_SetDirEncryptionPolicy_001
  * @tc.desc: Verify the SetDirEncryptionPolicy function.
  * @tc.type: FUNC

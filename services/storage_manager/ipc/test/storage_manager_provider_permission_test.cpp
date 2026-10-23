@@ -1539,26 +1539,6 @@ HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_UnregisterUeceAc
 }
 
 /**
- * @tc.name: StorageManagerProviderTest_CreateUserDir_001
- * @tc.desc: Verify the CreateUserDir function.
- * @tc.type: FUNC
- */
-HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_CreateUserDir_001, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "StorageManagerProviderTest_CreateUserDir_001 start";
-    ASSERT_TRUE(storageManagerProviderTest_ != nullptr);
-
-    g_testCallingUid = 0;
-    EXPECT_EQ(storageManagerProviderTest_->CreateUserDir("", 0, 0, 0), E_PERMISSION_DENIED);
-
-    g_testCallingUid = 7558;
-    EXPECT_EQ(storageManagerProviderTest_->CreateUserDir("", 0, 0, 0), E_SERVICE_IS_NULLPTR);
-
-    EXPECT_EQ(storageManagerProviderTest_->CreateUserDir("/test/../", 0, 0, 0), E_PARAMS_INVALID);
-    GTEST_LOG_(INFO) << "StorageManagerProviderTest_CreateUserDir_001 end";
-}
-
-/**
  * @tc.name: StorageManagerProviderTest_UpdateUserPublicDirPolicy_002
  * @tc.desc: Verify the UpdateUserPublicDirPolicy function.
  * @tc.type: FUNC

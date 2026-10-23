@@ -2522,22 +2522,6 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_GetDqBlkSpacesByUi
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_GetDqBlkSpacesByUids_001 end";
 }
 
-HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_CreateUserDir_001, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_CreateUserDir_001 start";
-    const std::string path = "";
-    mode_t mode = S_IRWXU | S_IRWXG | S_IXOTH;
-    uid_t uid = 0;
-    gid_t gid = 0;
-    EXPECT_CALL(*userManagerMock_, CreateUserDir(_, _, _, _)).WillOnce(Return(E_OK));
-    auto ret = storageDaemonProviderTest_->CreateUserDir(path, mode, uid, gid);
-    EXPECT_TRUE(ret == E_OK);
-    EXPECT_CALL(*userManagerMock_, CreateUserDir(_, _, _, _)).WillOnce(Return(-1));
-    ret = storageDaemonProviderTest_->CreateUserDir(path, mode, uid, gid);
-    EXPECT_TRUE(ret == -1);
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_CreateUserDir_001 end";
-}
-
 #ifdef EL5_FILEKEY_MANAGER
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_UnregisterUeceActivationCallback_001, TestSize.Level1)
 {
