@@ -14,6 +14,7 @@
  */
 
 #include "ipc/storage_daemon_provider.h"
+#include "ipc_skeleton.h"
 #include "message_parcel.h"
 #include "quota/quota_manager.h"
 #include "storage_service_errno.h"
@@ -28,10 +29,32 @@
 #include <mutex>
 #include <thread>
 #include <vector>
+
+namespace {
+pid_t g_testCallingUid = 999;
+} //namespace
+ 
+void SetCallingUid(int32_t uid)
+{
+    g_testCallingUid = uid;
+}
+ 
+namespace OHOS {
+#ifdef CONFIG_IPC_SINGLE
+using namespace IPC_SINGLE;
+#endif
+ 
+pid_t OHOS::IPCSkeleton::GetCallingUid()
+{
+    return g_testCallingUid;
+}
+} //namespace OHOS
+
 namespace OHOS {
 namespace StorageDaemon {
 using namespace testing;
 using namespace testing::ext;
+constexpr pid_t STORAGE_MANAGER_UID = 1090;
 class StorageDaemonProviderTest : public testing::Test {
 public:
     static void SetUpTestCase(void) {};
@@ -353,6 +376,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_QueryUsbIsInUse_00
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_StartUser_001, TestSize.Level1)
 {
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_StartUser_001 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
     ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
     int32_t ret = storageDaemonProviderTest_->StartUser(StorageService::START_USER_ID - 1);
     EXPECT_TRUE(ret == E_USERID_RANGE) << "user's dirs are not prepare";
@@ -368,6 +392,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_StartUser_001, Tes
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_StartUser_002, TestSize.Level1)
 {
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_StartUser_002 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
     ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
 
     int32_t flags = IStorageDaemonEnum::CRYPTO_FLAG_EL1 | IStorageDaemonEnum::CRYPTO_FLAG_EL2;
@@ -391,6 +416,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_StartUser_002, Tes
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_StopUser_001, TestSize.Level1)
 {
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_StopUser_001 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
     ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
     auto ret = storageDaemonProviderTest_->StopUser(StorageService::START_USER_ID - 1);
     EXPECT_NE(ret, E_OK);
@@ -406,7 +432,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_StopUser_001, Test
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_StopUser_002, TestSize.Level1)
 {
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_StopUser_002 start";
-
+    SetCallingUid(STORAGE_MANAGER_UID);
     ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
     int32_t flags = IStorageDaemonEnum::CRYPTO_FLAG_EL1 | IStorageDaemonEnum::CRYPTO_FLAG_EL2;
     auto ret = storageDaemonProviderTest_->PrepareUserDirs(StorageTest::USER_ID1, flags);
@@ -432,6 +458,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_StopUser_002, Test
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_PrepareUserDirs_001, TestSize.Level1)
 {
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_PrepareUserDirs_001 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
     ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
     const uint32_t testFlags = 0;
     ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
@@ -449,6 +476,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_PrepareUserDirs_00
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_PrepareUserDirs_002, TestSize.Level1)
 {
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_PrepareUserDirs_002 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
     ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
     const uint32_t testFlags = -1;
     auto ret = storageDaemonProviderTest_->PrepareUserDirs(StorageService::START_USER_ID - 1, testFlags);
@@ -465,6 +493,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_PrepareUserDirs_00
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_DestroyUserDirs_001, TestSize.Level1)
 {
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_DestroyUserDirs_001 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
     ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
     const uint32_t testFlags = 0x02;
     ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
@@ -482,6 +511,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_DestroyUserDirs_00
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_DestroyUserDirs_002, TestSize.Level1)
 {
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_DestroyUserDirs_002 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
     ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
     const uint32_t testFlags = -1;
     ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
@@ -600,6 +630,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_UpdateUseAuthWithR
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_ActiveUserKey_001, TestSize.Level1)
 {
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_ActiveUserKey_001 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
     ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
     auto token = GenerateTestData(0x01, 32);
     auto secret = GenerateTestData(0x02, 32);
@@ -617,6 +648,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_ActiveUserKey_001,
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_ActiveUserKey_002, TestSize.Level1)
 {
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_ActiveUserKey_002 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
     ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
     std::vector<uint8_t> token;
     std::vector<uint8_t> secret;
@@ -634,6 +666,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_ActiveUserKey_002,
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_InactiveUserKey_001, TestSize.Level1)
 {
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_InactiveUserKey_001 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
     ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
     int32_t ret = storageDaemonProviderTest_->InactiveUserKey(StorageTest::USER_ID1);
     EXPECT_EQ(ret, E_OK);
@@ -649,6 +682,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_InactiveUserKey_00
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_InactiveUserKey_002, TestSize.Level1)
 {
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_InactiveUserKey_002 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
     ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
 #ifdef USER_CRYPTO_MANAGER
     int32_t ret = storageDaemonProviderTest_->InactiveUserKey(StorageService::START_USER_ID - 1);
@@ -666,6 +700,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_InactiveUserKey_00
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_UpdateKeyContext_001, TestSize.Level1)
 {
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_UpdateKeyContext_001 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
     ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
     bool needRemoveTmpKey = true;
     int32_t result = storageDaemonProviderTest_->UpdateKeyContext(StorageTest::USER_ID1, needRemoveTmpKey);
@@ -682,6 +717,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_UpdateKeyContext_0
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_UpdateKeyContext_002, TestSize.Level1)
 {
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_UpdateKeyContext_002 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
     ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
     bool needRemoveTmpKey = true;
     uint32_t secureUid = -1;
@@ -936,6 +972,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_SetRecoverKey_001,
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_CreateShareFile_001, TestSize.Level1)
 {
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_CreateShareFile_001 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
     ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
     std::string uriStr = "file1";
     std::vector<std::string> uriStrVec = {uriStr};
@@ -961,6 +998,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_CreateShareFile_00
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_CreateShareFile_002, TestSize.Level1)
 {
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_CreateShareFile_002 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
     ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
     std::vector<std::string> uriStrVec;
     for (int i = 0; i < 200000; ++i) {
@@ -989,6 +1027,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_CreateShareFile_00
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_CreateShareFile_003, TestSize.Level1)
 {
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_CreateShareFile_003 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
     ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
     std::vector<std::string> uriStrVec;
     for (int i = 0; i < 200001; ++i) {
@@ -1017,6 +1056,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_CreateShareFile_00
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_CreateShareFile_004, TestSize.Level1)
 {
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_CreateShareFile_004 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
     ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
     std::vector<uint8_t> binaryData = {3, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0};
     StorageFileRawData fileRawData {
@@ -1152,6 +1192,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_SetUserStatistics_
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_DeleteShareFile_001, TestSize.Level1)
 {
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_DeleteShareFile_001 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
     ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
     std::string uriStr = "file1";
     std::vector<std::string> uriStrVec = {uriStr};
@@ -1302,6 +1343,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_GetUserNeedActiveS
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_MountMediaFuse_001, TestSize.Level1)
 {
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_MountMediaFuse_001 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
     ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
     int32_t devFd = 1001;
     int32_t result = storageDaemonProviderTest_->MountMediaFuse(StorageTest::USER_ID1, devFd);
@@ -1318,6 +1360,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_MountMediaFuse_001
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_UMountMediaFuse_001, TestSize.Level1)
 {
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_UMountMediaFuse_001 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
     ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
     int32_t result = storageDaemonProviderTest_->UMountMediaFuse(StorageTest::USER_ID1);
     EXPECT_EQ(result, E_OK);
@@ -1333,6 +1376,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_UMountMediaFuse_00
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_MountFileMgrFuse_001, TestSize.Level1)
 {
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_MountFileMgrFuse_001 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
     ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
     std::string path = "";
     int32_t fuseFd = 0;
@@ -1351,6 +1395,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_MountFileMgrFuse_0
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_UMountFileMgrFuse_001, TestSize.Level1)
 {
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_UMountFileMgrFuse_001 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
     ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
     std::string path = "";
     int32_t result = storageDaemonProviderTest_->UMountFileMgrFuse(StorageTest::USER_ID1, path);
@@ -1780,6 +1825,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_UMountDfsDocs_003,
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_MountMediaFuse_002, TestSize.Level1)
 {
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_MountMediaFuse_002 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
     ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
     int32_t devFd = 1001;
     uint32_t userId = -1;
@@ -1797,6 +1843,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_MountMediaFuse_002
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_UMountMediaFuse_002, TestSize.Level1)
 {
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_UMountMediaFuse_002 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
     ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
     uint32_t userId = -1;
     int32_t result = storageDaemonProviderTest_->UMountMediaFuse(userId);
@@ -1813,6 +1860,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_UMountMediaFuse_00
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_MountFileMgrFuse_002, TestSize.Level1)
 {
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_MountFileMgrFuse_002 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
     ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
     std::string path = "";
     int32_t fuseFd = 0;
@@ -1831,6 +1879,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_MountFileMgrFuse_0
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_UMountFileMgrFuse_002, TestSize.Level1)
 {
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_UMountFileMgrFuse_002 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
     ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
     std::string path = "";
     uint32_t userId = -1;
