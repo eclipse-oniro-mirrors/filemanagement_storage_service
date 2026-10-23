@@ -3496,6 +3496,87 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_UMountCloudDiskFus
 }
 
 /**
+ * @tc.name: StorageDaemonProviderTest_OpticalEraseDfx_001
+ * @tc.desc: Erase failure on non-optical device keeps return and flushes op diag.
+ * @tc.type: FUNC
+ * @tc.require: AR000H09L6
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_OpticalEraseDfx_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalEraseDfx_001 start";
+    SetCallingUid(DISK_MANAGER_UID);
+    int32_t ret = storageDaemonProviderTest_->Erase("/dev/block/ut_test_dev");
+    EXPECT_NE(ret, E_OK);
+    SetCallingUid(999);
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalEraseDfx_001 end";
+}
+
+/**
+ * @tc.name: StorageDaemonProviderTest_OpticalEjectDfx_001
+ * @tc.desc: Eject failure on non-exist sr device keeps return and flushes op diag.
+ * @tc.type: FUNC
+ * @tc.require: AR000H09L6
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_OpticalEjectDfx_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalEjectDfx_001 start";
+    SetCallingUid(DISK_MANAGER_UID);
+    int32_t ret = storageDaemonProviderTest_->Eject("sr99");
+    EXPECT_NE(ret, E_OK);
+    SetCallingUid(999);
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalEjectDfx_001 end";
+}
+
+/**
+ * @tc.name: StorageDaemonProviderTest_OpticalEjectInvalidNameDfx_001
+ * @tc.desc: Eject with invalid dev name returns E_PARAMS_INVALID via op diag.
+ * @tc.type: FUNC
+ * @tc.require: AR000H09L6
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_OpticalEjectInvalidNameDfx_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalEjectInvalidNameDfx_001 start";
+    SetCallingUid(DISK_MANAGER_UID);
+    int32_t ret = storageDaemonProviderTest_->Eject("invalid_name");
+    EXPECT_EQ(ret, E_PARAMS_INVALID);
+    SetCallingUid(999);
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalEjectInvalidNameDfx_001 end";
+}
+
+/**
+ * @tc.name: StorageDaemonProviderTest_OpticalBurnDfx_001
+ * @tc.desc: Burn with empty fsType returns E_PARAMS_INVALID via op diag.
+ * @tc.type: FUNC
+ * @tc.require: AR000H09L6
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_OpticalBurnDfx_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalBurnDfx_001 start";
+    SetCallingUid(DISK_MANAGER_UID);
+    int32_t ret = storageDaemonProviderTest_->Burn("/dev/block/ut_test_dev", "{}", "");
+    EXPECT_EQ(ret, E_PARAMS_INVALID);
+    SetCallingUid(999);
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalBurnDfx_001 end";
+}
+
+/**
+ * @tc.name: StorageDaemonProviderTest_OpticalCreateIsoImageDfx_001
+ * @tc.desc: CreateIsoImage with empty fsType returns E_PARAMS_INVALID via op diag.
+ * @tc.type: FUNC
+ * @tc.require: AR000H09L6
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_OpticalCreateIsoImageDfx_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalCreateIsoImageDfx_001 start";
+    SetCallingUid(DISK_MANAGER_UID);
+    int32_t ret = storageDaemonProviderTest_->CreateIsoImage("/dev/block/ut_test_dev", "/data/local/tmp/iso.img",
+                                                             "", "/mnt/data/ut_test_mnt");
+    EXPECT_EQ(ret, E_PARAMS_INVALID);
+    SetCallingUid(999);
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalCreateIsoImageDfx_001 end";
+}
+
+/**
  * @tc.name: StorageDaemonProviderTest_MountUdmfClipFuse_001
  * @tc.desc: Verify the MountUdmfClipFuse function with valid uid and valid params.
  * @tc.type: FUNC
@@ -3695,87 +3776,5 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_UMountUdmfClipFuse
     OHOS::ForceRemoveDirectory(path);
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_UMountUdmfClipFuse_005 end";
 }
-
-/**
- * @tc.name: StorageDaemonProviderTest_OpticalEraseDfx_001
- * @tc.desc: Erase failure on non-optical device keeps return and flushes op diag.
- * @tc.type: FUNC
- * @tc.require: AR000H09L6
- */
-HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_OpticalEraseDfx_001, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalEraseDfx_001 start";
-    SetCallingUid(DISK_MANAGER_UID);
-    int32_t ret = storageDaemonProviderTest_->Erase("/dev/block/ut_test_dev");
-    EXPECT_NE(ret, E_OK);
-    SetCallingUid(999);
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalEraseDfx_001 end";
-}
-
-/**
- * @tc.name: StorageDaemonProviderTest_OpticalEjectDfx_001
- * @tc.desc: Eject failure on non-exist sr device keeps return and flushes op diag.
- * @tc.type: FUNC
- * @tc.require: AR000H09L6
- */
-HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_OpticalEjectDfx_001, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalEjectDfx_001 start";
-    SetCallingUid(DISK_MANAGER_UID);
-    int32_t ret = storageDaemonProviderTest_->Eject("sr99");
-    EXPECT_NE(ret, E_OK);
-    SetCallingUid(999);
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalEjectDfx_001 end";
-}
-
-/**
- * @tc.name: StorageDaemonProviderTest_OpticalEjectInvalidNameDfx_001
- * @tc.desc: Eject with invalid dev name returns E_PARAMS_INVALID via op diag.
- * @tc.type: FUNC
- * @tc.require: AR000H09L6
- */
-HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_OpticalEjectInvalidNameDfx_001, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalEjectInvalidNameDfx_001 start";
-    SetCallingUid(DISK_MANAGER_UID);
-    int32_t ret = storageDaemonProviderTest_->Eject("invalid_name");
-    EXPECT_EQ(ret, E_PARAMS_INVALID);
-    SetCallingUid(999);
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalEjectInvalidNameDfx_001 end";
-}
-
-/**
- * @tc.name: StorageDaemonProviderTest_OpticalBurnDfx_001
- * @tc.desc: Burn with empty fsType returns E_PARAMS_INVALID via op diag.
- * @tc.type: FUNC
- * @tc.require: AR000H09L6
- */
-HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_OpticalBurnDfx_001, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalBurnDfx_001 start";
-    SetCallingUid(DISK_MANAGER_UID);
-    int32_t ret = storageDaemonProviderTest_->Burn("/dev/block/ut_test_dev", "{}", "");
-    EXPECT_EQ(ret, E_PARAMS_INVALID);
-    SetCallingUid(999);
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalBurnDfx_001 end";
-}
-
-/**
- * @tc.name: StorageDaemonProviderTest_OpticalCreateIsoImageDfx_001
- * @tc.desc: CreateIsoImage with empty fsType returns E_PARAMS_INVALID via op diag.
- * @tc.type: FUNC
- * @tc.require: AR000H09L6
- */
-HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_OpticalCreateIsoImageDfx_001, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalCreateIsoImageDfx_001 start";
-    SetCallingUid(DISK_MANAGER_UID);
-    int32_t ret = storageDaemonProviderTest_->CreateIsoImage("/dev/block/ut_test_dev", "/data/local/tmp/iso.img",
-                                                             "", "/mnt/data/ut_test_mnt");
-    EXPECT_EQ(ret, E_PARAMS_INVALID);
-    SetCallingUid(999);
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalCreateIsoImageDfx_001 end";
-}
-
 } // namespace StorageDaemon
 } // namespace OHOS
