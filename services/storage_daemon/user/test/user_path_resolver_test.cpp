@@ -459,12 +459,12 @@ HWTEST_F(UserPathResolverTest, UserPathResolverTest_GetVirtualPath_001, TestSize
 }
 
 /**
- * @tc.name: UserPathResolverTest_GetVirtualPath_UdmfClipFuse
- * @tc.desc: Verify the GetVirtualPath contains udmf_fuse and clipboard_fuse entries.
+ * @tc.name: UserPathResolverTest_GetAppdataPath_UdmfClipFuse
+ * @tc.desc: Verify the GetAppdataPath contains udmf_fuse and clipboard_fuse entries.
  * @tc.type: FUNC
  * @tc.require: 20260807938859
  */
-HWTEST_F(UserPathResolverTest, UserPathResolverTest_GetVirtualPath_UdmfClipFuse, TestSize.Level1)
+HWTEST_F(UserPathResolverTest, UserPathResolverTest_GetAppdataPath_UdmfClipFuse, TestSize.Level1)
 {
     std::vector<DirInfo> dirInfoList;
     EXPECT_EQ(UserPathResolver::GetAppdataPath(userId_, dirInfoList), E_OK);

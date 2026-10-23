@@ -168,11 +168,11 @@ bool IsPathStartWithUdmfClip(int32_t userId, const std::string &dstPath)
         LOGE("IsPathStartWithUdmfClip: dstPath is empty");
         return false;
     }
-    const std::string udmfDir = "/mnt/data/" + std::to_string(userId) + "/udmf_fuse";
+    const std::string udmfDir = "/mnt/data/" + std::to_string(userId) + "/udmf_fuse/";
     if (dstPath.compare(0, udmfDir.size(), udmfDir) == 0) {
         return true;
     }
-    const std::string clipDir = "/mnt/data/" + std::to_string(userId) + "/clipboard_fuse";
+    const std::string clipDir = "/mnt/data/" + std::to_string(userId) + "/clipboard_fuse/";
     if (dstPath.compare(0, clipDir.size(), clipDir) == 0) {
         return true;
     }
