@@ -104,6 +104,8 @@ interface OHOS.StorageManager.IStorageManager {
     [ipccode 115] void UMountDlpFuse([in] String dstPath);
     [ipccode 116] void MountCloudDiskFuse([in] int userId, [in] String path, [out] FileDescriptor fuseFd);
     [ipccode 117] void UMountCloudDiskFuse([in] int userId, [in] String path);
+    [ipccode 118] void MountUdmfClipFuse([in] int userId, [in] String path, [out] FileDescriptor fuseFd);
+    [ipccode 119] void UMountUdmfClipFuse([in] int userId, [in] String path);
     [ipccode 260] void SetDirEncryptionPolicyWithKeyDesc([in] String dirPath, [in] unsigned int level, [in] String keyDesc);
 
 }

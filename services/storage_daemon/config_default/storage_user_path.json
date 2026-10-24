@@ -857,6 +857,18 @@
             "mode": "0771",
             "uid": 6161,
             "gid": 6161
+        },
+        {
+            "path": "/mnt/data/<userId>/udmf_fuse",
+            "mode": "0771",
+            "uid": 3012,
+            "gid": 3012
+        },
+        {
+            "path": "/mnt/data/<userId>/clipboard_fuse",
+            "mode": "0771",
+            "uid": 3816,
+            "gid": 3816
         }
     ],
     "virtual": [

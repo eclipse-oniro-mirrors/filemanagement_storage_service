@@ -280,5 +280,29 @@ int32_t StorageManagerClient::UMountCloudDiskFuse(int32_t userId, const std::str
 
     return client->UMountCloudDiskFuse(userId, path);
 }
+
+int32_t StorageManagerClient::MountUdmfClipFuse(int32_t userId, const std::string &path, int32_t &fuseFd)
+{
+    HITRACE_METER_NAME(HITRACE_TAG_FILEMANAGEMENT, __PRETTY_FUNCTION__);
+    sptr<IStorageManager> client = GetStorageManagerProxy();
+    if (client == nullptr) {
+        LOGE("get storage manager service failed");
+        return E_SA_IS_NULLPTR;
+    }
+
+    return client->MountUdmfClipFuse(userId, path, fuseFd);
+}
+
+int32_t StorageManagerClient::UMountUdmfClipFuse(int32_t userId, const std::string &path)
+{
+    HITRACE_METER_NAME(HITRACE_TAG_FILEMANAGEMENT, __PRETTY_FUNCTION__);
+    sptr<IStorageManager> client = GetStorageManagerProxy();
+    if (client == nullptr) {
+        LOGE("get storage manager service failed");
+        return E_SA_IS_NULLPTR;
+    }
+
+    return client->UMountUdmfClipFuse(userId, path);
+}
 }
 }

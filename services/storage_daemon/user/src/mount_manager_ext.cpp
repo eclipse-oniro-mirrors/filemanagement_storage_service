@@ -446,5 +446,63 @@ int32_t MountManager::UMountCloudDiskFuse(int32_t userId, const std::string &pat
     return E_OK;
 }
 
+int32_t MountManager::MountUdmfClipFuse(int32_t userId, const std::string &path, int32_t &fuseFd)
+{
+    LOGI("[L2:MountManager] MountUdmfClipFuse: >>> ENTER <<< userId=%{public}d, path=%{public}s",
+        userId, path.c_str());
+    UMountUdmfClipFuse(userId, path);
+    auto startTime = StorageService::StorageRadar::RecordCurrentTime();
+    fuseFd = open("/dev/fuse", O_RDWR);
+    if (fuseFd < 0) {
+        LOGE("[L2:MountManager] MountUdmfClipFuse: <<< EXIT FAILED <<< open /dev/fuse fail, errno=%{public}d",
+            errno);
+        return E_OPEN_FUSE;
+    }
+    auto delay = StorageService::StorageRadar::ReportDuration("OPEN: UDMF CLIP FUSE", startTime,
+        StorageService::DELAY_TIME_THRESH_HIGH, userId);
+    LOGI("[L2:MountManager] MountUdmfClipFuse: open fuse end, delayTime = %{public}s.", delay.c_str());
+    string opt = StringPrintf("fd=%i,"
+        "rootmode=40000,"
+        "default_permissions,"
+        "allow_other,"
+        "user_id=0,group_id=0,"
+        "context=\"u:object_r:hmdfs:s0\","
+        "fscontext=u:object_r:hmdfs:s0",
+        fuseFd);
+    startTime = StorageService::StorageRadar::RecordCurrentTime();
+    int ret = Mount("/dev/fuse", path.c_str(), "fuse", MS_NOSUID | MS_NODEV | MS_NOEXEC, opt.c_str());
+    if (ret) {
+        LOGE("[L2:MountManager] MountUdmfClipFuse: <<< EXIT FAILED <<< mount fuse failed, ret=%{public}d,"
+            "errno=%{public}d, path=%{public}s", ret, errno, path.c_str());
+        close(fuseFd);
+        std::string extraData = "dstPath=" + path + ",kernelCode=" + to_string(errno);
+        StorageRadar::ReportUserManager("MountUdmfClipFuse", userId, E_MOUNT_UDMF_CLIP_FUSE, extraData);
+        return E_MOUNT_UDMF_CLIP_FUSE;
+    }
+    delay = StorageService::StorageRadar::ReportDuration("MOUNT: UDMF CLIP FUSE", startTime,
+        StorageService::DELAY_TIME_THRESH_HIGH, userId);
+    LOGI("[L2:MountManager] MountUdmfClipFuse: <<< EXIT SUCCESS <<< fuseFd=%{public}d, delayTime = %{public}s",
+         fuseFd, delay.c_str());
+    return E_OK;
+}
+
+int32_t MountManager::UMountUdmfClipFuse(int32_t userId, const std::string &path)
+{
+    LOGI("[L2:MountManager] UMountUdmfClipFuse: >>> ENTER <<< userId=%{public}d, path=%{public}s",
+        userId, path.c_str());
+    auto startTime = StorageService::StorageRadar::RecordCurrentTime();
+    int32_t ret = UMount2(path, MNT_DETACH);
+    if (ret != E_OK && errno != ENOENT && errno != EINVAL) {
+        LOGE("[L2:MountManager] UMountUdmfClipFuse: <<< EXIT FAILED <<< umount failed, ret=%{public}d,"
+            "errno=%{public}d, path=%{public}s", ret, errno, path.c_str());
+        std::string extraData = "dstPath=" + path + ",kernelCode=" + to_string(errno);
+        StorageRadar::ReportUserManager("UMountUdmfClipFuse", userId, E_UMOUNT_UDMF_CLIP_FUSE, extraData);
+        return E_UMOUNT_UDMF_CLIP_FUSE;
+    }
+    auto delay = StorageService::StorageRadar::ReportDuration("UMOUNT2: UMOUNT UDMF CLIP FUSE",
+        startTime, StorageService::DELAY_TIME_THRESH_HIGH, userId);
+    LOGI("[L2:MountManager] UMountUdmfClipFuse: <<< EXIT SUCCESS <<< delayTime = %{public}s", delay.c_str());
+    return E_OK;
+}
 } // namespace StorageDaemon
 } // namespace OHOS

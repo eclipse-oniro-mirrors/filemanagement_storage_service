@@ -108,6 +108,9 @@ public:
     // clouddisk fuse
     virtual int32_t MountCloudDiskFuse(int32_t userId, const std::string &path, int32_t &fuseFd) override;
     virtual int32_t UMountCloudDiskFuse(int32_t userId, const std::string &path) override;
+    // udmf clip fuse
+    virtual int32_t MountUdmfClipFuse(int32_t userId, const std::string &path, int32_t &fuseFd) override;
+    virtual int32_t UMountUdmfClipFuse(int32_t userId, const std::string &path) override;
     virtual int32_t IsFileOccupied(const std::string &path,
                                    const std::vector<std::string> &inputList,
                                    std::vector<std::string> &outputList,
@@ -226,6 +229,7 @@ private:
     std::mutex mutex_;
     std::mutex mutexStats_;
     std::mutex cloudDiskFuseMutex_;
+    std::mutex udmfClipFuseMutex_;
 
     std::atomic<bool> stopRadarReport_{false};
     std::condition_variable execRadarReportCon_;

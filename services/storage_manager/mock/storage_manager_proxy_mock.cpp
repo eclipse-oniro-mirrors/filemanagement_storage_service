@@ -294,6 +294,16 @@ int32_t StorageManagerProxy::UMountCloudDiskFuse(int32_t userId, const std::stri
     return E_OK;
 }
 
+int32_t StorageManagerProxy::MountUdmfClipFuse(int32_t userId, const std::string &path, int32_t &fuseFd)
+{
+    return E_OK;
+}
+
+int32_t StorageManagerProxy::UMountUdmfClipFuse(int32_t userId, const std::string &path)
+{
+    return E_OK;
+}
+
 int32_t StorageManagerProxy::IsFileOccupied(const std::string &path, const std::vector<std::string> &inputList,
     std::vector<std::string> &outputList, bool &isOccupy)
 {

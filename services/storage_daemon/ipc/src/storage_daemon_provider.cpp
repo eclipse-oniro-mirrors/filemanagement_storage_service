@@ -1881,6 +1881,66 @@ int32_t StorageDaemonProvider::UMountCloudDiskFuse(int32_t userId, const std::st
     return err;
 }
 
+int32_t StorageDaemonProvider::MountUdmfClipFuse(int32_t userId, const std::string &path, int32_t &fuseFd)
+{
+    std::lock_guard<std::mutex> lock(udmfClipFuseMutex_);
+    LOGI("[L1:StorageDaemonProvider] MountUdmfClipFuse: >>> ENTER <<< userId=%{public}d, path=%{public}s",
+        userId, path.c_str());
+    HiAudit::GetInstance().WriteStart("MountUdmfClipFuse", "userId: " + std::to_string(userId) + " path: " + path);
+    auto uid = IPCSkeleton::GetCallingUid();
+    if (uid != STORAGE_MANAGER_UID) {
+        LOGE("[L1:StorageDaemonProvider] MountUdmfClipFuse: <<< EXIT FAILED <<< uid=%{public}d is invalid", uid);
+        return E_PERMISSION_DENIED;
+    }
+    int32_t err = CheckUserIdRange(userId);
+    if (err != E_OK) {
+        return err;
+    }
+    if (!IsUdmfClipPathValid(userId, path)) {
+        return E_PARAMS_INVALID;
+    }
+    fuseFd = -1;
+    err = MountManager::GetInstance().MountUdmfClipFuse(userId, path, fuseFd);
+    HiAudit::GetInstance().WriteEnd("MountUdmfClipFuse", err);
+    if (err == E_OK) {
+        LOGI("[L1:StorageDaemonProvider] MountUdmfClipFuse: <<< EXIT SUCCESS <<< userId=%{public}d, fuseFd=%{public}d",
+            userId, fuseFd);
+    } else {
+        LOGE("[L1:StorageDaemonProvider] MountUdmfClipFuse: <<< EXIT FAILED <<< userId=%{public}d, ret=%{public}d",
+            userId, err);
+    }
+    return err;
+}
+
+int32_t StorageDaemonProvider::UMountUdmfClipFuse(int32_t userId, const std::string &path)
+{
+    std::lock_guard<std::mutex> lock(udmfClipFuseMutex_);
+    LOGI("[L1:StorageDaemonProvider] UMountUdmfClipFuse: >>> ENTER <<< userId=%{public}d, path=%{public}s",
+        userId, path.c_str());
+    HiAudit::GetInstance().WriteStart("UMountUdmfClipFuse", "userId: " + std::to_string(userId) + " path: " + path);
+    auto uid = IPCSkeleton::GetCallingUid();
+    if (uid != STORAGE_MANAGER_UID) {
+        LOGE("[L1:StorageDaemonProvider] UMountUdmfClipFuse: <<< EXIT FAILED <<< uid=%{public}d is invalid", uid);
+        return E_PERMISSION_DENIED;
+    }
+    int32_t err = CheckUserIdRange(userId);
+    if (err != E_OK) {
+        return err;
+    }
+    if (!IsUdmfClipPathValid(userId, path)) {
+        return E_PARAMS_INVALID;
+    }
+    err = MountManager::GetInstance().UMountUdmfClipFuse(userId, path);
+    HiAudit::GetInstance().WriteEnd("UMountUdmfClipFuse", err);
+    if (err == E_OK) {
+        LOGI("[L1:StorageDaemonProvider] UMountUdmfClipFuse: <<< EXIT SUCCESS <<< userId=%{public}d", userId);
+    } else {
+        LOGE("[L1:StorageDaemonProvider] UMountUdmfClipFuse: <<< EXIT FAILED <<< userId=%{public}d, ret=%{public}d",
+            userId, err);
+    }
+    return err;
+}
+
 int32_t StorageDaemonProvider::IsFileOccupied(const std::string &path,
                                               const std::vector<std::string> &inputList,
                                               std::vector<std::string> &outputList,

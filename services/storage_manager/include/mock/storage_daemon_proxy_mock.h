@@ -100,6 +100,9 @@ public:
     // cloud disk fuse
     virtual int32_t MountCloudDiskFuse(int32_t userId, const std::string &path, int32_t &fuseFd) override;
     virtual int32_t UMountCloudDiskFuse(int32_t userId, const std::string &path) override;
+    // udmf clip fuse
+    virtual int32_t MountUdmfClipFuse(int32_t userId, const std::string &path, int32_t &fuseFd) override;
+    virtual int32_t UMountUdmfClipFuse(int32_t userId, const std::string &path) override;
     // file lock
     virtual int32_t IsFileOccupied(const std::string &path, const std::vector<std::string> &inputList,
         std::vector<std::string> &outputList, bool &isOccupy) override;

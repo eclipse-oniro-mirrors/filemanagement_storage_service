@@ -157,3 +157,19 @@ int32_t MountManager::IsFileOccupied(const std::string &path, const std::vector<
     }
     return IMountManagerMoc::mountManagerMoc->IsFileOccupied(path, inputList, outputList, isOccupy);
 }
+
+int32_t MountManager::MountUdmfClipFuse(int32_t userId, const std::string &path, int32_t &fuseFd)
+{
+    if (IMountManagerMoc::mountManagerMoc == nullptr) {
+        return -1;
+    }
+    return IMountManagerMoc::mountManagerMoc->MountUdmfClipFuse(userId, path, fuseFd);
+}
+
+int32_t MountManager::UMountUdmfClipFuse(int32_t userId, const std::string &path)
+{
+    if (IMountManagerMoc::mountManagerMoc == nullptr) {
+        return -1;
+    }
+    return IMountManagerMoc::mountManagerMoc->UMountUdmfClipFuse(userId, path);
+}
