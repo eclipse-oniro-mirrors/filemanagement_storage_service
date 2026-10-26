@@ -154,13 +154,5 @@ int GetDvdConfiguration(int fd, int &dvdMedia)
     }
     return IDiskUtilMoc::diskUtilMoc->GetDvdConfiguration(fd, dvdMedia);
 }
-
-bool IsDvdRwRestrictedOverwrite(int cmdFd)
-{
-    if (IDiskUtilMoc::diskUtilMoc == nullptr) {
-        return false;
-    }
-    return IDiskUtilMoc::diskUtilMoc->IsDvdRwRestrictedOverwrite(cmdFd);
-}
 }
 }

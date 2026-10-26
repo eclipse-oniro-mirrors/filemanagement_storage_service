@@ -72,14 +72,14 @@ ohos_prebuilt_etc("storage_daemon_cfg") {
 }
 
 ohos_prebuilt_etc("storage_daemon_user_path") {
-  source = "storage_user_path.json"
+  source = "${config_dir}/storage_user_path.json"
   relative_install_dir = "storage_daemon"
   part_name = "storage_service"
   subsystem_name = "filemanagement"
 }
 
 ohos_prebuilt_etc("storage_daemon_mount_info") {
-  source = "storage_mount_info.json"
+  source = "${config_dir}/storage_mount_info.json"
   relative_install_dir = "storage_daemon"
   part_name = "storage_service"
   subsystem_name = "filemanagement"
@@ -139,11 +139,11 @@ ohos_executable("storage_daemon") {
     "LOG_DOMAIN = 0xD004301",
     "KMSG_LOG",
   ]
-  if (pc_device_enable) {
+  if (pc_2in1_tablet_device_enable) {
     defines += [ "PC_USER_MANAGER" ]
   }
 
-  if (pc_ext4_enable) {
+  if (pc_device_enable) {
     defines += [ "PC_EXT4_ENABLE" ]
   }
 
@@ -180,7 +180,7 @@ ohos_executable("storage_daemon") {
     ]
   }
 
-  if (enable_pc_encryption_extension) {
+  if (pc_device_enable) {
     defines += [ "PC_ENCRYPTION_EXTENSION" ]
   }
 

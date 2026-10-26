@@ -632,8 +632,6 @@ std::string StorageDaemon::GetNeedRestoreVersion(uint32_t userId, KeyType type)
         LOGI("[L1:StorageDaemon] GetNeedRestoreVersion: LoadStringFromFile success, version=%{public}s",
             need_restore_version.c_str());
     }
-    LOGI("[L1:StorageDaemon] GetNeedRestoreVersion: <<< EXIT SUCCESS <<< version=%{public}s",
-        need_restore_version.c_str());
     return need_restore_version;
 }
 
@@ -990,11 +988,13 @@ int32_t StorageDaemon::ActiveUserKeyAndPrepare(uint32_t userId, KeyType type,
     } else if (ret == -ENOENT) {
         LOGW("[L1:StorageDaemon] ActiveUserKeyAndPrepare: start GenerateKeyAndPrepareUserDirs userId=%{public}u,"
             "type=%{public}u", userId, type);
-        int delRet = KeyManager::GetInstance().DoDeleteUserCeEceSeceKeys(userId,
-            KeyManager::GetInstance().GetKeyDirByType(type), type);
-        if (delRet != E_OK) {
-            LOGE("[L1:StorageDaemon] ActiveUserKeyAndPrepare: DoDeleteUserCeEceSeceKeys failed, userId=%{public}u,"
-                "type=%{public}u, ret=%{public}d", userId, type, delRet);
+        if (type != EL5_KEY) {
+            int delRet = KeyManager::GetInstance().DoDeleteUserCeEceSeceKeys(userId,
+                KeyManager::GetInstance().GetKeyDirByType(type), type);
+            if (delRet != E_OK) {
+                LOGE("[L1:StorageDaemon] ActiveUserKeyAndPrepare: DoDeleteUserCeEceSeceKeys failed, userId=%{public}u,"
+                    "type=%{public}u, ret=%{public}d", userId, type, delRet);
+            }
         }
         ret = GenerateKeyAndPrepareUserDirs(userId, type, token, secret);
         if (ret != E_OK) {

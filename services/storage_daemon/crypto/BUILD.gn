@@ -122,7 +122,7 @@ ohos_static_library("libsdcrypto") {
     defines += [ "EL2_INACTIVE_SPECIAL_HANDLING" ]
   }
 
-  if (enable_pc_encryption_extension) {
+  if (pc_device_enable) {
     defines += [ "PC_ENCRYPTION_EXTENSION" ]
   }
 

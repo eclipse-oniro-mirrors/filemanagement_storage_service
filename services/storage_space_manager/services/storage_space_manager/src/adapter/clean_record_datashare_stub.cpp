@@ -155,9 +155,12 @@ int32_t CleanRecordDataShareStub::HandlingIndividualConditions(const nlohmann::j
     } else {
         while (resultSet->GoToNextRow() == E_OK) {
             int64_t freedSize = 0;
-            resultSet->GetColumnIndex("freed_size", columnIndex);
-            resultSet->GetLong(columnIndex, freedSize);
-            if (freedSize < 0) {
+            ret = resultSet->GetColumnIndex("freed_size", columnIndex);
+            if (ret != E_OK) {
+                continue;
+            }
+            ret = resultSet->GetLong(columnIndex, freedSize);
+            if (ret != E_OK || freedSize < 0) {
                 continue;
             }
             if (freedSize > INT64_MAX - revenue) {

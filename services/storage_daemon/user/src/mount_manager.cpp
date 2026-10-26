@@ -253,6 +253,9 @@ void MountManager::MountPointToList(std::list<std::string> &hmdfsList, std::list
         if (src.length() >= mntUserPrefix.length() && src.substr(0, mntUserPrefix.length()) == mntUserPrefix) {
             sharefsList.push_front(dst);
         }
+        if (dst.length() >= mntUserPrefix.length() && dst.substr(0, mntUserPrefix.length()) == mntUserPrefix) {
+            sharefsList.push_front(dst);
+        }
         return;
     }
 }

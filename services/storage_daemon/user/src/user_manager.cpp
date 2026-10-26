@@ -125,8 +125,9 @@ int32_t UserManager::PrepareUserDirsForUpdate(int32_t userId, uint32_t flags)
                 dirInfo.path.c_str());
         }
     }
-    HiAudit::GetInstance().WriteEnd("PrepareUserDirsForUpdate", E_OK);
-    return CreateServiceDirs(userId, flags);
+    int32_t serviceRet = CreateServiceDirs(userId, flags);
+    HiAudit::GetInstance().WriteEnd("PrepareUserDirsForUpdate", serviceRet);
+    return serviceRet;
 }
 
 int32_t UserManager::PrepareUserDirs(int32_t userId, uint32_t flags)
@@ -173,6 +174,8 @@ int32_t UserManager::PrepareAllUserEl1Dirs()
         auto err = PrepareUserDirs(item, IStorageDaemonEnum::CRYPTO_FLAG_EL1);
         if (err != E_OK) {
             LOGE("[L2:UserManager] PrepareAllUserEl1Dirs: PrepareUserDirs fail, userId=%{public}d", item);
+            StorageRadar::ReportUserManager("PrepareAllUserEl1Dirs::PrepareUserDirs", item, err,
+                "PrepareUserDirs failed, userId=" + std::to_string(item));
             ret = err;
         }
     }

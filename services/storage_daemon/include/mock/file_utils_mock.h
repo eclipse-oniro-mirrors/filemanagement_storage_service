@@ -50,6 +50,7 @@ public:
     virtual bool IsPathMounted(std::string &path) = 0;
     virtual std::string ProcessToString(std::vector<ProcessInfo> &processList) = 0;
     virtual void GetSubDirs(const std::string &path, std::vector<std::string> &dirList) = 0;
+    virtual void ReadDigitDir(const std::string &path, std::vector<FileList> &dirInfo) = 0;
     virtual bool IsFilePathInvalid(const std::string &filePath) = 0;
     virtual bool WriteFileSync(const char *path, const uint8_t *data, size_t size, std::string &errMsg) = 0;
 public:
@@ -82,6 +83,7 @@ public:
     MOCK_METHOD0(IsUsbFuse, bool());
     MOCK_METHOD1(ProcessToString, std::string(std::vector<ProcessInfo> &processList));
     MOCK_METHOD2(GetSubDirs, void(const std::string &path, std::vector<std::string> &dirList));
+    MOCK_METHOD2(ReadDigitDir, void(const std::string &path, std::vector<FileList> &dirInfo));
     MOCK_METHOD1(IsFilePathInvalid, bool(const std::string &filePath));
     MOCK_METHOD4(WriteFileSync, bool(const char *path, const uint8_t *data, size_t size, std::string &errMsg));
 };

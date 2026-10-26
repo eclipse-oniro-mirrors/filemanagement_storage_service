@@ -63,21 +63,21 @@ storage_service_common_path =
 storage_service_path = "//foundation/filemanagement/storage_service"
 
 if ("${target_platform}" == "pc" || "${target_platform}" == "2in1" || "${target_platform}" == "tablet") {
-  pc_device_enable = true
+  pc_2in1_tablet_device_enable = true
 } else {
-  pc_device_enable = false
+  pc_2in1_tablet_device_enable = false
 }
 
-if ("${target_platform}" == "pc" || "${target_platform}" == "2in1") {
-  enable_pc_encryption_extension = true
+if (pc_2in1_tablet_device_enable) {
+  config_dir = "config_pc"
 } else {
-  enable_pc_encryption_extension = false
+  config_dir = "config_default"
 }
 
 if ("${target_platform}" == "pc") {
-  pc_ext4_enable = true
+  pc_device_enable = true
 } else {
-  pc_ext4_enable = false
+  pc_device_enable = false
 }
 
 if ("${target_platform}" == "car") {
