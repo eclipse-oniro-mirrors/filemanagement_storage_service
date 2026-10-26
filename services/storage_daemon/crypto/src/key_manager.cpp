@@ -84,10 +84,10 @@ constexpr const char *FILE_BASED_ENCRYPT_DST_PATH = "/data/service/el1/public/se
 constexpr int32_t DEFAULT_REPAIR_USERID = 10736;
 #endif
 #if defined(PC_ENCRYPTION_EXTENSION)
-const std::string RECOVER_PIN_SRC_PATH = "/mnt/data_old/service/el1/public/sec_storage_data/pin";
-const std::string RECOVER_PIN_DST_PATH = "/data/service/el1/public/sec_storage_data/pin";
-const std::string RECOVER_SD_SRC_PATH = "/mnt/data_old/service/el1/public/storage_daemon";
-const std::string RECOVER_SD_DST_PATH = "/data/service/el1/public/storage_daemon";
+const char RECOVER_PIN_SRC_PATH[] = "/mnt/data_old/service/el1/public/sec_storage_data/pin";
+const char RECOVER_PIN_DST_PATH[] = "/data/service/el1/public/sec_storage_data/pin";
+const char RECOVER_SD_SRC_PATH[] = "/mnt/data_old/service/el1/public/storage_daemon";
+const char RECOVER_SD_DST_PATH[] = "/data/service/el1/public/storage_daemon";
 #endif
 
 static bool IsEncryption()
@@ -2276,42 +2276,46 @@ int32_t KeyManager::InstallEmptyUserKeyForRecovery(uint32_t userId)
 int32_t KeyManager::MountRecoverPaths()
 {
     LOGI("[L3:KeyManager] MountRecoverPaths: >>> ENTER <<<");
+    std::string pinSrc = RECOVER_PIN_SRC_PATH;
+    std::string pinDst = RECOVER_PIN_DST_PATH;
+    std::string sdSrc = RECOVER_SD_SRC_PATH;
+    std::string sdDst = RECOVER_SD_DST_PATH;
     errno = 0;
-    int32_t ret = UMount(RECOVER_PIN_DST_PATH);
+    int32_t ret = UMount(pinDst);
     if (ret != E_OK && errno != ENOENT && errno != EINVAL) {
         LOGE("[L3:KeyManager] MountRecoverPaths: <<< EXIT FAILED <<< [failed to unmount pin path, err=%{public}d]",
             errno);
-        std::string extraData = "srcPath=" + RECOVER_PIN_SRC_PATH + ",dstPath=" + RECOVER_PIN_DST_PATH +
+        std::string extraData = "srcPath=" + pinSrc + ",dstPath=" + pinDst +
             ",kernelCode=" + std::to_string(errno);
         StorageRadar::ReportUserManager("MountRecoverPaths", DEFAULT_REPAIR_USERID, E_UMOUNT_RECOVER_KEY, extraData);
         return E_UMOUNT_RECOVER_KEY;
     }
     errno = 0;
-    ret = Mount(RECOVER_PIN_SRC_PATH, RECOVER_PIN_DST_PATH, nullptr, MS_BIND, nullptr);
+    ret = Mount(pinSrc, pinDst, nullptr, MS_BIND, nullptr);
     if (ret != E_OK && errno != EEXIST && errno != EBUSY) {
         LOGE("[L3:KeyManager] MountRecoverPaths: <<< EXIT FAILED <<< [failed to bind mount pin path, err=%{public}d]",
             errno);
-        std::string extraData = "srcPath=" + RECOVER_PIN_SRC_PATH + ",dstPath=" + RECOVER_PIN_DST_PATH +
+        std::string extraData = "srcPath=" + pinSrc + ",dstPath=" + pinDst +
             ",kernelCode=" + std::to_string(errno);
         StorageRadar::ReportUserManager("MountRecoverPaths", DEFAULT_REPAIR_USERID, E_MOUNT_RECOVER_KEY, extraData);
         return E_MOUNT_RECOVER_KEY;
     }
     errno = 0;
-    ret = UMount(RECOVER_SD_DST_PATH);
+    ret = UMount(sdDst);
     if (ret != E_OK && errno != ENOENT && errno != EINVAL) {
         LOGE("[L3:KeyManager] MountRecoverPaths: <<< EXIT FAILED <<< [failed to unmount storage_daemon path,"
             " err=%{public}d]", errno);
-        std::string extraData = "srcPath=" + RECOVER_SD_SRC_PATH + ",dstPath=" + RECOVER_SD_DST_PATH +
+        std::string extraData = "srcPath=" + sdSrc + ",dstPath=" + sdDst +
             ",kernelCode=" + std::to_string(errno);
         StorageRadar::ReportUserManager("MountRecoverPaths", DEFAULT_REPAIR_USERID, E_UMOUNT_RECOVER_KEY, extraData);
         return E_UMOUNT_RECOVER_KEY;
     }
     errno = 0;
-    ret = Mount(RECOVER_SD_SRC_PATH, RECOVER_SD_DST_PATH, nullptr, MS_BIND, nullptr);
+    ret = Mount(sdSrc, sdDst, nullptr, MS_BIND, nullptr);
     if (ret != E_OK && errno != EEXIST && errno != EBUSY) {
         LOGE("[L3:KeyManager] MountRecoverPaths: <<< EXIT FAILED <<< [failed to bind mount storage_daemon path,"
             " err=%{public}d]", errno);
-        std::string extraData = "srcPath=" + RECOVER_SD_SRC_PATH + ",dstPath=" + RECOVER_SD_DST_PATH +
+        std::string extraData = "srcPath=" + sdSrc + ",dstPath=" + sdDst +
             ",kernelCode=" + std::to_string(errno);
         StorageRadar::ReportUserManager("MountRecoverPaths", DEFAULT_REPAIR_USERID, E_MOUNT_RECOVER_KEY, extraData);
         return E_MOUNT_RECOVER_KEY;
