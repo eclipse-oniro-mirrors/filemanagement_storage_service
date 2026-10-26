@@ -61,6 +61,8 @@ group("storage_manager_provider_fuzztest") {
     "storagemanagerproviderumountdlpfuse_fuzzer:fuzztest",
     "storagemanagerprovidermountclouddiskfuse_fuzzer:fuzztest",
     "storagemanagerproviderumountclouddiskfuse_fuzzer:fuzztest",
+    "storagemanagerprovidermountudmfclipfuse_fuzzer:fuzztest",
+    "storagemanagerproviderumountudmfclipfuse_fuzzer:fuzztest",
   ]
 }
 
@@ -118,6 +120,8 @@ group("storage_daemon_provider_fuzztest") {
     "storagedaemonproviderexecutecommand_fuzzer:fuzztest",
     "storagedaemonprovidermountclouddiskfuse_fuzzer:fuzztest",
     "storagedaemonproviderumountclouddiskfuse_fuzzer:fuzztest",
+    "storagedaemonprovidermountudmfclipfuse_fuzzer:fuzztest",
+    "storagedaemonproviderumountudmfclipfuse_fuzzer:fuzztest",
   ]
 }
 
