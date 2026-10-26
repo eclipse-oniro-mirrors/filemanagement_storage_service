@@ -317,11 +317,6 @@ int32_t StorageDaemonProxy::UnregisterUeceActivationCallback()
     return E_OK;
 }
 
-int32_t StorageDaemonProxy::CreateUserDir(const std::string &path, mode_t mode, uid_t uid, gid_t gid)
-{
-    return E_OK;
-}
-
 int32_t StorageDaemonProxy::GetDqBlkSpacesByUids(const std::vector<int32_t> &uids, std::vector<NextDqBlk> &dqBlks)
 {
     return E_OK;

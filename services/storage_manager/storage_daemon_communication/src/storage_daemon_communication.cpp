@@ -923,21 +923,6 @@ int32_t StorageDaemonCommunication::UnregisterUeceActivationCallback()
     return proxy->UnregisterUeceActivationCallback();
 }
 
-int32_t StorageDaemonCommunication::CreateUserDir(const std::string &path, mode_t mode, uid_t uid, gid_t gid)
-{
-    int32_t err = Connect();
-    if (err != E_OK) {
-        LOGE("Connect failed");
-        return err;
-    }
-    auto proxy = GetStorageDaemon();
-    if (proxy == nullptr) {
-        LOGE("StorageDaemonCommunication::Connect service nullptr");
-        return E_SERVICE_IS_NULLPTR;
-    }
-    return proxy->CreateUserDir(path, mode, uid, gid);
-}
-
 int32_t StorageDaemonCommunication::SetDirEncryptionPolicy(uint32_t userId,
     const std::string &dirPath, uint32_t level)
 {

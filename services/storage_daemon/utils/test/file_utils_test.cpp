@@ -21,7 +21,6 @@
 #include <filesystem>
 #include <fstream>
 
-#include "directory_ex.h"
 #include "gtest/gtest.h"
 #include "common/help_utils.h"
 #include "storage_service_errno.h"
@@ -168,31 +167,6 @@ HWTEST_F(FileUtilsTest, FileUtilsTest_MkDir_001, TestSize.Level1)
     EXPECT_TRUE((st.st_mode & ALL_PERMS) == mode);
 
     GTEST_LOG_(INFO) << "FileUtilsTest_MkDir_001 end";
-}
-
-/**
- * @tc.name: FileUtilsTest_PrepareDirSimple_001
- * @tc.desc: Verify the PrepareDirSimple function.
- * @tc.type: FUNC
- * @tc.require: AR000GK4HB
- */
-HWTEST_F(FileUtilsTest, FileUtilsTest_PrepareDirSimple_001, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "FileUtilsTest_PrepareDirSimple_001 start";
-
-    std::string path = "/data/testDir";
-    mode_t mode = 0771;
-    uid_t uid = 0;
-    gid_t gid = 0;
-
-    int32_t ret = PrepareDirSimple(path + "/testDir", mode, uid, gid);
-    EXPECT_NE(ret, E_OK);
-
-    ret = PrepareDirSimple(path, mode, uid, gid);
-    EXPECT_EQ(ret, E_OK);
-
-    OHOS::ForceRemoveDirectory(path);
-    GTEST_LOG_(INFO) << "FileUtilsTest_PrepareDirSimple_001 end";
 }
 
 /**

@@ -345,11 +345,6 @@ int32_t StorageManagerProxy::UnregisterUeceActivationCallback()
     return E_OK;
 }
 
-int32_t StorageManagerProxy::CreateUserDir(const std::string &path, uint32_t mode, uint32_t uid, uint32_t gid)
-{
-    return E_OK;
-}
-
 int32_t StorageManagerProxy::NotifyUserChangedEvent(uint32_t userId, uint32_t eventType)
 {
     return E_OK;

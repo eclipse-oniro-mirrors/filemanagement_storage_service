@@ -128,7 +128,6 @@ using namespace testing;
 using namespace testing::ext;
 constexpr pid_t DFS_UID = 1009;
 constexpr pid_t ACCOUNT_UID = 3058;
-constexpr pid_t AOCO_UID = 7558;
 constexpr pid_t FOUNDATION_UID = 5523;
 constexpr pid_t DLP_UID = 3553;
 constexpr int32_t USER_ID = 100;
@@ -522,22 +521,6 @@ HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_EraseAllUserEncr
     auto ret = storageManagerProviderTest_->EraseAllUserEncryptedKeys();
     EXPECT_NE(ret, E_OK);
     GTEST_LOG_(INFO) << "StorageManagerProviderTest_EraseAllUserEncryptedKeys_001 end";
-}
-
-/**
- * @tc.name: StorageManagerProviderTest_CreateUserDir_001
- * @tc.desc: Verify the CreateUserDir function.
- * @tc.type: FUNC
- */
-HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_CreateUserDir_001, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "StorageManagerProviderTest_CreateUserDir_001 start";
-    ASSERT_TRUE(storageManagerProviderTest_ != nullptr);
-    g_returnUpdateService = false;
-    SetCallingUid(AOCO_UID);
-    auto ret = storageManagerProviderTest_->CreateUserDir("", 0, 0, 0);
-    EXPECT_NE(ret, E_OK);
-    GTEST_LOG_(INFO) << "StorageManagerProviderTest_CreateUserDir_001 end";
 }
 
 /**

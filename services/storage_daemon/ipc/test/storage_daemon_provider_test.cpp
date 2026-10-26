@@ -249,9 +249,6 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_PermissionInvalid_
     EXPECT_EQ(result, E_PERMISSION_DENIED);
     result = storageDaemonProviderTest_->UnregisterUeceActivationCallback();
     EXPECT_EQ(result, E_PERMISSION_DENIED);
-    mode_t mode = S_IRWXU | S_IRWXG | S_IXOTH;
-    result = storageDaemonProviderTest_->CreateUserDir("path", mode, 0, 0);
-    EXPECT_EQ(result, E_PERMISSION_DENIED);
     std::vector<NextDqBlk> dqBlks;
     result = storageDaemonProviderTest_->GetDqBlkSpacesByUids({100}, dqBlks);
     EXPECT_EQ(result, E_PERMISSION_DENIED);
@@ -2511,29 +2508,6 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_GetDqBlkSpacesByUi
     EXPECT_TRUE(ret == E_OK);
     #endif
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_GetDqBlkSpacesByUids_001 end";
-}
-
-HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_CreateUserDir_001, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_CreateUserDir_001 start";
-    SetCallingUid(STORAGE_MANAGER_UID);
-    const std::string path = "";
-    mode_t mode = S_IRWXU | S_IRWXG | S_IXOTH;
-    uid_t uid = 0;
-    gid_t gid = 0;
-    EXPECT_CALL(*userManagerMock_, CreateUserDir(_, _, _, _)).WillOnce(Return(E_OK));
-    auto ret = storageDaemonProviderTest_->CreateUserDir(path, mode, uid, gid);
-    EXPECT_TRUE(ret != E_OK);
-    ret = storageDaemonProviderTest_->CreateUserDir(path, mode, uid, gid);
-    EXPECT_TRUE(ret != -1);
-
-    const std::string newPath = "/data/system/hiview/unzip_configs/sys_event_def";
-    ret = storageDaemonProviderTest_->CreateUserDir(newPath, mode, uid, gid);
-    EXPECT_TRUE(ret == E_OK);
-    EXPECT_CALL(*userManagerMock_, CreateUserDir(_, _, _, _)).WillOnce(Return(-1));
-    ret = storageDaemonProviderTest_->CreateUserDir(newPath, mode, uid, gid);
-    EXPECT_TRUE(ret == -1);
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_CreateUserDir_001 end";
 }
 
 #ifdef EL5_FILEKEY_MANAGER
