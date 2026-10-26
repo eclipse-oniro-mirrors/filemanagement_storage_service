@@ -19,9 +19,7 @@
 #include <cstring>
 #include <system_ability_definition.h>
 
-#include "accesstoken_kit.h"
 #include "ipc/storage_manager_provider.h"
-#include "ipc_skeleton.h"
 #include "message_parcel.h"
 #include "securec.h"
 #include "storage_manager_stub.h"

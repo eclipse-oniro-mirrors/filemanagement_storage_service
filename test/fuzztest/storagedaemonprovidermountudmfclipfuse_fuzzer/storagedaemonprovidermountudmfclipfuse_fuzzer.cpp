@@ -16,14 +16,11 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <cstring>
-#include <sstream>
 
 #include "message_parcel.h"
 #include "storage_daemon_stub.h"
 #include "storage_daemon_provider.h"
 #include "securec.h"
-#include "fuzzer/FuzzedDataProvider.h"
 
 using namespace OHOS::StorageDaemon;
 
@@ -51,6 +48,9 @@ bool StorageDaemonProviderMountUdmfClipFuseFuzzTest(const uint8_t *data, size_t 
 /* Fuzzer entry point */
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 {
+    if (data == nullptr) {
+        return 0;
+    }
     OHOS::StorageDaemonProviderMountUdmfClipFuseFuzzTest(data, size);
     return 0;
 }
