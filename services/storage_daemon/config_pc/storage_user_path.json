@@ -196,6 +196,12 @@
             "gid": 5523
         },
         {
+            "path": "/data/service/el1/<userId>/useriam",
+            "mode": "0700",
+            "uid": 1088,
+            "gid": 1088
+        },
+        {
             "path": "/data/app/el1/<userId>/aot_compiler",
             "mode": "0711",
             "uid": 0,
