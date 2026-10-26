@@ -195,9 +195,9 @@ private:
 #ifdef RECOVER_KEY_TEE_ENVIRONMENT
     int32_t FileBasedEncryptfsMount();
     int32_t InstallEmptyUserKeyForRecovery(uint32_t userId);
+#endif
 #if defined(PC_ENCRYPTION_EXTENSION)
     int32_t MountRecoverPaths();
-#endif
 #endif
     using KeyMap = std::map<KeyType, std::shared_ptr<BaseKey>>;
     std::map<unsigned int, KeyMap> userElKeys_;
