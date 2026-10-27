@@ -24,14 +24,12 @@
 
 #include "parameter.h"
 #include "user/mount_constant.h"
-#include "utils/mount_argument_utils.h"
 #include "utils/storage_radar.h"
 #include "utils/hi_audit.h"
 #include "storage_service_constant.h"
 #include "storage_service_errno.h"
 #include "storage_service_log.h"
 #include "string_utils.h"
-#include "utils/disk_utils.h"
 
 namespace OHOS {
 namespace StorageDaemon {

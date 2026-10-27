@@ -14,7 +14,6 @@
  */
 
 #include "utils/storage_radar.h"
-#include "utils/string_utils.h"
 
 #include "hisysevent.h"
 #include "storage_service_errno.h"

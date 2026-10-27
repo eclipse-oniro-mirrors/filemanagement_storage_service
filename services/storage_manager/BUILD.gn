@@ -104,7 +104,6 @@ ohos_shared_library("storage_manager") {
     "ability_base:base",
     "ability_base:want",
     "ability_base:zuri",
-    "ability_runtime:extensionkit_native",
     "access_token:libaccesstoken_sdk",
     "appspawn:appspawn_client",
     "cJSON:cjson",
@@ -117,7 +116,6 @@ ohos_shared_library("storage_manager") {
     "os_account:os_account_innerkits",
     "safwk:system_ability_fwk",
     "samgr:samgr_proxy",
-    "security_guard:libsg_collect_sdk",
   ]
 
   if (enable_disk_manager) {

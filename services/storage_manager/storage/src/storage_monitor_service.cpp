@@ -33,7 +33,6 @@
 #include "storage_service_constant.h"
 #include "storage_service_errno.h"
 #include "storage_service_log.h"
-#include "storage_stats.h"
 
 using namespace OHOS::StorageService;
 namespace OHOS {

@@ -23,7 +23,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "storage_service_constant.h"
 #include "storage_service_errno.h"
 #include "storage_service_log.h"
 #include "utils/file_utils.h"

@@ -16,7 +16,6 @@
 #include <sys/sysmacros.h>
 
 #include "disk/disk_info.h"
-#include "storage_service_log.h"
 #include "utils/string_utils.h"
 
 namespace OHOS {
