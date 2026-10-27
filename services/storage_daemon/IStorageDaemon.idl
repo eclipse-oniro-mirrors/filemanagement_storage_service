@@ -122,8 +122,7 @@ interface OHOS.StorageDaemon.IStorageDaemon{
                                      [in] String partitionType,
                                      [in] int partitionNum);
      [ipccode 207] void Check([in] String devPath,
-                              [in] String fsType,
-                              [in] boolean autoFix);
+                              [in] String fsType);
      [ipccode 208] void Repair([in] String devPath,
                               [in] String fsType);
      [ipccode 209] void SetLabel([in] String devPath,
