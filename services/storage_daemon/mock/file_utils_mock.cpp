@@ -168,5 +168,10 @@ void CheckAndReportOverLoop(const std::string &funcName, uint32_t &loopCount, ui
 {
     loopCount++;
 }
+
+bool ContainsInvalidChars(const std::string &filePath)
+{
+    return IFileUtilMoc::fileUtilMoc->ContainsInvalidChars(filePath);
+}
 } // namespace StorageDaemon
 } // namespace OHOS

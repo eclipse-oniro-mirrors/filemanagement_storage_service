@@ -52,6 +52,7 @@ public:
     virtual void GetSubDirs(const std::string &path, std::vector<std::string> &dirList) = 0;
     virtual bool IsFilePathInvalid(const std::string &filePath) = 0;
     virtual bool WriteFileSync(const char *path, const uint8_t *data, size_t size, std::string &errMsg) = 0;
+    virtual bool ContainsInvalidChars(const std::string &filePath) = 0;
 public:
     static inline std::shared_ptr<IFileUtilMoc> fileUtilMoc = nullptr;
 };
@@ -84,6 +85,7 @@ public:
     MOCK_METHOD2(GetSubDirs, void(const std::string &path, std::vector<std::string> &dirList));
     MOCK_METHOD1(IsFilePathInvalid, bool(const std::string &filePath));
     MOCK_METHOD4(WriteFileSync, bool(const char *path, const uint8_t *data, size_t size, std::string &errMsg));
+    MOCK_METHOD1(ContainsInvalidChars, bool(const std::string &filePath));
 };
 }
 }
