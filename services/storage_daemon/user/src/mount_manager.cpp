@@ -807,7 +807,7 @@ int32_t MountManager::MountDfsDocs(int32_t userId, const std::string &relativePa
     LOGI("[L2:MountManager] MountDfsDocs: >>> ENTER <<< userId=%{public}d, relativePath=%{public}s",
         userId, relativePath.c_str());
     std::string dstPath = StringPrintf("/mnt/data/%d/hmdfs/%s/", userId, deviceId.c_str());
-    if (IsFilePathInvalid(dstPath)) {
+    if (ContainsInvalidChars(dstPath)) {
         LOGE("[L2:MountManager] MountDfsDocs: <<< EXIT FAILED <<< invalid dstPath");
         return E_PARAMS_INVALID;
     }
@@ -824,7 +824,7 @@ int32_t MountManager::MountDfsDocs(int32_t userId, const std::string &relativePa
 
     Utils::MountArgument hmdfsMntArgs(Utils::MountArgumentDescriptors::Alpha(userId, relativePath));
     std::string srcPath = hmdfsMntArgs.GetFullDst() + "/device_view/" + networkId + "/files/Docs/";
-    if (IsFilePathInvalid(srcPath)) {
+    if (ContainsInvalidChars(srcPath)) {
         LOGE("[L2:MountManager] MountDfsDocs: <<< EXIT FAILED <<< invalid srcPath");
         return E_PARAMS_INVALID;
     }
