@@ -624,13 +624,31 @@ bool ScanDevice::ParseStringToUlongLong(const std::string &str, unsigned long lo
     return true;
 }
 
+uint64_t ScanDevice::GetDiskSizeByIoctl(const std::string &deviceName)
+{
+    // 层级路径（如 sda/sda1）取 basename 拼 /dev/block/<partName>
+    std::string baseName = deviceName;
+    size_t pos = deviceName.rfind('/');
+    if (pos != std::string::npos) {
+        baseName = deviceName.substr(pos + 1);
+    }
+    std::string devPath = std::string(DEV_PATH) + SPLIT_STRING + baseName;
+    uint64_t size = 0;
+    if (GetExternalDiskSize(devPath, &size)) {
+        LOGI("GetDiskSizeByIoctl success: size=%{public}" PRIu64 ", dev=%{public}s", size, devPath.c_str());
+        return size;
+    }
+    LOGE("GetDiskSizeByIoctl failed: ioctl failed for %{public}s", devPath.c_str());
+    return 0;
+}
+
 uint64_t ScanDevice::GetDiskSize(const std::string &deviceName)
 {
     std::string sizePath = sysBlockPath + SPLIT_STRING + deviceName + SIZE_NODE;
     std::string content;
     if (!ReadSysfsNode(sizePath, content)) {
         LOGE("GetDiskSize failed: read node of disk size failed");
-        return 0;
+        return GetDiskSizeByIoctl(deviceName);
     }
     if (content.empty()) {
         LOGE("GetDiskSize: empty content");
