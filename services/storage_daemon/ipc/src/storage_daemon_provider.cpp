@@ -74,7 +74,8 @@ namespace StorageDaemon {
 using namespace std;
 using namespace StorageService;
 constexpr unsigned int LOCAL_TIME_OUT_SECONDS = 10;
-constexpr unsigned int INACTIVE_USER_KEY_OUT_SECONDS = 25;
+constexpr unsigned int USER_OPERATE_OUT_SECONDS = 30;
+constexpr unsigned int KEY_OPERATE_OUT_SECONDS = 60;
 constexpr unsigned int UPDATE_RADAR_STATISTIC_INTERVAL_SECONDS = 300;
 constexpr unsigned int RADAR_REPORT_STATISTIC_INTERVAL_MINUTES = 1440;
 constexpr unsigned int USER0ID = 0;
@@ -557,10 +558,12 @@ int32_t StorageDaemonProvider::StartUser(int32_t userId)
         return ret;
     }
     HiAudit::GetInstance().WriteStart("StartUser", "userId: " + std::to_string(userId));
+    int timerId = StorageXCollie::SetTimer("storage:StartUser", USER_OPERATE_OUT_SECONDS);
     auto startTime = StorageService::StorageRadar::RecordCurrentTime();
     isNeedUpdateRadarFile_ = true;
     (void)StorageDaemon::GetInstance().SetPriority();  // set tid priority to 40
     ret = UserManager::GetInstance().StartUser(userId);
+    StorageXCollie::CancelTimer(timerId);
     if (ret != E_OK && ret != E_KEY_NOT_ACTIVED) {
         LOGE("[L1:StorageDaemonProvider] StartUser: <<< EXIT FAILED <<< userId=%{public}d, ret=%{public}d",
             userId, ret);
@@ -590,7 +593,9 @@ int32_t StorageDaemonProvider::StopUser(int32_t userId)
         return ret;
     }
     isNeedUpdateRadarFile_ = true;
+    int timerId = StorageXCollie::SetTimer("storage:StopUser", USER_OPERATE_OUT_SECONDS);
     ret = UserManager::GetInstance().StopUser(userId);
+    StorageXCollie::CancelTimer(timerId);
     LOGE("[L1:StorageDaemonProvider] StopUser end, ret is %{public}d.", ret);
     if (ret != E_OK) {
         StorageService::StorageRadar::ReportUserManager("StopUser", userId, ret, "StopUser failed");
@@ -625,7 +630,9 @@ int32_t StorageDaemonProvider::PrepareUserDirs(int32_t userId, uint32_t flags)
     }
     std::lock_guard<std::mutex> lock(mutex_);
     isNeedUpdateRadarFile_ = true;
+    int timerId = StorageXCollie::SetTimer("storage:PrepareUserDirs", KEY_OPERATE_OUT_SECONDS);
     int32_t err = StorageDaemon::GetInstance().PrepareUserDirs(userId, flags);
+    StorageXCollie::CancelTimer(timerId);
     StorageRadar::ReportFucBehavior("PrepareUserDirs", userId, "PrepareUserDirs End", err);
     HiAudit::GetInstance().WriteEnd("PrepareUserDirs", err, "flags: " + std::to_string(flags));
     SetUserStatistics(userId, err != E_OK ? USER_ADD_FAIL : USER_ADD_SUCCESS);
@@ -658,7 +665,9 @@ int32_t StorageDaemonProvider::DestroyUserDirs(int32_t userId, uint32_t flags)
     }
     std::lock_guard<std::mutex> lock(mutex_);
     isNeedUpdateRadarFile_ = true;
+    int timerId = StorageXCollie::SetTimer("storage:DestroyUserDirs", KEY_OPERATE_OUT_SECONDS);
     int err = StorageDaemon::GetInstance().DestroyUserDirs(userId, flags);
+    StorageXCollie::CancelTimer(timerId);
     StorageRadar::ReportFucBehavior("DestroyUserDirs", userId, "DestroyUserDirs End", err);
     HiAudit::GetInstance().WriteEnd("DestroyUserDirs", err, "flags: " + std::to_string(flags));
     SetUserStatistics(userId, err != E_OK ? USER_REMOVE_FAIL : USER_REMOVE_SUCCESS);
@@ -772,9 +781,11 @@ int32_t StorageDaemonProvider::InitGlobalKey()
     LOGI("[L1:StorageDaemonProvider] InitGlobalKey: >>> ENTER <<<");
     StorageRadar::ReportFucBehavior("InitGlobalKey", DEFAULT_USERID, "InitGlobalKey Begin", E_OK);
     HiAudit::GetInstance().WriteStart("InitGlobalKey");
+    int timerId = StorageXCollie::SetTimer("storage:InitGlobalKey", KEY_OPERATE_OUT_SECONDS);
     std::lock_guard<std::mutex> lock(mutex_);
     isNeedUpdateRadarFile_ = true;
     int err = StorageDaemon::GetInstance().InitGlobalKey();
+    StorageXCollie::CancelTimer(timerId);
     HiAudit::GetInstance().WriteEnd("InitGlobalKey", err);
     SetUserStatistics(USER0ID, err != E_OK ? KEY_LOAD_FAIL : KEY_LOAD_SUCCESS);
     StorageRadar::ReportFucBehavior("InitGlobalKey", DEFAULT_USERID, "InitGlobalKey End", err);
@@ -791,9 +802,11 @@ int32_t StorageDaemonProvider::InitGlobalUserKeys()
     LOGI("[L1:StorageDaemonProvider] InitGlobalUserKeys: >>> ENTER <<<");
     StorageRadar::ReportFucBehavior("InitGlobalUserKeys", DEFAULT_USERID, "InitGlobalUserKeys Begin", E_OK);
     HiAudit::GetInstance().WriteStart("InitGlobalUserKeys");
+    int timerId = StorageXCollie::SetTimer("storage:InitGlobalUserKeys", KEY_OPERATE_OUT_SECONDS);
     std::lock_guard<std::mutex> lock(mutex_);
     isNeedUpdateRadarFile_ = true;
     int32_t err = StorageDaemon::GetInstance().InitGlobalUserKeys();
+    StorageXCollie::CancelTimer(timerId);
     HiAudit::GetInstance().WriteEnd("InitGlobalUserKeys", err);
     SetUserStatistics(USER100ID, err != E_OK ? KEY_LOAD_FAIL : KEY_LOAD_SUCCESS);
     StorageRadar::ReportFucBehavior("InitGlobalUserKeys", DEFAULT_USERID, "InitGlobalUserKeys End", err);
@@ -849,7 +862,7 @@ int32_t StorageDaemonProvider::UpdateUserAuth(uint32_t userId,
         LOGE("[L1:StorageDaemonProvider] UpdateUserAuth: <<< EXIT FAILED <<< userId is invalid");
         return err;
     }
-    int timerId = StorageXCollie::SetTimer("storage:UpdateUserAuth", LOCAL_TIME_OUT_SECONDS);
+    int timerId = StorageXCollie::SetTimer("storage:UpdateUserAuth", KEY_OPERATE_OUT_SECONDS);
     std::lock_guard<std::mutex> lock(mutex_);
     err =  StorageDaemon::GetInstance().UpdateUserAuth(userId, secureUid, token, oldSecret, newSecret);
     StorageXCollie::CancelTimer(timerId);
@@ -914,7 +927,7 @@ int32_t StorageDaemonProvider::ActiveUserKey(uint32_t userId,
         return error;
     }
     auto startTime = StorageService::StorageRadar::RecordCurrentTime();
-    int timerId = StorageXCollie::SetTimer("storage:ActiveUserKey", LOCAL_TIME_OUT_SECONDS);
+    int timerId = StorageXCollie::SetTimer("storage:ActiveUserKey", KEY_OPERATE_OUT_SECONDS);
     std::lock_guard<std::mutex> lock(mutex_);
     isNeedUpdateRadarFile_ = true;
     int32_t err = StorageDaemon::GetInstance().ActiveUserKey(userId, token, secret);
@@ -946,7 +959,7 @@ int32_t StorageDaemonProvider::InactiveUserKey(uint32_t userId)
         StorageService::StorageRadar::ReportUserManager("InactiveUserKey", userId, err, "userId out of range");
         return err;
     }
-    int timerId = StorageXCollie::SetTimer("storage:InactiveUserKey", INACTIVE_USER_KEY_OUT_SECONDS);
+    int timerId = StorageXCollie::SetTimer("storage:InactiveUserKey", KEY_OPERATE_OUT_SECONDS);
     std::lock_guard<std::mutex> lock(mutex_);
     isNeedUpdateRadarFile_ = true;
     int32_t ret = StorageDaemon::GetInstance().InactiveUserKey(userId);
@@ -1008,7 +1021,7 @@ int32_t StorageDaemonProvider::LockUserScreen(uint32_t userId)
         StorageService::StorageRadar::ReportUserManager("LockUserScreen", userId, err, "userId out of range");
         return err;
     }
-    int timerId = StorageXCollie::SetTimer("storage:LockUserScreen", LOCAL_TIME_OUT_SECONDS);
+    int timerId = StorageXCollie::SetTimer("storage:LockUserScreen", USER_OPERATE_OUT_SECONDS);
     std::lock_guard<std::mutex> lock(mutex_);
     isNeedUpdateRadarFile_ = true;
     int ret = StorageDaemon::GetInstance().LockUserScreen(userId);
@@ -1045,7 +1058,7 @@ int32_t StorageDaemonProvider::UnlockUserScreen(uint32_t userId,
             "userId out of range");
         return ret;
     }
-    int timerId = StorageXCollie::SetTimer("storage:UnlockUserScreen", LOCAL_TIME_OUT_SECONDS);
+    int timerId = StorageXCollie::SetTimer("storage:UnlockUserScreen", USER_OPERATE_OUT_SECONDS);
     std::unique_lock<std::mutex> lock(mutex_);
     isNeedUpdateRadarFile_ = true;
     ret = StorageDaemon::GetInstance().UnlockUserScreen(userId, token, secret);
@@ -1127,7 +1140,7 @@ int32_t StorageDaemonProvider::GenerateAppkey(uint32_t userId, uint32_t hashId, 
         LOGE("[L1:StorageDaemonProvider] GenerateAppkey: <<< EXIT FAILED <<< userId=%{public}d out of range", userId);
         return err;
     }
-    int timerId = StorageXCollie::SetTimer("storage:GenerateAppkey", LOCAL_TIME_OUT_SECONDS);
+    int timerId = StorageXCollie::SetTimer("storage:GenerateAppkey", USER_OPERATE_OUT_SECONDS);
     int32_t ret = StorageDaemon::GetInstance().GenerateAppkey(userId, hashId, keyId, needReSet);
     StorageXCollie::CancelTimer(timerId);
     message = "hashId: " + std::to_string(hashId)
@@ -1161,7 +1174,7 @@ int32_t StorageDaemonProvider::DeleteAppkey(uint32_t userId, const std::string &
         LOGE("[L1:StorageDaemonProvider] DeleteAppkey: <<< EXIT FAILED <<< keyId is invalid");
         return E_PARAMS_INVALID;
     }
-    int timerId = StorageXCollie::SetTimer("storage:DeleteAppkey", LOCAL_TIME_OUT_SECONDS);
+    int timerId = StorageXCollie::SetTimer("storage:DeleteAppkey", USER_OPERATE_OUT_SECONDS);
     std::lock_guard<std::mutex> lock(mutex_);
     int32_t ret = StorageDaemon::GetInstance().DeleteAppkey(userId, keyId);
     StorageXCollie::CancelTimer(timerId);

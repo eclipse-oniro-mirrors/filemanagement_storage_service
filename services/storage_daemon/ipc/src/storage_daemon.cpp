@@ -43,6 +43,7 @@
 #include "disk/disk_manager.h"
 #endif
 #include "file_sharing/file_sharing.h"
+#include "hi_audit.h"
 #include "quota/quota_manager.h"
 #include "storage_service_errno.h"
 #include "system_ability_definition.h"
@@ -179,6 +180,8 @@ std::string StorageDaemon::GetNeedRestoreFilePathByType(int32_t userId, KeyType 
 int32_t StorageDaemon::RestoreOneUserKey(int32_t userId, KeyType type)
 {
     LOGI("[L1:StorageDaemon] RestoreOneUserKey: >>> ENTER <<< userId=%{public}d, type=%{public}u", userId, type);
+    HiAudit::GetInstance().WriteStart("RestoreOneUserKey",
+        "userId=" + std::to_string(userId) + ", type=" + std::to_string(type));
     uint32_t flags = 0;
     int32_t ret = GetCryptoFlag(type, flags);
     if (ret != E_OK) {
@@ -237,12 +240,15 @@ int32_t StorageDaemon::RestoreOneUserKey(int32_t userId, KeyType type)
     UserManager::GetInstance().CreateElxBundleDataDir(userId, type);
     LOGI("[L1:StorageDaemon] RestoreOneUserKey: <<< EXIT SUCCESS <<< "
         "userId=%{public}d, type=%{public}u", userId, type);
+    HiAudit::GetInstance().WriteEnd("RestoreOneUserKey", E_OK);
     return E_OK;
 }
 
 int32_t StorageDaemon::RestoreUserKey(int32_t userId, uint32_t flags)
 {
     LOGI("[L1:StorageDaemon] RestoreUserKey: >>> ENTER <<< userId=%{public}d, flags=%{public}u", userId, flags);
+    HiAudit::GetInstance().WriteStart("RestoreUserKey",
+        "userId=" + std::to_string(userId) + ", flags=" + std::to_string(flags));
     if (!IsNeedRestorePathExist(userId, true)) {
         LOGE("[L1:StorageDaemon] RestoreUserKey: <<< EXIT FAILED <<< need_restore file is not existed");
         return -EEXIST;
@@ -265,6 +271,7 @@ int32_t StorageDaemon::RestoreUserKey(int32_t userId, uint32_t flags)
     }
     MountManager::GetInstance().PrepareAppdataDir(userId);
     LOGI("[L1:StorageDaemon] RestoreUserKey: <<< EXIT SUCCESS <<< userId=%{public}d", userId);
+    HiAudit::GetInstance().WriteEnd("RestoreUserKey", E_OK);
     return E_OK;
 }
 #endif
@@ -622,10 +629,16 @@ std::string StorageDaemon::GetNeedRestoreVersion(uint32_t userId, KeyType type)
 {
     LOGI("[L1:StorageDaemon] GetNeedRestoreVersion: >>> ENTER <<< userId=%{public}u, type=%{public}u", userId, type);
     std::string need_restore_path = KeyManager::GetInstance().GetKeyDirByUserAndType(userId, type) + RESTORE_DIR;
-    std::string need_restore_version;
-    OHOS::LoadStringFromFile(need_restore_path, need_restore_version);
-    LOGI("[L1:StorageDaemon] GetNeedRestoreVersion: <<< EXIT SUCCESS <<< version=%{public}s",
-        need_restore_version.c_str());
+    std::string need_restore_version = "3";
+    bool isRead = OHOS::LoadStringFromFile(need_restore_path, need_restore_version);
+    if (!isRead) {
+        LOGE("[L1:StorageDaemon] GetNeedRestoreVersion: LoadStringFromFile failed,"
+            " path=%{public}s, use default version 3",
+            need_restore_path.c_str());
+    } else {
+        LOGI("[L1:StorageDaemon] GetNeedRestoreVersion: LoadStringFromFile success, version=%{public}s",
+            need_restore_version.c_str());
+    }
     return need_restore_version;
 }
 
@@ -634,6 +647,8 @@ int32_t StorageDaemon::PrepareUserDirsAndUpdateUserAuth(uint32_t userId, KeyType
 {
     LOGI("[L1:StorageDaemon] PrepareUserDirsAndUpdateUserAuth: >>> ENTER <<< userId=%{public}u, type=%{public}u",
         userId, type);
+    HiAudit::GetInstance().WriteStart("PrepareUserDirsAndUpdateUserAuth",
+        "userId=" + std::to_string(userId) + ", type=" + std::to_string(type));
     int32_t ret = E_OK;
     std::string need_restore_version = GetNeedRestoreVersion(userId, type);
     int32_t OLD_UPDATE_VERSION_MAXLIMIT = std::atoi(NEW_DOUBLE_2_SINGLE);
@@ -670,6 +685,7 @@ int32_t StorageDaemon::PrepareUserDirsAndUpdateUserAuth(uint32_t userId, KeyType
         LOGE("[L1:StorageDaemon] PrepareUserDirsAndUpdateUserAuth: <<< EXIT FAILED <<< userId=%{public}u,"
             "type=%{public}u, ret=%{public}d", userId, type, ret);
     }
+    HiAudit::GetInstance().WriteEnd("PrepareUserDirsAndUpdateUserAuth", ret);
     return ret;
 }
 
@@ -678,6 +694,8 @@ int32_t StorageDaemon::PrepareUserDirsAndUpdateUserAuthOld(uint32_t userId, KeyT
 {
     LOGW("[L1:StorageDaemon] PrepareUserDirsAndUpdateUserAuthOld: >>> ENTER <<< userId=%{public}u, type=%{public}u",
         userId, type);
+    HiAudit::GetInstance().WriteStart("PrepareUserDirsAndUpdateUserAuthOld",
+        "userId=" + std::to_string(userId) + ", type=" + std::to_string(type));
     int32_t ret = E_OK;
     uint32_t flags = 0;
 
@@ -736,6 +754,7 @@ int32_t StorageDaemon::PrepareUserDirsAndUpdateUserAuthOld(uint32_t userId, KeyT
     }
     LOGW("[L1:StorageDaemon] PrepareUserDirsAndUpdateUserAuthOld: <<< EXIT SUCCESS <<< userId=%{public}u,"
         "type=%{public}u", userId, type);
+    HiAudit::GetInstance().WriteEnd("PrepareUserDirsAndUpdateUserAuthOld", E_OK);
     return E_OK;
 }
 
@@ -745,6 +764,8 @@ int32_t StorageDaemon::PrepareUserDirsAndUpdateUserAuthVx(uint32_t userId, KeyTy
 {
     LOGW("[L1:StorageDaemon] PrepareUserDirsAndUpdateUserAuthVx: >>> ENTER <<< userId=%{public}u, type=%{public}u",
         userId, type);
+    HiAudit::GetInstance().WriteStart("PrepareUserDirsAndUpdateUserAuthVx",
+        "userId=" + std::to_string(userId) + ", type=" + std::to_string(type));
     int32_t ret = E_OK;
     uint32_t flags = 0;
 
@@ -796,6 +817,7 @@ int32_t StorageDaemon::PrepareUserDirsAndUpdateUserAuthVx(uint32_t userId, KeyTy
     }
     LOGI("[L1:StorageDaemon] PrepareUserDirsAndUpdateUserAuthVx: <<< EXIT SUCCESS <<< userId=%{public}u,"
         "type=%{public}u", userId, type);
+    HiAudit::GetInstance().WriteEnd("PrepareUserDirsAndUpdateUserAuthVx", E_OK);
     return E_OK;
 }
 
@@ -804,6 +826,8 @@ int32_t StorageDaemon::PrepareUserDirsAndUpdateAuth4Nato(uint32_t userId,
 {
     LOGW("[L1:StorageDaemon] PrepareUserDirsAndUpdateAuth4Nato: >>> ENTER <<< userId=%{public}u, type=%{public}u",
         userId, type);
+    HiAudit::GetInstance().WriteStart("PrepareUserDirsAndUpdateAuth4Nato",
+        "userId=" + std::to_string(userId) + ", type=" + std::to_string(type));
     std::error_code errCode;
     std::string natoRestore = KeyManager::GetInstance().GetNatoNeedRestorePath(userId, type) + RESTORE_DIR;
     if (!std::filesystem::exists(natoRestore, errCode)) {
@@ -843,6 +867,7 @@ int32_t StorageDaemon::PrepareUserDirsAndUpdateAuth4Nato(uint32_t userId,
     UserManager::GetInstance().CreateElxBundleDataDir(userId, type);
     LOGI("[L1:StorageDaemon] PrepareUserDirsAndUpdateAuth4Nato: <<< EXIT SUCCESS <<< userId=%{public}u,"
         "type=%{public}u", userId, type);
+    HiAudit::GetInstance().WriteEnd("PrepareUserDirsAndUpdateAuth4Nato", E_OK);
     return E_OK;
 }
 
@@ -888,6 +913,7 @@ int32_t StorageDaemon::GenerateKeyAndPrepareUserDirs(uint32_t userId,
 {
     LOGI("[L1:StorageDaemon] GenerateKeyAndPrepareUserDirs: >>> ENTER <<< userId=%{public}u, type=%{public}u,"
         "secretEmpty=%{public}d", userId, type, secret.empty());
+    HiAudit::GetInstance().WriteStart("GenerateKeyAndPrepareUserDirs", "userId=" + std::to_string(userId));
 #ifdef USER_CRYPTO_MANAGER
     int32_t ret;
     uint32_t flags = 0;
@@ -935,6 +961,7 @@ int32_t StorageDaemon::GenerateKeyAndPrepareUserDirs(uint32_t userId,
     UserManager::GetInstance().CreateElxBundleDataDir(userId, type);
     LOGI("[L1:StorageDaemon] GenerateKeyAndPrepareUserDirs: <<< EXIT SUCCESS <<< userId=%{public}u, type=%{public}u",
         userId, type);
+    HiAudit::GetInstance().WriteEnd("GenerateKeyAndPrepareUserDirs", ret);
     return ret;
 #else
     LOGI("[L1:StorageDaemon] GenerateKeyAndPrepareUserDirs: <<< EXIT SUCCESS <<< not supported");
@@ -968,6 +995,14 @@ int32_t StorageDaemon::ActiveUserKeyAndPrepare(uint32_t userId, KeyType type,
     } else if (ret == -ENOENT) {
         LOGW("[L1:StorageDaemon] ActiveUserKeyAndPrepare: start GenerateKeyAndPrepareUserDirs userId=%{public}u,"
             "type=%{public}u", userId, type);
+        if (type != EL5_KEY) {
+            int delRet = KeyManager::GetInstance().DoDeleteUserCeEceSeceKeys(userId,
+                KeyManager::GetInstance().GetKeyDirByType(type), type);
+            if (delRet != E_OK) {
+                LOGE("[L1:StorageDaemon] ActiveUserKeyAndPrepare: DoDeleteUserCeEceSeceKeys failed, userId=%{public}u,"
+                    "type=%{public}u, ret=%{public}d", userId, type, delRet);
+            }
+        }
         ret = GenerateKeyAndPrepareUserDirs(userId, type, token, secret);
         if (ret != E_OK) {
             LOGE("[L1:StorageDaemon] ActiveUserKeyAndPrepare: <<< EXIT FAILED <<< GenerateKeyAndPrepareUserDirs"
@@ -1164,6 +1199,7 @@ int32_t StorageDaemon::ActiveUserKey4Nato(uint32_t userId, const std::vector<uin
     const std::vector<uint8_t> &secret)
 {
     LOGI("[L1:StorageDaemon] ActiveUserKey4Nato: >>> ENTER <<< userId=%{public}u", userId);
+    HiAudit::GetInstance().WriteStart("ActiveUserKey4Nato", "userId=" + std::to_string(userId));
     if (!token.empty() || !secret.empty()) {
         LOGE("[L1:StorageDaemon] ActiveUserKey4Nato: <<< EXIT FAILED <<< token or secret is not empty");
         ClearAllNatoRestoreKey(userId, true);
@@ -1202,6 +1238,7 @@ int32_t StorageDaemon::ActiveUserKey4Nato(uint32_t userId, const std::vector<uin
 
     std::thread([this]() { ActiveAppCloneUserKey(); }).detach();
     LOGI("[L1:StorageDaemon] ActiveUserKey4Nato: <<< EXIT SUCCESS <<< userId=%{public}u", userId);
+    HiAudit::GetInstance().WriteEnd("ActiveUserKey4Nato", E_OK);
     return E_OK;
 }
 
@@ -1211,6 +1248,7 @@ int32_t StorageDaemon::ActiveUserKey4Update(uint32_t userId, const std::vector<u
     LOGI("[L1:StorageDaemon] ActiveUserKey4Update: >>> ENTER <<< userId=%{public}u, tokenEmpty=%{public}d,"
          "secretEmpty=%{public}d",
          userId, token.empty(), secret.empty());
+    HiAudit::GetInstance().WriteStart("ActiveUserKey4Update", "userId=" + std::to_string(userId));
     if (token.empty() && secret.empty()) {
         LOGE("[L1:StorageDaemon] ActiveUserKey4Update: <<< EXIT FAILED <<< token and secret are empty");
         return E_ACTIVE_EL2_FAILED;
@@ -1247,6 +1285,7 @@ int32_t StorageDaemon::ActiveUserKey4Update(uint32_t userId, const std::vector<u
         return E_UNLOCK_APP_KEY2_FAILED;
     }
     LOGI("[L1:StorageDaemon] ActiveUserKey4Update: <<< EXIT SUCCESS <<< userId=%{public}u", userId);
+    HiAudit::GetInstance().WriteEnd("ActiveUserKey4Update", E_OK);
     return E_OK;
 }
 
@@ -1309,6 +1348,8 @@ void StorageDaemon::ClearNatoRestoreKey(uint32_t userId, KeyType type, bool isCl
 {
     LOGI("[L1:StorageDaemon] ClearNatoRestoreKey: >>> ENTER <<< userId=%{public}u, type=%{public}u,"
         "isClearAll=%{public}d", userId, type, isClearAll);
+    HiAudit::GetInstance().WriteStart("ClearNatoRestoreKey",
+        "userId=" + std::to_string(userId) + ", type=" + std::to_string(type));
     std::string natoKey = KeyManager::GetInstance().GetNatoNeedRestorePath(userId, type);
     if (natoKey.empty()) {
         LOGE("[L1:StorageDaemon] ClearNatoRestoreKey: <<< EXIT FAILED <<< natoKey is empty, userId=%{public}u,"
@@ -1352,16 +1393,20 @@ void StorageDaemon::ClearNatoRestoreKey(uint32_t userId, KeyType type, bool isCl
     }
     LOGI("[L1:StorageDaemon] ClearNatoRestoreKey: <<< EXIT SUCCESS <<< userId=%{public}u, type=%{public}u",
         userId, type);
+    HiAudit::GetInstance().WriteEnd("ClearNatoRestoreKey", E_OK);
 }
 
 void StorageDaemon::ClearAllNatoRestoreKey(uint32_t userId, bool isClearAll)
 {
     LOGI("[L1:StorageDaemon] ClearAllNatoRestoreKey: >>> ENTER <<< userId=%{public}u, isClearAll=%{public}d",
          userId, isClearAll);
+    HiAudit::GetInstance().WriteStart("ClearAllNatoRestoreKey",
+        "userId=" + std::to_string(userId) + ", isClearAll=" + std::to_string(isClearAll));
     ClearNatoRestoreKey(userId, EL2_KEY, isClearAll);
     ClearNatoRestoreKey(userId, EL3_KEY, isClearAll);
     ClearNatoRestoreKey(userId, EL4_KEY, isClearAll);
     LOGI("[L1:StorageDaemon] ClearAllNatoRestoreKey: <<< EXIT SUCCESS <<< userId=%{public}u", userId);
+    HiAudit::GetInstance().WriteEnd("ClearAllNatoRestoreKey", E_OK);
 }
 #endif
 
@@ -1949,6 +1994,7 @@ int32_t StorageDaemon::DoStoreAndUpdate(uint32_t userId,
                                         KeyType keyType,
                                         bool needFixFiles)
 {
+    HiAudit::GetInstance().WriteStart("DoStoreAndUpdate", "userId=" + std::to_string(userId));
 #ifdef USER_CRYPTO_MIGRATE_KEY
     uint64_t secureUid = 0;
     if (!KeyManager::GetInstance().GetSecureUid(userId, secureUid)) {
@@ -1958,14 +2004,17 @@ int32_t StorageDaemon::DoStoreAndUpdate(uint32_t userId,
     auto ret = KeyManager::GetInstance().UpdateUserAuthByKeyType(userId, userTokenSecret, keyType, needFixFiles);
     if (ret != E_OK) {
         LOGE("UpdateUserAuth failed, ret:%{public}d, userId:%{public}u, keyType:%{public}u", ret, userId, keyType);
+        HiAudit::GetInstance().WriteEnd("DoStoreAndUpdate", ret, "UpdateUserAuth failed");
         return ret;
     }
     ret = KeyManager::GetInstance().UpdateKeyContextByKeyType(userId, keyType);
     if (ret != E_OK) {
         LOGE("UpdateKeyContext failed, ret:%{public}d, userId:%{public}u, keyType:%{public}u", ret, userId, keyType);
+        HiAudit::GetInstance().WriteEnd("DoStoreAndUpdate", ret, "UpdateKeyContext failed");
         return ret;
     }
 #endif
+    HiAudit::GetInstance().WriteEnd("DoStoreAndUpdate", E_OK);
     return E_OK;
 }
 

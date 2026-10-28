@@ -25,6 +25,7 @@
 #include "directory_ex.h"
 
 #include "base_key_mock.h"
+#include "file_utils_mock.h"
 #include "fscrypt_control_mock.h"
 #include "fscrypt_key_v1.h"
 #include "fscrypt_key_v2_mock.h"
@@ -54,6 +55,7 @@ public:
     static inline shared_ptr<FscryptKeyV2Moc> fscryptKeyMock_ = nullptr;
     static inline shared_ptr<KeyControlMoc> keyControlMock_ = nullptr;
     static inline shared_ptr<BaseKeyMoc> baseKeyMock_ = nullptr;
+    static inline shared_ptr<FileUtilMoc> fileUtilMoc_ = nullptr;
 };
 void KeyManagerOtherTest::SetUpTestCase(void)
 {
@@ -78,6 +80,8 @@ void KeyManagerOtherTest::SetUp(void)
     KeyControlMoc::keyControlMoc = keyControlMock_;
     baseKeyMock_ = make_shared<BaseKeyMoc>();
     BaseKeyMoc::baseKeyMoc = baseKeyMock_;
+    fileUtilMoc_ = make_shared<FileUtilMoc>();
+    IFileUtilMoc::fileUtilMoc = fileUtilMoc_;
 }
 
 void KeyManagerOtherTest::TearDown(void)
@@ -93,6 +97,8 @@ void KeyManagerOtherTest::TearDown(void)
     keyControlMock_ = nullptr;
     BaseKeyMoc::baseKeyMoc = nullptr;
     baseKeyMock_ = nullptr;
+    IFileUtilMoc::fileUtilMoc = nullptr;
+    fileUtilMoc_ = nullptr;
 }
 
 /**
@@ -958,5 +964,99 @@ HWTEST_F(KeyManagerOtherTest,
     OHOS::ForceRemoveDirectory(dir);
     GTEST_LOG_(INFO) <<
         "KeyManager_UpdateCeEceSeceUserAuth_needFixFiles_001 end";
+}
+
+/**
+ * @tc.name: KeyManager_LoadAllUsersEl1Key_RestoreUserKeyRetryFail
+ * @tc.desc: Verify RestoreUserKey retries on failure and still fails
+ * @tc.type: FUNC
+ * @tc.require: IAHHWW
+ */
+HWTEST_F(KeyManagerOtherTest, KeyManager_LoadAllUsersEl1Key_RestoreUserKeyRetryFail,
+    TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "KeyManager_LoadAllUsersEl1Key_RestoreUserKeyRetryFail Start";
+
+    EXPECT_CALL(*fscryptControlMock_, GetFscryptVersionFromPolicy()).WillRepeatedly(Return(FSCRYPT_V2));
+    EXPECT_CALL(*keyControlMock_, KeyCtrlGetFscryptVersion(_)).WillRepeatedly(Return(FSCRYPT_V2));
+    EXPECT_CALL(*baseKeyMock_, UpgradeKeys()).WillRepeatedly(Return(true));
+    EXPECT_CALL(*baseKeyMock_, InitKey(_)).WillRepeatedly(Return(true));
+    // RestoreKey always fails
+    EXPECT_CALL(*baseKeyMock_, RestoreKey(_, _, _)).WillRepeatedly(Return(E_ELX_KEY_STORE_ERROR));
+    EXPECT_CALL(*fscryptKeyMock_, ActiveKey(_, _, _)).WillRepeatedly(Return(E_OK));
+    // Mock ReadDigitDir to return a user so RestoreUserKey gets invoked
+    EXPECT_CALL(*fileUtilMoc_, ReadDigitDir(_, _))
+        .WillRepeatedly(Invoke([](const std::string &path, std::vector<FileList> &dirInfo) {
+            if (path == std::string(USER_EL1_DIR)) {
+                dirInfo.push_back({889, std::string(USER_EL1_DIR) + "/889", ""});
+            }
+        }));
+
+    // LoadAllUsersEl1Key still returns E_OK (individual user failures don't block)
+    EXPECT_EQ(KeyManager::GetInstance().LoadAllUsersEl1Key(), E_OK);
+
+    GTEST_LOG_(INFO) << "KeyManager_LoadAllUsersEl1Key_RestoreUserKeyRetryFail end";
+}
+
+/**
+ * @tc.name: KeyManager_LoadAllUsersEl1Key_BackupOnlyUser_UserIdSetFind
+ * @tc.desc: Verify ReadDirWithBackup picks up users only in backup dir (userIdSet.find branch)
+ * @tc.type: FUNC
+ * @tc.require: IAHHWW
+ */
+HWTEST_F(KeyManagerOtherTest, KeyManager_LoadAllUsersEl1Key_BackupOnlyUser_UserIdSetFind,
+    TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "KeyManager_LoadAllUsersEl1Key_BackupOnlyUser_UserIdSetFind Start";
+
+    EXPECT_CALL(*fscryptControlMock_, GetFscryptVersionFromPolicy()).WillRepeatedly(Return(FSCRYPT_V2));
+    EXPECT_CALL(*keyControlMock_, KeyCtrlGetFscryptVersion(_)).WillRepeatedly(Return(FSCRYPT_V2));
+    EXPECT_CALL(*baseKeyMock_, UpgradeKeys()).WillRepeatedly(Return(true));
+    EXPECT_CALL(*baseKeyMock_, InitKey(_)).WillRepeatedly(Return(true));
+    EXPECT_CALL(*baseKeyMock_, RestoreKey(_, _, _)).WillRepeatedly(Return(E_OK));
+    EXPECT_CALL(*fscryptKeyMock_, ActiveKey(_, _, _)).WillRepeatedly(Return(E_OK));
+    // User 777 only exists in backup dir, not in main → userIdSet.find branch
+    EXPECT_CALL(*fileUtilMoc_, ReadDigitDir(_, _))
+        .WillRepeatedly(Invoke([](const std::string &path, std::vector<FileList> &dirInfo) {
+            if (path == std::string(USER_EL1_DIR) + "_bak") {
+                dirInfo.push_back({777, std::string(USER_EL1_DIR) + "_bak" + "/777", ""});
+            }
+        }));
+
+    EXPECT_EQ(KeyManager::GetInstance().LoadAllUsersEl1Key(), E_OK);
+
+    GTEST_LOG_(INFO) << "KeyManager_LoadAllUsersEl1Key_BackupOnlyUser_UserIdSetFind end";
+}
+
+/**
+ * @tc.name: KeyManager_LoadAllUsersEl1Key_BackupSameUser_UserIdSetFindFalse
+ * @tc.desc: Verify userIdSet.find false branch (backup user exists in main) + RestoreUserKey first success (if2 false)
+ * @tc.type: FUNC
+ * @tc.require: IAHHWW
+ */
+HWTEST_F(KeyManagerOtherTest, KeyManager_LoadAllUsersEl1Key_BackupSameUser_UserIdSetFindFalse,
+    TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "KeyManager_LoadAllUsersEl1Key_BackupSameUser_UserIdSetFindFalse Start";
+
+    EXPECT_CALL(*fscryptControlMock_, GetFscryptVersionFromPolicy()).WillRepeatedly(Return(FSCRYPT_V2));
+    EXPECT_CALL(*keyControlMock_, KeyCtrlGetFscryptVersion(_)).WillRepeatedly(Return(FSCRYPT_V2));
+    EXPECT_CALL(*baseKeyMock_, UpgradeKeys()).WillRepeatedly(Return(true));
+    EXPECT_CALL(*baseKeyMock_, InitKey(_)).WillRepeatedly(Return(true));
+    EXPECT_CALL(*baseKeyMock_, RestoreKey(_, _, _)).WillRepeatedly(Return(E_OK));
+    EXPECT_CALL(*fscryptKeyMock_, ActiveKey(_, _, _)).WillRepeatedly(Return(E_OK));
+    // Same user 778 in both main and backup → userIdSet.find != end → if1 false (skip backup)
+    EXPECT_CALL(*fileUtilMoc_, ReadDigitDir(_, _))
+        .WillRepeatedly(Invoke([](const std::string &path, std::vector<FileList> &dirInfo) {
+            if (path == std::string(USER_EL1_DIR)) {
+                dirInfo.push_back({778, std::string(USER_EL1_DIR) + "/778", ""});
+            } else if (path == std::string(USER_EL1_DIR) + "_bak") {
+                dirInfo.push_back({778, std::string(USER_EL1_DIR) + "_bak" + "/778", ""});
+            }
+        }));
+
+    EXPECT_EQ(KeyManager::GetInstance().LoadAllUsersEl1Key(), E_OK);
+
+    GTEST_LOG_(INFO) << "KeyManager_LoadAllUsersEl1Key_BackupSameUser_UserIdSetFindFalse end";
 }
 }

@@ -20,6 +20,7 @@
 #include "crypto/key_manager.h"
 #include "utils/disk_utils.h"
 #include "utils/storage_radar.h"
+#include "utils/hi_audit.h"
 #include "parameter.h"
 #include "parameters.h"
 #include "quota/quota_manager.h"
@@ -1016,11 +1017,13 @@ int32_t MountManager::MountAppdata(int32_t userId, bool beforeStartup)
 int32_t MountManager::PrepareAppdataDir(int32_t userId)
 {
     LOGI("[L2:MountManager] PrepareAppdataDir: >>> ENTER <<< userId=%{public}d", userId);
+    HiAudit::GetInstance().WriteStart("PrepareAppdataDir", "userId=" + std::to_string(userId));
     if (userId == 0) {
         std::vector<int32_t> userIds;
         GetAllUserId(userIds);
         if (userIds.empty()) {
             LOGI("[L2:MountManager] PrepareAppdataDir: <<< EXIT SUCCESS <<< userIds empty");
+            HiAudit::GetInstance().WriteEnd("PrepareAppdataDir", E_OK, "userIds empty");
             return E_OK;
         }
         for (const int32_t &item: userIds) {
@@ -1030,6 +1033,7 @@ int32_t MountManager::PrepareAppdataDir(int32_t userId)
         PrepareAppdataDirByUserId(userId);
     }
     LOGI("[L2:MountManager] PrepareAppdataDir: <<< EXIT SUCCESS <<< userId=%{public}d", userId);
+    HiAudit::GetInstance().WriteEnd("PrepareAppdataDir", E_OK);
     return E_OK;
 }
 
