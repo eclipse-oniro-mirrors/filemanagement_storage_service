@@ -61,7 +61,6 @@ private:
     enum BUNDLE_STATS {APP = 0, LOCAL, DISTRIBUTED, DATABASE, CACHE};
     enum BUNDLE_STATS_RESULT {APPSIZE = 0, CACHESIZE, DATASIZE};
     int32_t GetMediaAndFileStorageStats(int32_t userId, StorageStats &storageStats, bool isSchedule = false);
-    int32_t GetBundleName(uint32_t userId, const std::string &businessName, std::string &dbBundleName);
     int32_t InsertOrUpdateExtBundleStats(uint32_t userId, const ExtBundleStats &stats, std::string callingBundleName);
     std::mutex extBundleMtx_;
 };

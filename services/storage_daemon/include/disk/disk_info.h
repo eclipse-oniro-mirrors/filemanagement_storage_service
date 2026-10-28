@@ -35,7 +35,6 @@ public:
 
     DiskInfo(std::string &diskName, std::string &sysPath_, std::string &devPath_, dev_t device, int diskType);
     virtual ~DiskInfo();
-    dev_t GetDevice() const;
     std::string GetDiskId() const;
     std::string GetDevPath() const;
     std::string GetSysPath() const;
@@ -47,7 +46,6 @@ private:
     std::string diskName_;
     std::string sysPath_;
     std::string devPath_;
-    dev_t device_ {};
     DiskType diskType_;
 };
 } // STORAGE_DAEMON

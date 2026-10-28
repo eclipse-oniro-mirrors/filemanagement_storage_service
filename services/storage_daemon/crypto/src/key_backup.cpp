@@ -250,69 +250,7 @@ void KeyBackup::ListAndCheckDir(std::string &origDir)
     return;
 }
 
-int32_t KeyBackup::DoResotreKeyMix(std::shared_ptr<BaseKey> &baseKey, const UserAuth &auth, const std::string &keyDir,
-    const std::string &backupDir)
-{
-    LOGI("[L4:KeyBackup] DoResotreKeyMix: >>> ENTER <<<");
-    std::string origKeyDir = keyDir + PATH_LATEST;
-    std::string backupKeyDir = backupDir + PATH_LATEST;
-    std::vector<struct FileNode> fileList;
-    uint32_t diffNum = 0;
-    int32_t ret = GetFileList(origKeyDir, backupKeyDir, fileList, diffNum);
-    if (ret != 0 || diffNum <= 1) {
-        LOGE("[L4:KeyBackup] DoResotreKeyMix: <<< EXIT FAILED <<< get file list failed or diffNum too least,"
-             "ret=%{public}d, diffNum=%{public}d", ret, diffNum);
-        return E_ERR;
-    }
 
-    std::string tempKeyDir;
-    ret = CopySameFilesToTempDir(backupKeyDir, tempKeyDir, fileList);
-    if (ret != 0) {
-        LOGE("[L4:KeyBackup] DoResotreKeyMix: <<< EXIT FAILED <<< CopySameFilesToTempDir failed");
-        return E_ERR;
-    }
-
-    diffNum = fileList.size();
-    uint32_t loopNum = GetLoopMaxNum(diffNum);
-    if (loopNum == INVALID_LOOP_NUM) {
-        HiAudit::GetInstance().WriteStart("KeyBackup::DoResotreKeyMix RemoveNode one while");
-        RemoveNode(tempKeyDir);
-        HiAudit::GetInstance().WriteEnd("KeyBackup::DoResotreKeyMix RemoveNode one while", E_ERR);
-        LOGE("[L4:KeyBackup] DoResotreKeyMix: <<< EXIT FAILED <<< loopNum is invalid");
-        return E_ERR;
-    }
-    for (uint32_t i = 0; i <= loopNum; i++) {
-        LOGI("[L4:KeyBackup] DoResotreKeyMix: try mix key files to decrypt i=%{public}u loopNum=%{public}u",
-             i, loopNum);
-        ret = CopyMixFilesToTempDir(diffNum, i, tempKeyDir, fileList);
-        if (ret != 0) {
-            LOGE("[L4:KeyBackup] DoResotreKeyMix: copy mix files to temp dir failed, i=%{public}u", i);
-            continue;
-        }
-        if (baseKey == nullptr) {
-            LOGE("[L4:KeyBackup] DoResotreKeyMix: <<< EXIT FAILED <<< basekey is nullptr");
-            HiAudit::GetInstance().WriteStart("KeyBackup::DoResotreKeyMix RemoveNode two while");
-            RemoveNode(tempKeyDir);
-            HiAudit::GetInstance().WriteEnd("KeyBackup::DoResotreKeyMix RemoveNode two while", E_ERR);
-            return E_ERR;
-        }
-        if (baseKey->DoRestoreKey(auth, tempKeyDir) == E_OK) {
-            LOGI("[L4:KeyBackup] DoResotreKeyMix: mix key files decrypt succ, fix orig and backup");
-            CheckAndFixFiles(tempKeyDir, origKeyDir);
-            CheckAndFixFiles(tempKeyDir, backupKeyDir);
-            HiAudit::GetInstance().WriteStart("KeyBackup::DoResotreKeyMix RemoveNode three while");
-            RemoveNode(tempKeyDir);
-            HiAudit::GetInstance().WriteEnd("KeyBackup::DoResotreKeyMix RemoveNode three while", E_OK);
-            LOGI("[L4:KeyBackup] DoResotreKeyMix: <<< EXIT SUCCESS <<<");
-            return E_OK;
-        }
-    }
-    HiAudit::GetInstance().WriteStart("KeyBackup::DoResotreKeyMix RemoveNode four while");
-    RemoveNode(tempKeyDir);
-    HiAudit::GetInstance().WriteEnd("KeyBackup::DoResotreKeyMix RemoveNode four while", E_ERR);
-    LOGE("[L4:KeyBackup] DoResotreKeyMix: <<< EXIT FAILED <<< all attempts failed");
-    return E_ERR;
-}
 
 int32_t KeyBackup::GetFileList(const std::string &origDir, const std::string &backDir,
     std::vector<struct FileNode> &fileList, uint32_t diffNum)

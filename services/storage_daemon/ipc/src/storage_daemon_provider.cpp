@@ -217,34 +217,6 @@ int32_t StorageDaemonProvider::CheckUserIdRange(int32_t userId)
     return E_OK;
 }
 
-bool StorageDaemonProvider::IsDevPathValid(const std::string &devPath, std::string &verifiedPath)
-{
-    if (devPath.empty() || devPath.length() >= PATH_MAX) {
-        LOGE("IsDevPathValid: invalid devPath");
-        return false;
-    }
-    if (IsFilePathInvalid(devPath)) {
-        LOGE("IsDevPathValid: devPath contains invalid path segments");
-        return false;
-    }
-    if (devPath.find("/dev/block/") != 0 && devPath.find("/dev/mapper/") != 0) {
-        LOGE("IsDevPathValid: invalid devPath prefix");
-        return false;
-    }
-    char realPath[PATH_MAX] = {0};
-    if (realpath(devPath.c_str(), realPath) == nullptr) {
-        int32_t tmpErrno = errno;
-        LOGE("IsDevPathValid: realpath failed, errno=%{public}d", tmpErrno);
-        return false;
-    }
-    std::string tmpPath(realPath);
-    if (tmpPath.find("/dev/block/") != 0 && tmpPath.find("/dev/mapper/") != 0) {
-        LOGE("IsDevPathValid: invalid real path prefix");
-        return false;
-    }
-    verifiedPath = tmpPath;
-    return true;
-}
 
 int32_t StorageDaemonProvider::ValidateBlockDevicePath(const std::string &devPath,
                                                        std::string &verifiedPath)

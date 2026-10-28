@@ -61,7 +61,6 @@ private:
                           const std::string &cleanLevel);
     void CheckAndCleanCache(int64_t freeSize, int64_t totalSize, int64_t freeInode, int64_t totalInode);
     void CheckAndEventNotify(int64_t freeSize, int64_t totalSize, int64_t freeInode, int64_t totalInode);
-    void SendSmartNotificationEvent(const std::string &faultDesc, const std::string &faultSuggest, bool isHighFreq);
     void ReportRadarStorageUsage(enum StorageService::BizStage stage, const std::string &extraData);
     void RefreshAllNotificationTimeStamp();
     void EventNotifyFreqHandlerForLow(bool isCleanSpace, int64_t freeInode, int64_t totalInode);
@@ -73,17 +72,12 @@ private:
     void UpdateBaseLineByUid();
     std::string GetStorageAlertCleanupParams();
     std::string GetStorageAlertInodeCleanupParams();
-    std::string GetJsonString(const std::string &faultDesc, const std::string &faultSuggest, bool isHighFreq);
-    std::string GetJsonStringForInode(const std::string &faultDesc, const std::string &faultSuggest,
-                                      int64_t freeInode, int64_t totalInode);
 
     // stats
     void HapAndSaStatisticsThd();
 
     void PublishCleanCacheEvent(const std::string &cleanLevel, bool isCleanSpace, struct SizeInfo &sizeInfo);
     int32_t SendCommonEventToCleanCache(const std::string &cleanLevel, struct SizeInfo &sizeInfo, bool isCleanSpace);
-    void SendSmartNotificationInodeEvent(const std::string &faultDesc, const std::string &faultSuggest,
-                                         int64_t freeInode, int64_t totalInode);
     void HandleEventAndClean(const std::string &cleanLevel, struct SizeInfo &sizeInfo);
     bool isNumberString(const std::string &str);
     int32_t GetLastNotifyTime(const std::string &cleanLevel, int64_t &lastNotifyTime);

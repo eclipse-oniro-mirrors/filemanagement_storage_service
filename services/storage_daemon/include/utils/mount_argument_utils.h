@@ -34,35 +34,18 @@ struct MountArgument final {
     bool isSecurityMode_{ false };
     std::string relativePath_;
 
-    std::string GetFullSrc() const;
     std::string GetFullDst() const;
     std::string GetShareSrc() const;
     std::string GetShareDst() const;
-    std::string GetUserIdPara() const;
-    std::string GetHmUserIdPara() const;
-    std::string GetCommFullPath() const;
-    std::string GetCloudFullPath() const;
     std::string GetCachePath() const;
     std::string GetCtrlPath() const;
-    std::string OptionsToString() const;
     std::string GetFullCloud() const;
     std::string GetFullMediaCloud() const;
-    std::string GetCloudDocsPath() const;
-    std::string GetLocalDocsPath() const;
     std::string GetMountPointPrefix() const;
     std::string GetSandboxPath() const;
     std::string GetMntUserPath() const;
-    std::string GetMediaDocsPath() const;
-    std::string GetNoSharefsDocPath() const;
-    std::string GetNoSharefsDocCurPath() const;
-    std::string GetSharefsDocPath() const;
     std::string GetSharefsDocCurPath() const;
-    std::string GetCurOtherPath() const;
     std::string GetCurOtherAppdataPath() const;
-    std::string GetCurFileMgrPath() const;
-    std::string GetCurFileMgrAppdataPath() const;
-    std::string GetNoSharefsAppdataPath() const;
-    unsigned long GetFlags() const;
     std::string GetFullMediaFuse() const;
 };
 

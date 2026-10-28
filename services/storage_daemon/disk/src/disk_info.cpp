@@ -27,14 +27,9 @@ DiskInfo::DiskInfo(std::string &diskName, std::string &sysPath, std::string &dev
     diskName_ = diskName;
     sysPath_ = sysPath;
     devPath_ = StringPrintf("/dev/block/%s", diskId_.c_str());
-    device_ = device;
     diskType_ = static_cast<DiskType>(diskType);
 }
 
-dev_t DiskInfo::GetDevice() const
-{
-    return device_;
-}
 
 std::string DiskInfo::GetDiskId() const
 {

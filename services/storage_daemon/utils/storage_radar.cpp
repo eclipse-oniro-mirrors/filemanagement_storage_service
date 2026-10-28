@@ -428,21 +428,6 @@ void StorageRadar::ReportStorageUsage(enum BizStage stage, const std::string &ex
     StorageRadar::GetInstance().RecordFunctionResult(param, FILE_STORAGE_MANAGER_FAULT);
 }
 
-void StorageRadar::ReportAncoResult(const std::string &funcName, uint32_t userId,
-                                    int ret, const std::string &extraData)
-{
-    RadarParameter param = {
-        .orgPkg = "anco",
-        .userId = userId,
-        .funcName = funcName,
-        .bizScene = BizScene::USER_MOUNT_MANAGER,
-        .bizStage = BizStage::BIZ_STAGE_INIT_GLOBAL_KEY,
-        .keyElxLevel = "NA",
-        .errorCode = ret,
-        .extraData = extraData
-    };
-    StorageRadar::GetInstance().RecordFunctionResult(param);
-}
 
 bool StorageRadar::RecordFunctionResult(const RadarParameter &parRes, const std::string &eventName)
 {
