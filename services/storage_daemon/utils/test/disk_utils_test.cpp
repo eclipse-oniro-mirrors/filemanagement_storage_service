@@ -489,25 +489,6 @@ HWTEST_F(DiskUtilsTest, DiskUtilsTest_ReadConfiguration_004, TestSize.Level1)
     GTEST_LOG_(INFO) << "DiskUtilsTest_ReadConfiguration_004 end";
 }
 
-/**
- * @tc.name: DiskUtilsTest_GetOpticalDriveMaxWriteSpeed_002
- * @tc.desc: Verify GetOpticalDriveMaxWriteSpeed fails when Mode Sense fails.
- * @tc.type: FUNC
- * @tc.require: AR20260114725643
- */
-HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetOpticalDriveMaxWriteSpeed_001, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "DiskUtilsTest_GetOpticalDriveMaxWriteSpeed_001 start";
-    
-    std::string diskPath = "/dev/sr0";
-    int32_t maxWriteSpeed = 0;
-
-    int ret = GetOpticalDriveMaxWriteSpeed(diskPath, maxWriteSpeed);
-    EXPECT_EQ(ret, E_ERR);
-
-    GTEST_LOG_(INFO) << "DiskUtilsTest_GetOpticalDriveMaxWriteSpeed_001 end";
-}
-
 HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetScsiBusNum_001, TestSize.Level1)
 {
     GTEST_LOG_(INFO) << "DiskUtilsTest_GetScsiBusNum_001 start";

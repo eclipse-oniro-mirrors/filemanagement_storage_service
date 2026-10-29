@@ -33,6 +33,7 @@
 #include "storage_service_constant.h"
 #include "storage_service_errno.h"
 #include "storage_service_log.h"
+#include "storage_stats.h"
 
 using namespace OHOS::StorageService;
 namespace OHOS {
@@ -56,6 +57,8 @@ constexpr const char *DEFAULT_PARAMS = "notify_l:500M/notify_m:2G/notify_h:10%/c
 constexpr const char *STORAGE_ALERT_INODE_CLEANUP_PARAMETER = "const.storage_service.inode_alert_policy";
 constexpr const char *INODE_DEFAULT_PARAMS =
     "notify_l:25000/notify_m:100000/notify_h:10%/clean_l:37500/clean_m:5%/clean_h:12%";
+const std::string PUBLISH_SYSTEM_COMMON_EVENT = "ohos.permission.PUBLISH_SYSTEM_COMMON_EVENT";
+const std::string SMART_ACTION = "hicare.event.SMART_NOTIFICATION";
 const std::string TIMESTAMP_DAY = "persist.storage_manager.timestamp.day";
 const std::string TIMESTAMP_WEEK = "persist.storage_manager.timestamp.week";
 const std::string FAULT_ID_ONE = "845010021";
@@ -470,10 +473,144 @@ void StorageMonitorService::CheckAndEventNotify(int64_t freeSize, int64_t totalS
     EventNotifyFreqHandlerForHigh(isCleanSpace, freeInode, totalInode);
 }
 
+std::string StorageMonitorService::GetJsonStringForInode(const std::string &faultDesc,
+                                                         const std::string &faultSuggest,
+                                                         int64_t freeInode,
+                                                         int64_t totalInode)
+{
+    std::string eventDataStr = "{}";
+    cJSON *root = cJSON_CreateObject();
+    if (root == nullptr) {
+        LOGE("Create json object failed.");
+        return eventDataStr;
+    }
+    cJSON_AddStringToObject(root, "faultDescription", faultDesc.c_str());
+    cJSON_AddStringToObject(root, "faultSuggestion", faultSuggest.c_str());
 
+    cJSON *params = cJSON_CreateObject();
+    if (params == nullptr) {
+        LOGE("Create params json object failed.");
+        cJSON_Delete(root);
+        return eventDataStr;
+    }
+    std::string freeInodeStr = std::to_string(freeInode);
+    std::string totalInodeStr = std::to_string(totalInode);
+    cJSON_AddStringToObject(params, "free", freeInodeStr.c_str());
+    cJSON_AddStringToObject(params, "total", totalInodeStr.c_str());
 
+    if (!cJSON_AddItemToObject(root, "extraData", params)) {
+        LOGE("Add params to root failed.");
+        cJSON_Delete(params);
+        cJSON_Delete(root);
+        return eventDataStr;
+    }
 
+    char *json_str = cJSON_Print(root);
+    if (json_str == nullptr) {
+        LOGE("Print json string failed.");
+        cJSON_Delete(root);
+        return eventDataStr;
+    }
+    eventDataStr = json_str;
+    cJSON_free(json_str);
+    cJSON_Delete(root);
+    return eventDataStr;
+}
 
+std::string StorageMonitorService::GetJsonString(const std::string &faultDesc,
+    const std::string &faultSuggest, bool isHighFreq)
+{
+    std::string eventDataStr = "{}";
+    cJSON *root = cJSON_CreateObject();
+    if (root == nullptr) {
+        LOGE("Create json object failed.");
+        return eventDataStr;
+    }
+    cJSON_AddStringToObject(root, "faultDescription", faultDesc.c_str());
+    cJSON_AddStringToObject(root, "faultSuggestion", faultSuggest.c_str());
+    if (isHighFreq) {
+        cJSON *faultSuggestionParam = cJSON_CreateString("500M");
+        if (faultSuggestionParam == nullptr) {
+            LOGE("Create json string failed.");
+            cJSON_Delete(root);
+            return eventDataStr;
+        }
+        cJSON *faultSuggestionArray = cJSON_CreateArray();
+        if (faultSuggestionArray == nullptr) {
+            LOGE("Create json array failed.");
+            cJSON_Delete(faultSuggestionParam);
+            cJSON_Delete(root);
+            return eventDataStr;
+        }
+        cJSON_AddItemToArray(faultSuggestionArray, faultSuggestionParam);
+        cJSON_AddItemToObject(root, "faultSuggestionParams", faultSuggestionArray);
+    }
+    char *json_string = cJSON_Print(root);
+    if (json_string == nullptr) {
+        LOGE("Print json string failed.");
+        cJSON_Delete(root);
+        return eventDataStr;
+    }
+    eventDataStr = json_string;
+    cJSON_free(json_string);
+    cJSON_Delete(root);
+    return eventDataStr;
+}
+
+void StorageMonitorService::SendSmartNotificationInodeEvent(const std::string &faultDesc,
+                                                            const std::string &faultSuggest,
+                                                            int64_t freeInode,
+                                                            int64_t totalInode)
+{
+    LOGI("StorageMonitorService, start SendSmartNotificationInodeEvent.");
+    EventFwk::CommonEventPublishInfo publishInfo;
+    const std::string permission = PUBLISH_SYSTEM_COMMON_EVENT;
+    std::vector<std::string> permissions;
+    permissions.emplace_back(permission);
+    publishInfo.SetSubscriberPermissions(permissions);
+    publishInfo.SetOrdered(false);
+    publishInfo.SetSticky(false);
+
+    AAFwk::Want want;
+    want.SetAction(SMART_ACTION);
+    EventFwk::CommonEventData eventData;
+    eventData.SetWant(want);
+
+    std::string eventDataStr = GetJsonStringForInode(faultDesc, faultSuggest, freeInode, totalInode);
+    eventDataStr.erase(remove(eventDataStr.begin(), eventDataStr.end(), '\n'), eventDataStr.end());
+    eventDataStr.erase(remove(eventDataStr.begin(), eventDataStr.end(), '\t'), eventDataStr.end());
+
+    LOGI("send message is %{public}s", eventDataStr.c_str());
+    eventData.SetData(eventDataStr);
+    EventFwk::CommonEventManager::PublishCommonEvent(eventData, publishInfo, nullptr);
+}
+
+void StorageMonitorService::SendSmartNotificationEvent(const std::string &faultDesc,
+                                                       const std::string &faultSuggest,
+                                                       bool isHighFreq)
+{
+    LOGI("StorageMonitorService, start SendSmartNotificationEvent.");
+    EventFwk::CommonEventPublishInfo publishInfo;
+    const std::string permission = PUBLISH_SYSTEM_COMMON_EVENT;
+    std::vector<std::string> permissions;
+    permissions.emplace_back(permission);
+    publishInfo.SetSubscriberPermissions(permissions);
+    publishInfo.SetOrdered(false);
+    publishInfo.SetSticky(false);
+
+    AAFwk::Want want;
+    want.SetAction(SMART_ACTION);
+    EventFwk::CommonEventData eventData;
+    eventData.SetWant(want);
+
+    std::string eventDataStr = GetJsonString(faultDesc, faultSuggest, isHighFreq);
+    eventDataStr.erase(remove(eventDataStr.begin(), eventDataStr.end(), '\n'), eventDataStr.end());
+    eventDataStr.erase(remove(eventDataStr.begin(), eventDataStr.end(), '\t'), eventDataStr.end());
+
+    LOGI("send message is %{public}s", eventDataStr.c_str());
+    eventData.SetData(eventDataStr);
+    EventFwk::CommonEventManager::PublishCommonEvent(eventData, publishInfo, nullptr);
+}
 
 void StorageMonitorService::EventNotifyFreqHandlerForLow(bool isCleanSpace, int64_t freeInode, int64_t totalInode)
 {

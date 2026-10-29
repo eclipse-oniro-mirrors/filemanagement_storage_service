@@ -1239,45 +1239,6 @@ HWTEST_F(MountManagerTest, Storage_Daemon_MountManagerExtTest_RemoveDisSharePath
 }
 
 /**
- * @tc.name: MountManagerTest_InitSecondMountBundleName_001
- * @tc.desc: Verify the InitSecondMountBundleName function.
- * @tc.type: FUNC
- * @tc.require: IB49AM
- */
-HWTEST_F(MountManagerTest, MountManagerTest_InitSecondMountBundleName_001, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "MountManagerTest_InitSecondMountBundleName_001 start";
-    uint32_t userId = 99999;
-    int32_t ret = MountManager::GetInstance().InitSecondMountBundleName(userId);
-    EXPECT_EQ(ret, E_ERR);
-
-    std::string root = "/mnt/sandbox/99999";
-    std::string bundle1 = "/mnt/sandbox/99999/lock";
-    std::string bundle2 = "/mnt/sandbox/99999/com.bundle";
-    std::string bundle3 = "/mnt/sandbox/99999/com.bundle_locked";
-    std::error_code ec;
-    std::filesystem::create_directories(root, ec);
-    std::filesystem::create_directories(bundle1, ec);
-    std::filesystem::create_directories(bundle2, ec);
-    std::filesystem::create_directories(bundle3, ec);
-    ret = MountManager::GetInstance().InitSecondMountBundleName(userId);
-    EXPECT_EQ(ret, E_OK);
-
-    ret = MountManager::GetInstance().InitSecondMountBundleName(userId);
-    EXPECT_EQ(ret, E_OK);
-
-    MountManager::GetInstance().secondMountBundleNameMap_.erase(userId);
-    std::filesystem::remove_all(bundle1, ec);
-    std::filesystem::remove_all(bundle2, ec);
-    std::filesystem::remove_all(bundle3, ec);
-    std::filesystem::remove_all(root, ec);
-    if (ec && ec != std::errc::no_such_file_or_directory) {
-        GTEST_LOG_(WARNING) << "Cleanup failed: " << ec.message();
-    }
-    GTEST_LOG_(INFO) << "MountManagerTest_InitSecondMountBundleName_001 end";
-}
-
-/**
  * @tc.name: Storage_Manager_MountManagerTest_MountCloudDiskFuse_001
  * @tc.desc: Verify the MountCloudDiskFuse function when mount succeeds.
  * @tc.type: FUNC

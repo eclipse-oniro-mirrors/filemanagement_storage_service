@@ -34,6 +34,8 @@ std::string GetAnonyString(const std::string &value);
 bool IsPathStartWithFileMgr(int32_t userId, const std::string &path);
 int GetCurrentUserId();
 bool IsFilePathInvalid(const std::string &filePath);
+bool IsUserUnlocked(int32_t userId);
+int32_t GetForegroundUserIDFromOs();
 bool IsPathStartWithDlp(const std::string &dstPath);
 bool IsPathStartWithCloudDisk(int32_t userId, const std::string &dstPath);
 bool IsPathStartWithUdmfClip(int32_t userId, const std::string &dstPath);

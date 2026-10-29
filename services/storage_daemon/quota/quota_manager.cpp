@@ -281,20 +281,6 @@ bool QuotaManager::StringToInt64(const std::string& str, int64_t& out_value)
     return true;
 }
 
-void QuotaManager::GetCurrentTime(std::ostringstream &extraData)
-{
-    auto now = std::chrono::system_clock::now();
-    auto timeStamp = std::chrono::duration_cast<std::chrono::milliseconds>(
-        now.time_since_epoch()).count();
-    auto timeT = std::chrono::system_clock::to_time_t(now);
-    struct tm timeInfo;
-    localtime_r(&timeT, &timeInfo);
-    std::ostringstream timeStr;
-    timeStr << std::put_time(&timeInfo, "%Y-%m-%d %H:%M:%S");
-    extraData << "{timeStamp is:" << timeStamp
-              << "MS,BeiJingTime is:" << timeStr.str() << "}" << std::endl;
-}
-
 double QuotaManager::ConvertBytesToMB(int64_t bytes, int32_t decimalPlaces)
 {
     if (bytes < 0) {

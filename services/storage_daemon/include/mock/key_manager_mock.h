@@ -43,6 +43,7 @@ public:
     virtual std::string GetKeyDirByUserAndType(unsigned int user, KeyType type) = 0;
     virtual int GenerateUserKeyByType(unsigned int user, KeyType type,
         const std::vector<uint8_t> &token, const std::vector<uint8_t> &secret) = 0;
+    virtual int DoDeleteUserCeEceSeceKeys(unsigned int user, const std::string userDir, KeyType type) = 0;
     virtual int NotifyUeceActivation(uint32_t userId, int32_t resultCode, bool needGetAllAppKey) = 0;
     virtual int InActiveUserKey(unsigned int user) = 0;
     virtual int32_t LockUserScreen(uint32_t user) = 0;
@@ -95,6 +96,7 @@ public:
     MOCK_METHOD(std::string, GetKeyDirByUserAndType, (unsigned int, KeyType));
     MOCK_METHOD(int, GenerateUserKeyByType, (unsigned int, KeyType,
         const std::vector<uint8_t> &, const std::vector<uint8_t> &));
+    MOCK_METHOD(int, DoDeleteUserCeEceSeceKeys, (unsigned int, const std::string, KeyType));
     MOCK_METHOD(int, NotifyUeceActivation, (uint32_t, int32_t, bool));
     MOCK_METHOD(int, InActiveUserKey, (unsigned int));
     MOCK_METHOD(int32_t, LockUserScreen, (uint32_t));

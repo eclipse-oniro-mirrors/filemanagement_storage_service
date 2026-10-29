@@ -206,16 +206,6 @@ HWTEST_F(StorageRadarTest, StorageRadar_ReportUserManager_001, TestSize.Level1)
     GTEST_LOG_(INFO) << "StorageRadar_ReportUserManager_001 end";
 }
 
-HWTEST_F(StorageRadarTest, StorageRadar_ReportSaSizeResult_001, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "StorageRadar_ReportSaSizeResult_001 start";
-    std::string funcName = "GetSaSize";
-    int ret = 0;
-    std::string extraData = "test_data";
-    StorageService::StorageRadar::ReportSaSizeResult(funcName, ret, extraData);
-    GTEST_LOG_(INFO) << "StorageRadar_ReportSaSizeResult_001 end";
-}
-
 HWTEST_F(StorageRadarTest, StorageRadar_ReportSpaceRadar_001, TestSize.Level1)
 {
     GTEST_LOG_(INFO) << "StorageRadar_ReportSpaceRadar_001 start";
@@ -451,63 +441,6 @@ HWTEST_F(StorageRadarTest, StorageRadar_ReportFucBehavior_002, TestSize.Level1)
     int32_t ret = -1;
     StorageService::StorageRadar::ReportFucBehavior(funcName, userId, extraData, ret);
     GTEST_LOG_(INFO) << "StorageRadar_ReportFucBehavior_002 end";
-}
-
-HWTEST_F(StorageRadarTest, StorageRadar_RecordFaultResult_001, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "StorageRadar_RecordFaultResult_001 start";
-    StorageService::RadarParameter param = {
-        .orgPkg = "storageService",
-        .userId = 100,
-        .funcName = "GetStorageStatus",
-        .bizScene = StorageService::BizScene::SPACE_STATISTICS,
-        .bizStage = StorageService::BizStage::BIZ_STAGE_GET_USER_STORAGE_STATS,
-        .errorCode = -1,
-        .extraData = "storage_status_failed",
-        .toCallPkg = "test_pkg"
-    };
-    std::string eventName = "FILE_STORAGE_STATUS_FAULT";
-    bool result = StorageService::StorageRadar::GetInstance().RecordFaultResult(param, eventName);
-    GTEST_LOG_(INFO) << "StorageRadar_RecordFaultResult_001 result: " << result;
-    GTEST_LOG_(INFO) << "StorageRadar_RecordFaultResult_001 end";
-}
-
-HWTEST_F(StorageRadarTest, StorageRadar_RecordFaultResult_002, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "StorageRadar_RecordFaultResult_002 start";
-    StorageService::RadarParameter param = {
-        .orgPkg = "",
-        .userId = -1,
-        .funcName = "",
-        .bizScene = StorageService::BizScene::SPACE_STATISTICS,
-        .bizStage = StorageService::BizStage::BIZ_STAGE_GET_USER_STORAGE_STATS,
-        .errorCode = -1,
-        .extraData = "",
-        .toCallPkg = ""
-    };
-    std::string eventName = "FILE_STORAGE_STATUS_FAULT";
-    bool result = StorageService::StorageRadar::GetInstance().RecordFaultResult(param, eventName);
-    GTEST_LOG_(INFO) << "StorageRadar_RecordFaultResult_002 result: " << result;
-    GTEST_LOG_(INFO) << "StorageRadar_RecordFaultResult_002 end";
-}
-
-HWTEST_F(StorageRadarTest, StorageRadar_RecordFaultResult_003, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "StorageRadar_RecordFaultResult_003 start";
-    StorageService::RadarParameter param = {
-        .orgPkg = "storageService",
-        .userId = 0,
-        .funcName = "GetUserStorageStats",
-        .bizScene = StorageService::BizScene::SPACE_STATISTICS,
-        .bizStage = StorageService::BizStage::BIZ_STAGE_GET_USER_STORAGE_STATS,
-        .errorCode = 0,
-        .extraData = "test_extra_data_content",
-        .toCallPkg = "test_to_call_pkg"
-    };
-    std::string eventName = "FILE_STORA";
-    bool result = StorageService::StorageRadar::GetInstance().RecordFaultResult(param, eventName);
-    GTEST_LOG_(INFO) << "StorageRadar_RecordFaultResult_003 result: " << result;
-    GTEST_LOG_(INFO) << "StorageRadar_RecordFaultResult_003 end";
 }
 
 HWTEST_F(StorageRadarTest, StorageRadar_ReportStorageStatusRadar_003, TestSize.Level1)

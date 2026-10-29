@@ -126,7 +126,6 @@ public:
     bool RecordFunctionResult(const RadarParameter &parameterRes,
                              const std::string &eventName = FILE_STORAGE_MANAGER_FAULT);
     bool RecordStorageStatusResult(const RadarParameter &parRes, const std::string &eventName);
-    bool RecordFaultResult(const RadarParameter &parRes, const std::string &eventName);
     static void ReportActiveUserKey(const std::string &funcName, uint32_t userId, int ret,
 	                                const std::string &keyElxLevel);
     static void ReportGetStorageStatus(const std::string &funcName, uint32_t userId, int ret,
@@ -152,11 +151,11 @@ public:
         const std::string &extraData);
     static void ReportBundleMgrResult(const std::string &funcName, int32_t ret, unsigned int userId,
         const std::string &extraData);
+    static void ReportAncoResult(const std::string &funcName, uint32_t userId, int ret, const std::string &extraData);
     static void ReportStatistics(uint32_t userId, StorageDaemon::RadarStatisticInfo radarInfo);
     static std::string ReportDuration(const std::string &funcName, int64_t startTime,
         int64_t delay_threshold = DEFAULT_DELAY_TIME_THRESH, uint32_t userId = DEFAULT_USERID);
     static int64_t RecordCurrentTime();
-    static void ReportSaSizeResult(const std::string &funcName, int ret, const std::string &extraData);
     static void ReportSpaceRadar(const std::string &funcName, int ret, const std::string &extraData);
     static void ReportStorageStatusRadar(const std::string &orgPkgName, const std::string &extraData);
     static void ReportStorageStatusRadar(const std::string &funcName, int ret, const std::string &extraData);

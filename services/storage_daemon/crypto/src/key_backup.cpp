@@ -250,8 +250,6 @@ void KeyBackup::ListAndCheckDir(std::string &origDir)
     return;
 }
 
-
-
 int32_t KeyBackup::GetFileList(const std::string &origDir, const std::string &backDir,
     std::vector<struct FileNode> &fileList, uint32_t diffNum)
 {

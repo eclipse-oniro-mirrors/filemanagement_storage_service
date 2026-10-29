@@ -21,6 +21,7 @@ constexpr int ACTION_PRE_LEN = 7;
 constexpr int DEVPATH_PRE_LEN = 8;
 constexpr int SUBSYSTEM_PRE_LEN = 10;
 constexpr int DEVNAME_PRE_LEN = 8;
+constexpr int DISK_EJECT_REQUEST_LEN = 19;
 constexpr int NL_PARAMS_MAX = 128;
 constexpr const char *EMPTY_STRING = "";
 
@@ -47,6 +48,9 @@ void NetlinkData::Decode(const char *msg)
         } else if (!strncmp(msg, "DEVNAME=", DEVNAME_PRE_LEN)) {
             msg += DEVNAME_PRE_LEN;
             diskName_ = std::string(msg);
+        } else if (!strncmp(msg, "DISK_EJECT_REQUEST=", DISK_EJECT_REQUEST_LEN)) {
+            msg += DISK_EJECT_REQUEST_LEN;
+            ejectRequest_ = std::string(msg);
         } else if (paramIdx < NL_PARAMS_MAX) {
             params_.push_back(std::string(msg));
             ++paramIdx;
@@ -79,6 +83,10 @@ NetlinkData::Actions NetlinkData::GetAction()
     return action_;
 }
 
+std::string NetlinkData::GetEjectRequest()
+{
+    return ejectRequest_;
+}
 
 std::string NetlinkData::GetDiskName()
 {

@@ -48,7 +48,6 @@ namespace {
 int32_t ChMod(const std::string &path, mode_t mode);
 int32_t ChOwn(const std::string &path, uid_t uid, gid_t gid);
 int32_t MkDir(const std::string &path, mode_t mode);
-std::string MaskSensitiveInfo(const std::string &input);
 
 class FileUtilsTest : public testing::Test {
 public:
@@ -263,23 +262,6 @@ HWTEST_F(FileUtilsTest, FileUtilsTest_Split_001, TestSize.Level1)
     auto ret = Split(test, pattern);
     EXPECT_EQ(ret, expectVec);
     GTEST_LOG_(INFO) << "FileUtilsTest_Split_001 end";
-}
-
-/**
- * @tc.name: FileUtilsTest_DelFolder_001
- * @tc.desc: Verify the DelFolder function.
- * @tc.type: FUNC
- * @tc.require: IBDKKD
- */
-HWTEST_F(FileUtilsTest, FileUtilsTest_DelFolder_001, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "FileUtilsTest_DelFolder_001 start";
-
-    std::string testPath = "/data/test/tdd";
-    mkdir(testPath.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
-    EXPECT_TRUE(rmdir(testPath.c_str()) == 0);
-    EXPECT_TRUE(rmdir(testPath.c_str()) != 0);
-    GTEST_LOG_(INFO) << "FileUtilsTest_DelFolder_001 end";
 }
 
 /**
@@ -761,131 +743,6 @@ HWTEST_F(FileUtilsTest, FileUtilsTest_GetRmgDataSize_002, TestSize.Level1)
     ret = GetRmgDataSize(rgmName, path, ignorePaths, totalSize);
     EXPECT_NE(ret, E_CONTAINERPLUGIN_UTILS_RGM_NAME_INVALID);
     GTEST_LOG_(INFO) << "FileUtilsTest_GetRmgDataSize_002 end";
-}
-
-/**
- * @tc.name: FileUtilsTest_MaskSensitiveInfo_001
- * @tc.desc: Verify MaskSensitiveInfo function with single UUID.
- * @tc.type: FUNC
- * @tc.require: IBDKKD
- */
-HWTEST_F(FileUtilsTest, FileUtilsTest_MaskSensitiveInfo_001, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "FileUtilsTest_MaskSensitiveInfo_001 start";
-    
-    std::string input = "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7";
-    std::string result = MaskSensitiveInfo(input);
-    std::string expected = "EBD0****************************99C7";
-    EXPECT_EQ(result, expected);
-    
-    GTEST_LOG_(INFO) << "FileUtilsTest_MaskSensitiveInfo_001 end";
-}
-
-/**
- * @tc.name: FileUtilsTest_MaskSensitiveInfo_002
- * @tc.desc: Verify MaskSensitiveInfo function with multiple UUIDs.
- * @tc.type: FUNC
- * @tc.require: IBDKKD
- */
-HWTEST_F(FileUtilsTest, FileUtilsTest_MaskSensitiveInfo_002, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "FileUtilsTest_MaskSensitiveInfo_002 start";
-    
-    std::string input =
-    "PART 1 EBD0A0A2-B9E5-4433-87C0-68B6B72699C7 1965F076-B593-4262-AC27-80740D6E25BC Basic data partition";
-    std::string result = MaskSensitiveInfo(input);
-    std::string expected =
-    "PART 1 EBD0****************************99C7 1965****************************25BC Basic data partition";
-    EXPECT_EQ(result, expected);
-    
-    GTEST_LOG_(INFO) << "FileUtilsTest_MaskSensitiveInfo_002 end";
-}
-
-/**
- * @tc.name: FileUtilsTest_MaskSensitiveInfo_003
- * @tc.desc: Verify MaskSensitiveInfo function with no UUID.
- * @tc.type: FUNC
- * @tc.require: IBDKKD
- */
-HWTEST_F(FileUtilsTest, FileUtilsTest_MaskSensitiveInfo_003, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "FileUtilsTest_MaskSensitiveInfo_003 start";
-    
-    std::string input = "This is a test string without UUID";
-    std::string result = MaskSensitiveInfo(input);
-    EXPECT_EQ(result, input);
-    
-    GTEST_LOG_(INFO) << "FileUtilsTest_MaskSensitiveInfo_003 end";
-}
-
-/**
- * @tc.name: FileUtilsTest_MaskSensitiveInfo_004
- * @tc.desc: Verify MaskSensitiveInfo function with empty string.
- * @tc.type: FUNC
- * @tc.require: IBDKKD
- */
-HWTEST_F(FileUtilsTest, FileUtilsTest_MaskSensitiveInfo_004, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "FileUtilsTest_MaskSensitiveInfo_004 start";
-    
-    std::string input = "";
-    std::string result = MaskSensitiveInfo(input);
-    EXPECT_EQ(result, input);
-    
-    GTEST_LOG_(INFO) << "FileUtilsTest_MaskSensitiveInfo_004 end";
-}
-
-/**
- * @tc.name: FileUtilsTest_MaskSensitiveInfo_005
- * @tc.desc: Verify MaskSensitiveInfo function with short string.
- * @tc.type: FUNC
- * @tc.require: IBDKKD
- */
-HWTEST_F(FileUtilsTest, FileUtilsTest_MaskSensitiveInfo_005, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "FileUtilsTest_MaskSensitiveInfo_005 start";
-    
-    std::string input = "short";
-    std::string result = MaskSensitiveInfo(input);
-    EXPECT_EQ(result, input);
-    
-    GTEST_LOG_(INFO) << "FileUtilsTest_MaskSensitiveInfo_005 end";
-}
-
-/**
- * @tc.name: FileUtilsTest_MaskSensitiveInfo_006
- * @tc.desc: Verify MaskSensitiveInfo function with UUID in mixed case.
- * @tc.type: FUNC
- * @tc.require: IBDKKD
- */
-HWTEST_F(FileUtilsTest, FileUtilsTest_MaskSensitiveInfo_006, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "FileUtilsTest_MaskSensitiveInfo_006 start";
-    
-    std::string input = "ebd0a0a2-b9e5-4433-87c0-68b6b72699c7";
-    std::string result = MaskSensitiveInfo(input);
-    std::string expected = "ebd0****************************99c7";
-    EXPECT_EQ(result, expected);
-    
-    GTEST_LOG_(INFO) << "FileUtilsTest_MaskSensitiveInfo_006 end";
-}
-
-/**
- * @tc.name: FileUtilsTest_MaskSensitiveInfo_007
- * @tc.desc: Verify MaskSensitiveInfo function with repeated UUIDs.
- * @tc.type: FUNC
- * @tc.require: IBDKKD
- */
-HWTEST_F(FileUtilsTest, FileUtilsTest_MaskSensitiveInfo_007, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "FileUtilsTest_MaskSensitiveInfo_007 start";
-    
-    std::string input = "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7 EBD0A0A2-B9E5-4433-87C0-68B6B72699C7";
-    std::string result = MaskSensitiveInfo(input);
-    std::string expected = "EBD0****************************99C7 EBD0****************************99C7";
-    EXPECT_EQ(result, expected);
-    
-    GTEST_LOG_(INFO) << "FileUtilsTest_MaskSensitiveInfo_007 end";
 }
 
 /**

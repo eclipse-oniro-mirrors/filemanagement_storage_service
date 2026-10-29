@@ -19,7 +19,7 @@ namespace OHOS {
 namespace StorageDaemon {
 int StorageXCollie::SetTimer(const std::string &name, uint32_t timeout)
 {
-    return HiviewDFX::XCollie::GetInstance().SetTimer(name, timeout, nullptr, nullptr, HiviewDFX::XCOLLIE_FLAG_LOG);
+    return HiviewDFX::XCollie::GetInstance().SetTimer(name, timeout, nullptr, nullptr, HiviewDFX::XCOLLIE_FLAG_DEFAULT);
 }
 
 void StorageXCollie::CancelTimer(int timerId)

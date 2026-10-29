@@ -43,7 +43,6 @@ public:
     int32_t UMountAllPath(int32_t userId, std::list<std::string> &unMountFailList);
     int32_t UMountByList(std::list<std::string> &list, std::list<std::string> &unMountFailList);
     int32_t UMountByListWithDetach(std::list<std::string> &list);
-    void SetMediaObserverState(bool active);
     int32_t FindMountPointsToMap(std::map<std::string, std::list<std::string>> &mountMap, int32_t userId);
     void MountPointToList(std::list<std::string> &hmdfsList, std::list<std::string> &hmfsList,
         std::list<std::string> &sharefsList, std::string &line, int32_t userId);
@@ -57,9 +56,6 @@ public:
     int32_t MountMediaFuse(int32_t userId, int32_t &devFd);
     int32_t UMountMediaFuse(int32_t userId);
     int32_t FindAndKillProcess(int32_t userId, std::list<std::string> &unMountFailList, int32_t radar);
-    int32_t FindAndKillProcessWithoutRadar(int32_t userId, std::list<std::string> &killList);
-    int32_t CheckProcessUserId(int32_t userId, std::vector<ProcessInfo> &proInfos,
-                               std::vector<ProcessInfo> &processKillInfos);
     int32_t MountFileMgrFuse(int32_t userId, const std::string &path, int32_t &fuseFd);
     int32_t UMountFileMgrFuse(int32_t userId, const std::string &path);
     int32_t MountDlpFuse(const std::string &dstPath, int32_t &fuseFd);
@@ -108,7 +104,6 @@ private:
     int32_t FilterNotMountedPath(std::map<std::string, std::string> &notMountPaths);
     bool MatchesDisSharePath(const std::string &dstPath);
     bool RemoveDisSharePath(const std::string &dstPath, const std::string &networkId);
-    int32_t InitSecondMountBundleName(uint32_t userId);
 
     DISALLOW_COPY_AND_MOVE(MountManager);
 

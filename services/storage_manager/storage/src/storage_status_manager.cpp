@@ -54,8 +54,6 @@ constexpr int64_t FOUR_K = 4096;
 constexpr int64_t BLOCK_BYTE = 512;
 const string MEDIA_QUERYOPRN_QUERYVOLUME = "query_media_volume";
 const string MULTI_USER_URI_FLAG = "user=";
-constexpr int DECIMAL_PLACE = 2;
-constexpr double TO_MB = 1000.0 * 1000.0;
 const int64_t MAX_INT64 = std::numeric_limits<int64_t>::max();
 #ifdef STORAGE_SERVICE_GRAPHIC
 const int MEDIA_TYPE_IMAGE = 1;
@@ -257,13 +255,6 @@ int32_t StorageStatusManager::GetMediaAndFileStorageStats(int32_t userId, Storag
         return err;
     }
     return err;
-}
-
-std::string StorageStatusManager::ConvertBytesToMB(int64_t bytes)
-{
-    std::ostringstream oss;
-    oss << std::fixed << std::setprecision(DECIMAL_PLACE) << static_cast<double>(bytes) / TO_MB << "MB";
-    return oss.str();
 }
 
 int32_t StorageStatusManager::GetBundleNameAndUid(int32_t userId, std::map<int32_t, std::string> &bundleNameAndUid)
@@ -520,8 +511,6 @@ std::string StorageStatusManager::GetCallingBundleName()
     }
     return "";
 }
-
-
 
 static uint64_t GetCurrentTimeSeconds()
 {

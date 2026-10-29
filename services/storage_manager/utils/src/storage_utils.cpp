@@ -18,6 +18,7 @@
 #include <climits>
 #include <cstdlib>
 #include <regex>
+#include "os_account_manager.h"
 
 #include "ipc_skeleton.h"
 #include "storage_service_log.h"
@@ -114,7 +115,27 @@ bool IsFilePathInvalid(const std::string &filePath)
     return false;
 }
 
+bool IsUserUnlocked(int32_t userId)
+{
+    bool isUserUnlocked = false;
+    ErrCode ret = AccountSA::OsAccountManager::IsOsAccountVerified(userId, isUserUnlocked);
+    if (ret != ERR_OK) {
+        LOGE("IsOsAccountVerified failed, ret: %{public}d", ret);
+        return false;
+    }
+    return isUserUnlocked;
+}
 
+int32_t GetForegroundUserIDFromOs()
+{
+    int32_t foregroundId = INVALID_USER_ID;
+    int32_t res = OHOS::AccountSA::OsAccountManager::GetForegroundOsAccountLocalId(foregroundId);
+    if (res != ERR_OK || foregroundId == INVALID_USER_ID) {
+        LOGE("GetForegroundId failed, res:%{public}d", res);
+        return INVALID_USER_ID;
+    }
+    return foregroundId;
+}
 
 bool IsPathStartWithDlp(const std::string &dstPath)
 {

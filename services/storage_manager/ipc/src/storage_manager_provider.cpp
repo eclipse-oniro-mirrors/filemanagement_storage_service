@@ -19,7 +19,6 @@
 #include <cstdlib>
 
 #include "utils/storage_radar.h"
-#include <nlohmann/json.hpp>
 #include <singleton.h>
 #include <regex>
 #ifdef STORAGE_STATISTICS_MANAGER

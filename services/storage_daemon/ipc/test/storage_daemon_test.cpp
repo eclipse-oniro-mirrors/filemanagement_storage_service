@@ -797,6 +797,23 @@ HWTEST_F(StorageDaemonTest, StorageDaemonTest_GenerateUserKeys_001, TestSize.Lev
 
 #ifdef USER_CRYPTO_MIGRATE_KEY
 /**
+ * @tc.name: StorageDaemonTest_GetNeedRestoreVersion_FileNotExist
+ * @tc.desc: Verify GetNeedRestoreVersion when need_restore file not exist (if(!isRead) branch)
+ * @tc.type: FUNC
+ * @tc.require: AR000H09L6
+ */
+HWTEST_F(StorageDaemonTest, StorageDaemonTest_GetNeedRestoreVersion_FileNotExist, TestSize.Level1)
+{
+    ASSERT_TRUE(storageDaemon_ != nullptr);
+
+    EXPECT_CALL(*keyManagerMock_, GetKeyDirByUserAndType(userId_, EL1_KEY))
+        .WillOnce(Return("/data/test/need_restore_notexist_xyz"));
+    // need_restore file does not exist → LoadStringFromFile fails → if(!isRead) → default "3"
+    auto version = storageDaemon_->GetNeedRestoreVersion(userId_, EL1_KEY);
+    EXPECT_EQ(version, "3");
+}
+
+/**
  * @tc.name: StorageDaemonTest_PrepareUserDirsAndUpdateUserAuth_001
  * @tc.desc: Verify the PrepareUserDirsAndUpdateUserAuth  when return UpdateUserAuthOld.
  * @tc.type: FUNC
@@ -1366,6 +1383,7 @@ HWTEST_F(StorageDaemonTest, StorageDaemonTest_ActiveUserKeyAndPrepare_003, TestS
 
 #ifdef USER_CRYPTO_MANAGER
     EXPECT_CALL(*keyManagerMock_, ActiveCeSceSeceUserKey(_, _, _, _)).WillRepeatedly(Return(-ENOENT));
+    EXPECT_CALL(*keyManagerMock_, DoDeleteUserCeEceSeceKeys(_, _, _)).WillRepeatedly(Return(E_OK));
     EXPECT_CALL(*keyManagerMock_, GenerateUserKeyByType(_, _, _, _)).WillOnce(Return(E_ERR)).WillOnce(Return(E_OK));
     EXPECT_CALL(*userManagerMock_, PrepareUserDirs(_, _)).WillOnce(Return(E_OK));
  
@@ -1439,6 +1457,46 @@ HWTEST_F(StorageDaemonTest, StorageDaemonTest_ActiveUserKeyAndPrepare_005, TestS
  
     EXPECT_EQ(storageDaemon_->ActiveUserKeyAndPrepare(userId_, EL1_KEY, token_, secret_), E_OK);
 #endif
+#endif
+}
+
+/**
+ * @tc.name: StorageDaemonTest_ActiveUserKeyAndPrepare_006
+ * @tc.desc: Verify EL5 does not call DoDeleteUserCeEceSeceKeys in -ENOENT branch
+ * @tc.type: FUNC
+ * @tc.require: AR000H09L6
+ */
+HWTEST_F(StorageDaemonTest, StorageDaemonTest_ActiveUserKeyAndPrepare_006, TestSize.Level1)
+{
+    ASSERT_TRUE(storageDaemon_ != nullptr);
+
+#ifdef USER_CRYPTO_MANAGER
+    EXPECT_CALL(*keyManagerMock_, ActiveCeSceSeceUserKey(_, _, _, _)).WillOnce(Return(-ENOENT));
+    // EL5 should NOT call DoDeleteUserCeEceSeceKeys (special handling via CheckAndDeleteEmptyEl5Directory)
+    EXPECT_CALL(*keyManagerMock_, DoDeleteUserCeEceSeceKeys(_, _, _)).Times(0);
+    EXPECT_CALL(*keyManagerMock_, GenerateUserKeyByType(_, _, _, _)).WillOnce(Return(E_ERR));
+
+    EXPECT_EQ(storageDaemon_->ActiveUserKeyAndPrepare(userId_, EL5_KEY, token_, secret_), E_ERR);
+#endif
+}
+
+/**
+ * @tc.name: StorageDaemonTest_ActiveUserKeyAndPrepare_007
+ * @tc.desc: Verify DoDeleteUserCeEceSeceKeys failure does not block GenerateKeyAndPrepareUserDirs
+ * @tc.type: FUNC
+ * @tc.require: AR000H09L6
+ */
+HWTEST_F(StorageDaemonTest, StorageDaemonTest_ActiveUserKeyAndPrepare_007, TestSize.Level1)
+{
+    ASSERT_TRUE(storageDaemon_ != nullptr);
+
+#ifdef USER_CRYPTO_MANAGER
+    EXPECT_CALL(*keyManagerMock_, ActiveCeSceSeceUserKey(_, _, _, _)).WillOnce(Return(-ENOENT));
+    // DoDelete fails but should not block (continue to GenerateKeyAndPrepareUserDirs)
+    EXPECT_CALL(*keyManagerMock_, DoDeleteUserCeEceSeceKeys(_, _, _)).WillOnce(Return(E_CLEAR_KEY_FAILED));
+    EXPECT_CALL(*keyManagerMock_, GenerateUserKeyByType(_, _, _, _)).WillOnce(Return(E_ERR));
+
+    EXPECT_EQ(storageDaemon_->ActiveUserKeyAndPrepare(userId_, EL1_KEY, token_, secret_), E_ERR);
 #endif
 }
 
@@ -1999,6 +2057,27 @@ HWTEST_F(StorageDaemonTest, StorageDaemonTest_EraseAllUserEncryptedKeys_002, Tes
     auto ret = storageDaemon_->EraseAllUserEncryptedKeys(localIdList);
     EXPECT_EQ(ret, E_OK);
     GTEST_LOG_(INFO) << "StorageDaemonTest_EraseAllUserEncryptedKeys_002 end";
+}
+#endif
+
+#ifdef USER_CRYPTO_MIGRATE_KEY
+/**
+ * @tc.name: StorageDaemon_GetNeedRestoreVersion_FileNotExist_DefaultVersion3
+ * @tc.desc: GetNeedRestoreVersion returns default "3" when file not exist
+ * @tc.type: FUNC
+ */
+HWTEST_F(StorageDaemonTest, StorageDaemon_GetNeedRestoreVersion_FileNotExist_DefaultVersion3,
+    TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemon_GetNeedRestoreVersion_FileNotExist_DefaultVersion3 start";
+
+    EXPECT_CALL(*keyManagerMock_, GetKeyDirByUserAndType(StorageService::MAX_USER_ID, EL1_KEY))
+        .WillOnce(Return("/data/test/need_restore_notexist_max"));
+    // need_restore file does not exist, should return default "3"
+    std::string result = storageDaemon_->GetNeedRestoreVersion(StorageService::MAX_USER_ID, EL1_KEY);
+    EXPECT_EQ(result, "3");
+
+    GTEST_LOG_(INFO) << "StorageDaemon_GetNeedRestoreVersion_FileNotExist_DefaultVersion3 end";
 }
 #endif
 } // Test

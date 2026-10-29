@@ -16,11 +16,8 @@
 #ifndef OHOS_STORAGE_MANAGER_STORAGE_STATUS_MANAGER_H
 #define OHOS_STORAGE_MANAGER_STORAGE_STATUS_MANAGER_H
 
-#include <iostream>
 #include <map>
-#include <sstream>
 #include <singleton.h>
-#include <thread>
 
 #include "bundle_stats.h"
 #include "ext_bundle_stats.h"
@@ -53,7 +50,6 @@ public:
 private:
     StorageStatusManager();
     ~StorageStatusManager();
-    std::string ConvertBytesToMB(int64_t bytes);
     std::string GetCallingPkgName();
     int32_t GetAppSize(int32_t userId, int64_t &size);
     const std::vector<std::string> dataDir = {"app", "local", "distributed", "database", "cache"};

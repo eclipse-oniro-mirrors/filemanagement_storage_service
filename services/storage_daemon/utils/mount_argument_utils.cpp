@@ -73,9 +73,6 @@ string MountArgument::GetShareSrc() const
     return ss.str();
 }
 
-
-
-
 string MountArgument::GetShareDst() const
 {
     LOGD("[L8:MountArgumentUtils] GetShareDst: >>> ENTER <<< userId=%{public}d", userId_);
@@ -84,14 +81,6 @@ string MountArgument::GetShareDst() const
 
     return ss.str();
 }
-
-
-
-
-
-
-
-
 
 string MountArgument::GetCachePath() const
 {
@@ -144,12 +133,6 @@ std::string MountArgument::GetSandboxPath() const
     return ss.str();
 }
 
-
-
-
-
-
-
 string MountArgument::GetSharefsDocCurPath() const
 {
     LOGD("[L8:MountArgumentUtils] GetSharefsDocCurPath: >>> ENTER <<< userId=%{public}d", userId_);
@@ -173,10 +156,6 @@ string MountArgument::GetMntUserPath() const
     ss << MNT_USER_PATH << userId_;
     return ss.str();
 }
-
-
-
-
 
 #ifdef STORAGE_SERVICE_MEDIA_FUSE
 string MountArgument::GetFullMediaFuse() const

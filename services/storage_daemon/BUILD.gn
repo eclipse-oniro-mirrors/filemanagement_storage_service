@@ -185,6 +185,7 @@ ohos_executable("storage_daemon") {
   if (enable_disk_manager) {
     defines += [ "DISK_MANAGER" ]
     sources += [
+      "disk_manager/src/disk/disk_utils.cpp",
       "disk_manager/src/volume/volume_utils.cpp",
       "disk_manager/src/disk/scan_device.cpp",
       "disk_manager/src/disk/dm_device.cpp",

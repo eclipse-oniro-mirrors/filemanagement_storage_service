@@ -19,6 +19,7 @@
 #include <regex>
 #include "crypto/key_manager.h"
 #include "utils/storage_radar.h"
+#include "utils/hi_audit.h"
 #include "parameter.h"
 #include "parameters.h"
 #include "quota/quota_manager.h"
@@ -806,6 +807,10 @@ int32_t MountManager::MountDfsDocs(int32_t userId, const std::string &relativePa
     LOGI("[L2:MountManager] MountDfsDocs: >>> ENTER <<< userId=%{public}d, relativePath=%{public}s",
         userId, relativePath.c_str());
     std::string dstPath = StringPrintf("/mnt/data/%d/hmdfs/%s/", userId, deviceId.c_str());
+    if (ContainsInvalidChars(dstPath)) {
+        LOGE("[L2:MountManager] MountDfsDocs: <<< EXIT FAILED <<< invalid dstPath");
+        return E_PARAMS_INVALID;
+    }
     if (!PrepareDir(dstPath, MODE_0711, OID_FILE_MANAGER, OID_FILE_MANAGER)) {
         LOGE("[L2:MountManager] MountDfsDocs: <<< EXIT FAILED <<< PrepareDir failed");
         return E_PREPARE_DIR;
@@ -819,7 +824,7 @@ int32_t MountManager::MountDfsDocs(int32_t userId, const std::string &relativePa
 
     Utils::MountArgument hmdfsMntArgs(Utils::MountArgumentDescriptors::Alpha(userId, relativePath));
     std::string srcPath = hmdfsMntArgs.GetFullDst() + "/device_view/" + networkId + "/files/Docs/";
-    if (IsFilePathInvalid(srcPath)) {
+    if (ContainsInvalidChars(srcPath)) {
         LOGE("[L2:MountManager] MountDfsDocs: <<< EXIT FAILED <<< invalid srcPath");
         return E_PARAMS_INVALID;
     }
@@ -1011,11 +1016,13 @@ int32_t MountManager::MountAppdata(int32_t userId, bool beforeStartup)
 int32_t MountManager::PrepareAppdataDir(int32_t userId)
 {
     LOGI("[L2:MountManager] PrepareAppdataDir: >>> ENTER <<< userId=%{public}d", userId);
+    HiAudit::GetInstance().WriteStart("PrepareAppdataDir", "userId=" + std::to_string(userId));
     if (userId == 0) {
         std::vector<int32_t> userIds;
         GetAllUserId(userIds);
         if (userIds.empty()) {
             LOGI("[L2:MountManager] PrepareAppdataDir: <<< EXIT SUCCESS <<< userIds empty");
+            HiAudit::GetInstance().WriteEnd("PrepareAppdataDir", E_OK, "userIds empty");
             return E_OK;
         }
         for (const int32_t &item: userIds) {
@@ -1025,6 +1032,7 @@ int32_t MountManager::PrepareAppdataDir(int32_t userId)
         PrepareAppdataDirByUserId(userId);
     }
     LOGI("[L2:MountManager] PrepareAppdataDir: <<< EXIT SUCCESS <<< userId=%{public}d", userId);
+    HiAudit::GetInstance().WriteEnd("PrepareAppdataDir", E_OK);
     return E_OK;
 }
 
@@ -1354,42 +1362,5 @@ void MountManager::FindProcForMulti(const std::string &pidPath, const std::strin
         CheckSymlinkForMulti(fdPath + FILE_SEPARATOR_CHAR + fdDirent->d_name, path, occupyFiles);
     }
 }
-
-int32_t MountManager::InitSecondMountBundleName(uint32_t userId)
-{
-    LOGI("[L2:MountManager] InitSecondMountBundleName: >>> ENTER <<< userId=%{public}u", userId);
-    filesystem::path sandboxRootDir(SANDBOX_ROOT_PATH + to_string(userId));
-    std::error_code errCode;
-    if (!exists(sandboxRootDir, errCode)) {
-        std::string extraData = "sandbox dir not exist,kernelCode=" + to_string(errCode.value());
-        StorageRadar::ReportUserManager("InitSecondMountBundleName", DEFAULT_USERID, E_UMOUNT_SANDBOX, extraData);
-        LOGE("[L2:MountManager] InitSecondMountBundleName: <<< EXIT FAILED <<< root path not exists, errno=%{public}d",
-            errCode.value());
-        return E_ERR;
-    }
-    filesystem::directory_iterator bundleNameList(sandboxRootDir);
-    std::vector<std::string> bundles;
-    std::string bundleSuffix = MOUNT_SUFFIX;
-    for (const auto &bundle : bundleNameList) {
-        std::string bundleName = bundle.path().filename().generic_string();
-        if (bundleName.length() <= bundleSuffix.length()) {
-            continue;
-        }
-        std::string::size_type point = bundleName.rfind(bundleSuffix);
-        if (point != bundleName.length() - bundleSuffix.length()) {
-            continue;
-        }
-        bundleName = bundleName.substr(0, point);
-        if (std::find(bundles.begin(), bundles.end(), bundleName) != bundles.end()) {
-            continue;
-        }
-        bundles.emplace_back(bundleName);
-    }
-    secondMountBundleNameMap_[userId] = bundles;
-    LOGI("[L2:MountManager] InitSecondMountBundleName: <<< EXIT SUCCESS <<< userId=%{public}u,"
-        "bundles.size()=%{public}zu", userId, bundles.size());
-    return E_OK;
-}
-
 } // namespace StorageDaemon
 } // namespace OHOS

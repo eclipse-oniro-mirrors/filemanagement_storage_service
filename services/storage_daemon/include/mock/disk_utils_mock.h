@@ -38,12 +38,10 @@ public:
     virtual std::string GetAnonyString(const std::string &value) = 0;
     virtual std::string GetCDType(const std::string &diskPath) = 0;
     virtual std::string GetOpticalDriveType(const std::string &diskPath) = 0;
-    virtual int GetOpticalDriveMaxWriteSpeed(const std::string &diskPath, int32_t &maxWriteSpeed) = 0;
     virtual int GetCDStatus(const char *device, int &status) = 0;
     virtual int GetCdTotalCapacity(int fd, int64_t &cdTotalCapacity) = 0;
     virtual int GetDiscUsedCapacity(int fd, int64_t totalSize, int64_t &discUsedCapacity) = 0;
     virtual int GetDvdTotalCapacity(int fd, int64_t &dvdTotalCapacity) = 0;
-    virtual int GetDvdUsedCapacity(int fd, int64_t &dvdUsedCapacity) = 0;
     virtual int GetDvdPlusRwTotalCapacity(int fd, int64_t &dvdTotalCapacity) = 0;
     virtual int GetBdTotalCapacity(int fd, int64_t &bdTotalCapacity) = 0;
     virtual int GetDvdConfiguration(int fd, int &dvdMedia) = 0;
@@ -89,12 +87,10 @@ public:
     MOCK_METHOD1(GetAnonyString, std::string(const std::string &value));
     MOCK_METHOD1(GetCDType, std::string(const std::string &diskPath));
     MOCK_METHOD1(GetOpticalDriveType, std::string(const std::string &diskPath));
-    MOCK_METHOD2(GetOpticalDriveMaxWriteSpeed, int(const std::string &diskPath, int32_t &maxWriteSpeed));
     MOCK_METHOD2(GetCDStatus, int(const char *device, int &status));
     MOCK_METHOD2(GetCdTotalCapacity, int(int fd, int64_t &cdTotalCapacity));
     MOCK_METHOD3(GetDiscUsedCapacity, int(int fd, int64_t totalSize, int64_t &discUsedCapacity));
     MOCK_METHOD2(GetDvdTotalCapacity, int(int fd, int64_t &dvdTotalCapacity));
-    MOCK_METHOD2(GetDvdUsedCapacity, int(int fd, int64_t &dvdUsedCapacity));
     MOCK_METHOD2(GetDvdPlusRwTotalCapacity, int(int fd, int64_t &dvdTotalCapacity));
     MOCK_METHOD2(GetBdTotalCapacity, int(int fd, int64_t &bdTotalCapacity));
     MOCK_METHOD2(GetDvdConfiguration, int(int fd, int &dvdMedia));
