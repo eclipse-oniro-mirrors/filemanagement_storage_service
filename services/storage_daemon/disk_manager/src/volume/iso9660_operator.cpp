@@ -21,7 +21,6 @@
 #include "utils/string_utils.h"
 
 #include <cerrno>
-#include <sys/mount.h>
 #include <map>
 #include <sstream>
 #include <vector>
@@ -519,16 +518,6 @@ std::map<std::string, std::string> IsoOperator::ParseChecksumFile(
     }
 
     return checksumMap;
-}
-
-void IsoOperator::LogChecksumMap(const std::string& mapName,
-                                 const std::map<std::string, std::string>& map)
-{
-    LOGI("LogChecksumMap: %{public}s contents:", mapName.c_str());
-    for (const auto& pair : map) {
-        LOGI("LogChecksumMap:   [%{public}s] = [%{public}s]",
-             GetAnonyString(pair.first).c_str(), GetAnonyString(pair.second).c_str());
-    }
 }
 
 int32_t IsoOperator::CompareChecksums(

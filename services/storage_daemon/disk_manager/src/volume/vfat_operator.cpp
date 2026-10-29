@@ -20,7 +20,6 @@
 
 #include <cerrno>
 #include <sys/mount.h>
-#include <unistd.h>
 
 namespace OHOS {
 namespace StorageDaemon {

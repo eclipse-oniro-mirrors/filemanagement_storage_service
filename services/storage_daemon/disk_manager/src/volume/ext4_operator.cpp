@@ -19,7 +19,6 @@
 #include "utils/file_utils.h"
 
 #include <sys/mount.h>
-#include <unistd.h>
 
 namespace OHOS {
 namespace StorageDaemon {

@@ -16,7 +16,6 @@
 #include "utils/mount_argument_utils.h"
 
 #include <sstream>
-#include <sys/mount.h>
 #include <sys/stat.h>
 
 #include "storage_service_log.h"

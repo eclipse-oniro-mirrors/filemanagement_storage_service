@@ -108,10 +108,7 @@ private:
     int32_t FilterNotMountedPath(std::map<std::string, std::string> &notMountPaths);
     bool MatchesDisSharePath(const std::string &dstPath);
     bool RemoveDisSharePath(const std::string &dstPath, const std::string &networkId);
-    int32_t IsBundleNeedClear(uint32_t userId, const std::string &bundleName);
     int32_t InitSecondMountBundleName(uint32_t userId);
-    void RemoveBundleNameFromMap(uint32_t userId, const std::string &bundleName);
-    void ClearSecondMountMap(uint32_t userId);
 
     DISALLOW_COPY_AND_MOVE(MountManager);
 

@@ -19,7 +19,6 @@
 #include <fcntl.h>
 #include <filesystem>
 #include <regex>
-#include <sys/stat.h>
 #include <unistd.h>
 
 #include "parameter.h"

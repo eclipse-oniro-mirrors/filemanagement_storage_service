@@ -19,19 +19,14 @@
 #include <climits>
 #include <csignal>
 #include <dlfcn.h>
-#include <fcntl.h>
 #include <regex>
 #include <sstream>
-#include <sys/mount.h>
-#include <sys/resource.h>
-#include <sys/syscall.h>
 #include <thread>
 #include <unistd.h>
 
 #ifdef USER_CRYPTO_MANAGER
 #include "crypto/app_clone_key_manager.h"
 #include "crypto/iam_client.h"
-#include "crypto/key_crypto_utils.h"
 #include "crypto/key_manager.h"
 #endif
 #ifdef EXTERNAL_STORAGE_MANAGER
@@ -41,14 +36,10 @@
 #include "disk/disk_manager.h"
 #include "disk_manager/volume/volume_utils.h"
 #endif
-#include "file_ex.h"
-#include "file_sharing/file_sharing.h"
 #include "hi_audit.h"
 #include "ipc_skeleton.h"
-#include "securec.h"
 #include "storage_service_errno.h"
 #include "storage_service_log.h"
-#include "string_ex.h"
 #include "system_ability_definition.h"
 #include "user/mount_manager.h"
 #include "user/system_mount_manager.h"
@@ -56,7 +47,6 @@
 #include "utils/storage_radar.h"
 #include "utils/storage_xcollie.h"
 #include "utils/string_utils.h"
-#include "utils/disk_utils.h"
 #include "utils/file_utils.h"
 #ifdef DISK_MANAGER
 #include <sys/sysmacros.h>

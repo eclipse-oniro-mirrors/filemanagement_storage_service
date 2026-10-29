@@ -19,8 +19,6 @@
 #include <fcntl.h>
 #include <filesystem>
 #include <sys/ioctl.h>
-#include <sys/stat.h>
-#include <unistd.h>
 
 namespace OHOS {
 namespace StorageService {

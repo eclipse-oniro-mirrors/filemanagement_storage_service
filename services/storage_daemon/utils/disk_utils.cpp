@@ -18,8 +18,6 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
-#include <fcntl.h>
-#include <getopt.h>
 #include <iomanip>
 #include <linux/cdrom.h>
 #include <regex>
@@ -27,7 +25,6 @@
 #include <cinttypes>
 #include <scsi/sg.h>
 #include <sys/ioctl.h>
-#include <sys/stat.h>
 #include <sys/sysmacros.h>
 #include <unistd.h>
 

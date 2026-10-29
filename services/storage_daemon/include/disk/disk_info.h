@@ -36,9 +36,6 @@ public:
     DiskInfo(std::string &diskName, std::string &sysPath_, std::string &devPath_, dev_t device, int diskType);
     virtual ~DiskInfo();
     std::string GetDiskId() const;
-    std::string GetDevPath() const;
-    std::string GetSysPath() const;
-    int32_t GetDiskType() const;
     std::string GetDiskName() const;
 
 private:

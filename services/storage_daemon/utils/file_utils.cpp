@@ -28,7 +28,6 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include "file_ex.h"
-#include "parameters.h"
 #include "securec.h"
 #include "storage_service_errno.h"
 #include "storage_service_log.h"

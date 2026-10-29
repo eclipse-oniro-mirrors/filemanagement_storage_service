@@ -18,7 +18,6 @@
 #include <climits>
 #include <cstdlib>
 #include <regex>
-#include "os_account_manager.h"
 
 #include "ipc_skeleton.h"
 #include "storage_service_log.h"

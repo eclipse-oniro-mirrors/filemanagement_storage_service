@@ -20,7 +20,6 @@
 
 #ifdef EXTERNAL_STORAGE_MANAGER
 #include "disk/disk_config.h"
-#include "disk/disk_info.h"
 #include "disk/disk_manager.h"
 #include "netlink/netlink_manager.h"
 #endif

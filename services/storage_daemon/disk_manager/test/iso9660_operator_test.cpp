@@ -732,14 +732,6 @@ HWTEST_F(IsoOperatorTest, IsoOperator_ParseChecksumFile_NoDoubleSpace, TestSize.
     EXPECT_EQ(result.size(), 0u);
 }
 
-HWTEST_F(IsoOperatorTest, IsoOperator_LogChecksumMap_Basic, TestSize.Level1)
-{
-    IsoOperator op;
-    std::map<std::string, std::string> mapData = {{"/f", "h"}};
-    EXPECT_CALL(*diskUtilMoc_, GetAnonyString(_)).WillRepeatedly(Return("anon"));
-    op.LogChecksumMap("testMap", mapData);
-}
-
 HWTEST_F(IsoOperatorTest, IsoOperator_CompareChecksums_FileNotFound, TestSize.Level1)
 {
     IsoOperator op;

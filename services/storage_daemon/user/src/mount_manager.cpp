@@ -18,7 +18,6 @@
 #include <fcntl.h>
 #include <regex>
 #include "crypto/key_manager.h"
-#include "utils/disk_utils.h"
 #include "utils/storage_radar.h"
 #include "parameter.h"
 #include "parameters.h"
@@ -1392,51 +1391,5 @@ int32_t MountManager::InitSecondMountBundleName(uint32_t userId)
     return E_OK;
 }
 
-int32_t MountManager::IsBundleNeedClear(uint32_t userId, const std::string &bundleName)
-{
-    LOGI("[L2:MountManager] IsBundleNeedClear: >>> ENTER <<< userId=%{public}u, bundle=%{public}s",
-        userId, bundleName.c_str());
-    std::lock_guard<std::mutex> lock(secondMountMutex_);
-    if (secondMountBundleNameMap_.find(userId) == secondMountBundleNameMap_.end()) {
-        if (InitSecondMountBundleName(userId) != E_OK) {
-            LOGE("[L2:MountManager] IsBundleNeedClear: <<< EXIT FAILED <<< InitSecondMountBundleName failed");
-            return E_UMOUNT_SANDBOX;
-        }
-    }
-    std::vector<std::string> bundles = secondMountBundleNameMap_.at(userId);
-    if (std::find(bundles.begin(), bundles.end(), bundleName) == bundles.end()) {
-        LOGE("[L2:MountManager] IsBundleNeedClear: <<< EXIT SUCCESS <<< bundle not need clear");
-        return E_NOT_NEED_CLEAR_SECOND_MOUNT_POINT;
-    }
-    LOGI("[L2:MountManager] IsBundleNeedClear: <<< EXIT SUCCESS <<< bundle needs clear");
-    return E_OK;
-}
-
-void MountManager::RemoveBundleNameFromMap(uint32_t userId, const std::string &bundleName)
-{
-    LOGI("[L2:MountManager] RemoveBundleNameFromMap: >>> ENTER <<< userId=%{public}u, bundle=%{public}s",
-        userId, bundleName.c_str());
-    std::lock_guard<std::mutex> lock(secondMountMutex_);
-    if (secondMountBundleNameMap_.find(userId) == secondMountBundleNameMap_.end()) {
-        LOGI("[L2:MountManager] RemoveBundleNameFromMap: <<< EXIT SUCCESS <<< userId not found in map");
-        return;
-    }
-    std::vector<std::string> bundles = secondMountBundleNameMap_.at(userId);
-    bundles.erase(std::remove(bundles.begin(), bundles.end(), bundleName), bundles.end());
-    secondMountBundleNameMap_[userId] = bundles;
-    LOGI("[L2:MountManager] RemoveBundleNameFromMap: <<< EXIT SUCCESS <<< userId=%{public}u, bundle=%{public}s",
-        userId, bundleName.c_str());
-}
-
-void MountManager::ClearSecondMountMap(uint32_t userId)
-{
-    LOGI("[L2:MountManager] ClearSecondMountMap: >>> ENTER <<< userId=%{public}u", userId);
-    std::lock_guard<std::mutex> lock(secondMountMutex_);
-    if (secondMountBundleNameMap_.find(userId) != secondMountBundleNameMap_.end()) {
-        LOGE("[L2:MountManager] ClearSecondMountMap: clearing second mount map, userId=%{public}d", userId);
-        secondMountBundleNameMap_.erase(userId);
-    }
-    LOGI("[L2:MountManager] ClearSecondMountMap: <<< EXIT SUCCESS <<< userId=%{public}u", userId);
-}
 } // namespace StorageDaemon
 } // namespace OHOS

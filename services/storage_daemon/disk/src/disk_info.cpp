@@ -36,21 +36,6 @@ std::string DiskInfo::GetDiskId() const
     return diskId_;
 }
 
-std::string DiskInfo::GetDevPath() const
-{
-    return devPath_;
-}
-
-std::string DiskInfo::GetSysPath() const
-{
-    return sysPath_;
-}
-
-int32_t DiskInfo::GetDiskType() const
-{
-    return diskType_;
-}
-
 std::string DiskInfo::GetDiskName() const
 {
     return diskName_;
