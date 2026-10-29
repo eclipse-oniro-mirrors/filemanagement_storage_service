@@ -12,51 +12,46 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "storagedaemonproviderejectcd_fuzzer.h"
+#include "storagemanagerproviderumountudmfclipfuse_fuzzer.h"
 
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <string>
-#include <vector>
+#include <system_ability_definition.h>
 
-#include "fuzzer/FuzzedDataProvider.h"
+#include "ipc/storage_manager_provider.h"
 #include "message_parcel.h"
-#include "storage_daemon_provider.h"
-#include "storage_daemon_stub.h"
+#include "securec.h"
+#include "storage_manager_stub.h"
 
-using namespace OHOS::StorageDaemon;
+using namespace OHOS::StorageManager;
+namespace OHOS::StorageManager {
+std::shared_ptr<StorageManagerProvider> storageManagerProvider =
+    std::make_shared<StorageManagerProvider>(STORAGE_MANAGER_MANAGER_ID);
 
-namespace OHOS {
-
-static const int32_t MAX_PATH_LENGTH = 64;
-
-std::shared_ptr<StorageDaemonProvider> storageDaemonProvider =
-    std::make_shared<StorageDaemonProvider>();
-
-bool EjectCDFuzzTest(const uint8_t *data, size_t size)
+bool UMountUdmfClipFuseFuzzTest(const uint8_t *data, size_t size)
 {
-    if ((data == nullptr) || (size == 0)) {
-        return false;
-    }
-    FuzzedDataProvider fdp(data, size);
-    uint32_t code = static_cast<uint32_t>(IStorageDaemonIpcCode::COMMAND_EJECT_C_D);
+    uint32_t code = static_cast<uint32_t>(IStorageManagerIpcCode::COMMAND_UMOUNT_UDMF_CLIP_FUSE);
     MessageParcel datas;
-    datas.WriteInterfaceToken(StorageDaemonStub::GetDescriptor());
-    datas.WriteString(fdp.ConsumeRandomLengthString(MAX_PATH_LENGTH));
+    datas.WriteInterfaceToken(StorageManagerStub::GetDescriptor());
+    datas.WriteBuffer(data, size);
     datas.RewindRead(0);
     MessageParcel reply;
     MessageOption option;
 
-    storageDaemonProvider->OnRemoteRequest(code, datas, reply, option);
+    storageManagerProvider->OnRemoteRequest(code, datas, reply, option);
     return true;
 }
+} // namespace OHOS::StorageManager
 
-} // namespace OHOS
 
 /* Fuzzer entry point */
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 {
-    OHOS::EjectCDFuzzTest(data, size);
+    if (data == nullptr) {
+        return 0;
+    }
+
+    OHOS::StorageManager::UMountUdmfClipFuseFuzzTest(data, size);
     return 0;
 }

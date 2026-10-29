@@ -129,7 +129,7 @@ DeviceType MtpDeviceMonitor::GetDeviceType(uint8_t deviceClass, uint16_t vendorI
         return DeviceType::MOBILE;
     }
 
-    LOGI("[L2:MtpDeviceMonitor] GetDeviceType: unknown device type, VID=%{public}04x, PID=%{public}04x", vendorId,
+    LOGW("[L2:MtpDeviceMonitor] GetDeviceType: unknown device type, VID=%{public}04x, PID=%{public}04x", vendorId,
         productId);
     return DeviceType::UNKNOWN;
 }
@@ -169,6 +169,12 @@ int32_t MtpDeviceMonitor::GetMtpDevices(std::vector<MtpDeviceInfo> &devInfos, ui
             free(static_cast<void *>(rawDevices));
         }
         LOGE("[L2:MtpDeviceMonitor] GetMtpDevices: <<< EXIT FAILED <<< no device attached");
+        // NO_DEVICE_ATTACHED: device not authorized or MTP mode not selected, which is a normal
+        // state; only libmtp stack errors are reported as faults
+        if (err != LIBMTP_ERROR_NO_DEVICE_ATTACHED) {
+            StorageService::StorageRadar::ReportMtpResult("GetMtpDevices", E_MTP_MOUNT_FAILED,
+                "bus=" + std::to_string(busLocation) + ",dev=" + std::to_string(devNum));
+        }
         return E_MTP_MOUNT_FAILED;
     }
 
@@ -181,7 +187,7 @@ int32_t MtpDeviceMonitor::GetMtpDevices(std::vector<MtpDeviceInfo> &devInfos, ui
 
         if (busLocation != 0 || devNum != 0) {
             if (rawDevice->bus_location != busLocation || rawDevice->devnum != devNum) {
-                LOGI("[L2:MtpDeviceMonitor] GetMtpDevices: device skip,"
+                LOGE("[L2:MtpDeviceMonitor] GetMtpDevices: device skip,"
                      "actual busLocation=%{public}u, devNum=%{public}u", rawDevice->bus_location, rawDevice->devnum);
                 continue;
             }
@@ -200,6 +206,7 @@ int32_t MtpDeviceMonitor::GetMtpDevices(std::vector<MtpDeviceInfo> &devInfos, ui
 
     if (devInfos.empty()) {
         LOGE("[L2:MtpDeviceMonitor] GetMtpDevices: <<< EXIT FAILED <<< no matching device found");
+        StorageService::StorageRadar::ReportMtpResult("GetMtpDevices", E_MTP_MOUNT_FAILED, "no matching device");
         return E_MTP_MOUNT_FAILED;
     }
 
@@ -208,12 +215,13 @@ int32_t MtpDeviceMonitor::GetMtpDevices(std::vector<MtpDeviceInfo> &devInfos, ui
 }
 
 int32_t MtpDeviceMonitor::MountDeviceByType(DeviceType deviceType, std::vector<MtpDeviceInfo> &devInfos,
-                                            const std::string &deviceTypeName, uint32_t busLocation, uint8_t devNum)
+                                            uint32_t busLocation, uint8_t devNum, bool isFallback)
 {
+    const char *deviceTypeName = (deviceType == DeviceType::CAMERA) ? "camera" : "mobile";
     int32_t ret = E_MTP_MOUNT_FAILED;
     if (deviceType == DeviceType::CAMERA) {
 #ifdef SUPPORT_OPEN_SOURCE_GPHOTO2_DEVICE
-        ret = GetGphotoDevices(devInfos, busLocation, devNum);
+        ret = GetGphotoDevices(devInfos, busLocation, devNum, !isFallback);
 #else
         LOGE("[L2:MtpDeviceMonitor] MountDeviceByType: Camera device type not supported");
         return E_MTP_MOUNT_FAILED;
@@ -224,14 +232,14 @@ int32_t MtpDeviceMonitor::MountDeviceByType(DeviceType deviceType, std::vector<M
 
     if (ret == E_OK && !devInfos.empty()) {
         LOGI("[L2:MtpDeviceMonitor] MountDeviceByType:Mounting %{public}s device, count=%{public}zu",
-            deviceTypeName.c_str(), devInfos.size());
+            deviceTypeName, devInfos.size());
         ret = MountMtpDevice(devInfos);
         if (ret == E_OK) {
             SetPtpMode(devInfos, deviceType == DeviceType::CAMERA);
             return E_OK;
         }
     }
-    LOGE("[L2:MtpDeviceMonitor] MountDeviceByType:%{public}s device mount failed", deviceTypeName.c_str());
+    LOGE("[L2:MtpDeviceMonitor] MountDeviceByType:%{public}s device mount failed", deviceTypeName);
     return E_MTP_MOUNT_FAILED;
 }
 
@@ -263,17 +271,17 @@ void MtpDeviceMonitor::MountMtpDeviceByBroadcast(DeviceType deviceType, uint32_t
         "bus=%{public}u, dev=%{public}u", static_cast<int>(deviceType), busLocation, devNum);
 
     if (deviceType == DeviceType::CAMERA) {
-        int32_t ret = MountDeviceByType(DeviceType::CAMERA, devInfos, "camera", busLocation, devNum);
+        int32_t ret = MountDeviceByType(DeviceType::CAMERA, devInfos, busLocation, devNum);
         if (ret == E_OK) {
             return;
         }
-        LOGI("[L2:MtpDeviceMonitor] MountMtpDeviceByBroadcast: camera failed, fallback to mobile");
+        LOGW("[L2:MtpDeviceMonitor] MountMtpDeviceByBroadcast: camera failed, fallback to mobile, ret=%{public}d", ret);
         devInfos.clear();
-        MountDeviceByType(DeviceType::MOBILE, devInfos, "mobile", busLocation, devNum);
+        MountDeviceByType(DeviceType::MOBILE, devInfos, busLocation, devNum, true);
         return;
     }
     if (deviceType == DeviceType::MOBILE || deviceType == DeviceType::UNKNOWN) {
-        int32_t ret = MountDeviceByType(DeviceType::MOBILE, devInfos, "mobile", busLocation, devNum);
+        int32_t ret = MountDeviceByType(DeviceType::MOBILE, devInfos, busLocation, devNum);
         if (ret == E_OK) {
             return;
         }
@@ -281,8 +289,8 @@ void MtpDeviceMonitor::MountMtpDeviceByBroadcast(DeviceType deviceType, uint32_t
             LOGW("[L2:MtpDeviceMonitor] MountMtpDeviceByBroadcast: MTP detected, skip camera fallback");
             return;
         }
-        LOGI("[L2:MtpDeviceMonitor] MountMtpDeviceByBroadcast: mobile not detected, fallback to camera");
-        MountDeviceByType(DeviceType::CAMERA, devInfos, "camera", busLocation, devNum);
+        LOGW("MountMtpDeviceByBroadcast: mobile not detected, fallback to camera, ret=%{public}d", ret);
+        MountDeviceByType(DeviceType::CAMERA, devInfos, busLocation, devNum, true);
         return;
     }
 
@@ -347,7 +355,7 @@ int32_t MtpDeviceMonitor::MountMtpDevice(const std::vector<MtpDeviceInfo> &monit
             }
         }
         if (isInPendingList) {
-            LOGI("[L2:MtpDeviceMonitor] MountMtpDevice:Device already in pending list, skipping: id=%{public}s",
+            LOGW("[L2:MtpDeviceMonitor] MountMtpDevice:Device already in pending list, skipping: id=%{public}s",
                 device.id.c_str());
             continue;
         }
@@ -427,7 +435,7 @@ void MtpDeviceMonitor::UmountDetachedMtpDevice(uint32_t busLocation, uint8_t dev
         auto newPendingEnd = std::remove_if(pendingMtpDevList_.begin(), pendingMtpDevList_.end(),
             [busLocation, devNum](const MtpDeviceInfo& device) {
                 if (device.busLocation == busLocation && device.devNum == devNum) {
-                    LOGI("[L2:MtpDeviceMonitor] UmountDetachedMtpDevice:Removing pending device, id=%{public}s",
+                    LOGW("[L2:MtpDeviceMonitor] UmountDetachedMtpDevice:Removing pending device, id=%{public}s",
                         device.id.c_str());
                     return true;
                 }
@@ -439,7 +447,7 @@ void MtpDeviceMonitor::UmountDetachedMtpDevice(uint32_t busLocation, uint8_t dev
     for (const auto& device : devicesToUnmount) {
         int32_t ret = MtpDeviceManager::GetInstance().UmountDevice(device, true, true);
         if (ret == E_OK) {
-            LOGI("[L2:MtpDeviceMonitor] UmountDetachedMtpDevice:Successfully unmounted device");
+            LOGW("[L2:MtpDeviceMonitor] UmountDetachedMtpDevice:Successfully unmounted device");
         } else {
             LOGE("[L2:MtpDeviceMonitor] UmountDetachedMtpDevice:Umount mtp device failed, ret=%{public}d", ret);
             StorageService::StorageRadar::ReportMtpResult("UmountDetachedMtpDevice::UmountDevice", ret, "NA");
@@ -753,6 +761,8 @@ static void GenerateGphotoDeviceInfo(MtpDeviceInfo& devInfo, const char* portPat
     int dev = 0;
     if (!ParsePortPath(portPath, bus, dev)) {
         LOGE("[L2:MtpDeviceMonitor]GenerateGphotoDeviceInfo:ParsePortPath failed.");
+        StorageService::StorageRadar::ReportMtpResult("GenerateGphotoDeviceInfo", E_MTP_MOUNT_FAILED,
+            "ParsePortPath failed");
         return;
     }
     if (bus < MIN_VALUE || dev < MIN_VALUE || dev > MAX_VALUE) {
@@ -775,6 +785,8 @@ static void GenerateGphotoDeviceInfo(MtpDeviceInfo& devInfo, const char* portPat
     uint16_t vid = 0;
     uint16_t pid = 0;
     if (GetVidPidFromPortPath(portPath, vid, pid) != E_OK) {
+        StorageService::StorageRadar::ReportMtpResult("GenerateGphotoDeviceInfo", E_MTP_MOUNT_FAILED,
+            "GetVidPid failed");
         return;
     }
     devInfo.vendorId = vid;
@@ -794,7 +806,7 @@ static int32_t InitGphoto(GPContext* &context, CameraList* &list, Camera* &camer
     LOGI("[L2:MtpDeviceMonitor] InitGphoto: >>> ENTER <<<");
     context = gp_context_new();
     if (!context) {
-        LOGI("[L2:MtpDeviceMonitor] InitGphoto: context nullptr.");
+        LOGE("[L2:MtpDeviceMonitor] InitGphoto: context nullptr.");
         CleanupGphotoResources(context, list, camera);
         return E_MTP_MOUNT_FAILED;
     }
@@ -830,13 +842,16 @@ static int32_t InitGphoto(GPContext* &context, CameraList* &list, Camera* &camer
 }
 
 int32_t MtpDeviceMonitor::GetGphotoDevices(std::vector<MtpDeviceInfo> &devInfos,
-                                           uint32_t busLocation, uint8_t devNum)
+                                           uint32_t busLocation, uint8_t devNum, bool reportFault)
 {
     GPContext *context = nullptr;
     CameraList *list = nullptr;
     Camera *camera = nullptr;
     if (InitGphoto(context, list, camera) != E_OK) {
         LOGE("[L2:MtpDeviceMonitor] GetGphotoDevices: InitGphoto failed.");
+        if (reportFault) {
+            StorageService::StorageRadar::ReportMtpResult("GetGphotoDevices", E_MTP_MOUNT_FAILED, "InitGphoto failed");
+        }
         return E_MTP_MOUNT_FAILED;
     }
 

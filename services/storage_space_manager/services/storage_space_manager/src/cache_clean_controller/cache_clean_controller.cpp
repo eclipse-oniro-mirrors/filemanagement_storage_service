@@ -73,7 +73,7 @@ constexpr int32_t DEFAULT_CACHE_CLEAN_SPAN_HOURS = 168; // 7 days
 #endif
 constexpr mode_t CONFIG_DIR_MODE = 0755;
 constexpr int32_t JSON_INDENT = 4;
-constexpr uint64_t RECORD_DATA_AGING_TIME = 180LL * 24 * 60 * 60 * 1000;
+constexpr int64_t RECORD_DATA_AGING_TIME = 180LL * 24 * 60 * 60 * 1000;
 // Default quota config, used as fallback when GetQuotaByRank fails
 // e.g., the number in size_lowerlimit_0_upperlimit_256 is in GB
 //       tier units are MB, e.g. "top1-3": 750 means 750MB
@@ -362,7 +362,9 @@ int32_t CacheCleanController::ExecuteCacheCleaning(const std::vector<CleanCacheI
     extraData_ << "{endTimeStamp:" << timeStamp << "}" << std::endl;
     PrintOverLongLog(extraData_.str());
     StorageService::StorageRadar::ReportStorageStatusRadar("cacheCleanResult", extraData_.str());
-    DelayedSingleton<CleanRecordStore>::GetInstance()->Delete(timeStamp - RECORD_DATA_AGING_TIME);
+    if (timeStamp > RECORD_DATA_AGING_TIME) {
+        DelayedSingleton<CleanRecordStore>::GetInstance()->Delete(timeStamp - RECORD_DATA_AGING_TIME);
+    }
     NativeRdb::ValuesBucket values;
     int64_t freed_size;
     if (stats.cleanBefore < stats.cleanAfter) {

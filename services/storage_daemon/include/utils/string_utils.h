@@ -46,6 +46,7 @@ void IncreaseThreadPriority(const std::string &processName);
 void DecreaseThreadPriority(const std::string &processName);
 std::string AnonymizePath(const std::string &path);
 bool IsDlpPathValid(const std::string &dstPath);
+bool IsUdmfClipPathValid(int32_t userId, const std::string &dstPath);
 bool CheckLevelRange(uint32_t level);
 bool CheckInputListRange(const std::vector<std::string> &inputList);
 bool CheckLocalIdListRange(const std::vector<int32_t> &localList);

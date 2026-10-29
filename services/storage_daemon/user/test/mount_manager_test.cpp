@@ -1050,6 +1050,10 @@ HWTEST_F(MountManagerTest, Storage_Daemon_MountManagerExtTest_MountPointToList_0
     MountManager::GetInstance().MountPointToList(hmdfsList, hmdfsLists, sharefsList, line, userId);
     line = "s destination sharefs";
     MountManager::GetInstance().MountPointToList(hmdfsList, hmdfsLists, sharefsList, line, userId);
+    line = "source destinationdestinationdestinationdestinationdestination sharefs";
+    MountManager::GetInstance().MountPointToList(hmdfsList, hmdfsLists, sharefsList, line, userId);
+    line = "source /mnt/user/100/docs sharefs";
+    MountManager::GetInstance().MountPointToList(hmdfsList, hmdfsLists, sharefsList, line, userId);
 
     line = "source destination hmfs";
     MountManager::GetInstance().MountPointToList(hmdfsList, hmdfsLists, sharefsList, line, userId);
@@ -1160,6 +1164,32 @@ HWTEST_F(MountManagerTest, Storage_Daemon_MountManagerExtTest_MatchesDisSharePat
     ret = MountManager::GetInstance().MatchesDisSharePath(path);
     EXPECT_TRUE(ret);
     GTEST_LOG_(INFO) << "Storage_Daemon_MountManagerExtTest_MatchesDisSharePath_001 end";
+}
+
+/**
+ * @tc.name: Storage_Daemon_MountManagerExtTest_MatchesDisSharePath_002
+ * @tc.desc: Verify the MatchesDisSharePath function for docs path.
+ * @tc.type: FUNC
+ * @tc.require: IB49AM
+ */
+HWTEST_F(MountManagerTest, Storage_Daemon_MountManagerExtTest_MatchesDisSharePath_002, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "Storage_Daemon_MountManagerExtTest_MatchesDisSharePath_002 start";
+    std::string path =
+        "/data/service/el2/100/hmdfs/account/data/com.ohos.filemanager/.remote_share/qwert1245/storage/Users/currentUser";
+    bool ret = MountManager::GetInstance().MatchesDisSharePath(path);
+    EXPECT_TRUE(ret);
+
+    path =
+        "/data/service/el2/100/hmdfs/account/data/com.ohos.filemanager/.remote_share/qwert1245/storage/Users/currentUser/";
+    ret = MountManager::GetInstance().MatchesDisSharePath(path);
+    EXPECT_FALSE(ret);
+
+    path =
+        "/data/service/el2/100/hmdfs/account/data/com.ohos.filemanager/.remote_share/qwert1245/storage/Users/otherUser";
+    ret = MountManager::GetInstance().MatchesDisSharePath(path);
+    EXPECT_FALSE(ret);
+    GTEST_LOG_(INFO) << "Storage_Daemon_MountManagerExtTest_MatchesDisSharePath_002 end";
 }
 
 /**
@@ -1394,6 +1424,81 @@ HWTEST_F(MountManagerTest, Storage_Manager_MountManagerTest_UMountCloudDiskFuse_
     EXPECT_EQ(ret, E_OK);
     ForceRemoveDirectory(path);
     GTEST_LOG_(INFO) << "Storage_Manager_MountManagerTest_UMountCloudDiskFuse_001 end";
+}
+
+/**
+ * @tc.name: Storage_Manager_MountManagerTest_MountUdmfClipFuse_001
+ * @tc.desc: Verify the MountUdmfClipFuse function when mount succeeds.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(MountManagerTest, Storage_Manager_MountManagerTest_MountUdmfClipFuse_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "Storage_Manager_MountManagerTest_MountUdmfClipFuse_001 start";
+
+    int32_t userId = 100;
+    std::string path = "/mnt/data/100/udmf_fuse/test_mount";
+    ForceCreateDirectory(path);
+    int32_t fuseFd = -1;
+    EXPECT_CALL(*fileUtilMoc_, UMount2(_, _)).WillOnce(Return(0));
+    EXPECT_CALL(*fileUtilMoc_, Mount(_, _, _, _, _)).WillOnce(Return(0));
+    int32_t ret = MountManager::GetInstance().MountUdmfClipFuse(userId, path, fuseFd);
+    EXPECT_EQ(ret, E_OK);
+    EXPECT_GE(fuseFd, 0);
+    if (fuseFd >= 0) {
+        close(fuseFd);
+    }
+    ForceRemoveDirectory(path);
+    GTEST_LOG_(INFO) << "Storage_Manager_MountManagerTest_MountUdmfClipFuse_001 end";
+}
+
+/**
+ * @tc.name: Storage_Manager_MountManagerTest_MountUdmfClipFuse_002
+ * @tc.desc: Verify the MountUdmfClipFuse function when mount fails.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(MountManagerTest, Storage_Manager_MountManagerTest_MountUdmfClipFuse_002, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "Storage_Manager_MountManagerTest_MountUdmfClipFuse_002 start";
+
+    int32_t userId = 100;
+    std::string path = "/mnt/data/100/clipboard_fuse/test_mount_fail";
+    ForceCreateDirectory(path);
+    int32_t fuseFd = -1;
+    EXPECT_CALL(*fileUtilMoc_, UMount2(_, _)).WillOnce(Return(0));
+    EXPECT_CALL(*fileUtilMoc_, Mount(_, _, _, _, _)).WillOnce(Return(1));
+    int32_t ret = MountManager::GetInstance().MountUdmfClipFuse(userId, path, fuseFd);
+    EXPECT_EQ(ret, E_MOUNT_UDMF_CLIP_FUSE);
+    ForceRemoveDirectory(path);
+    GTEST_LOG_(INFO) << "Storage_Manager_MountManagerTest_MountUdmfClipFuse_002 end";
+}
+
+/**
+ * @tc.name: Storage_Manager_MountManagerTest_UMountUdmfClipFuse_001
+ * @tc.desc: Verify the UMountUdmfClipFuse function.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(MountManagerTest, Storage_Manager_MountManagerTest_UMountUdmfClipFuse_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "Storage_Manager_MountManagerTest_UMountUdmfClipFuse_001 start";
+
+    int32_t userId = 100;
+    std::string path = "/mnt/data/100/udmf_fuse/test_umount";
+    ForceCreateDirectory(path);
+
+    errno = EBUSY;
+    EXPECT_CALL(*fileUtilMoc_, UMount2(_, _)).WillOnce(Return(-1));
+    int32_t ret = MountManager::GetInstance().UMountUdmfClipFuse(userId, path);
+    EXPECT_EQ(ret, E_UMOUNT_UDMF_CLIP_FUSE);
+
+    errno = 0;
+    EXPECT_CALL(*fileUtilMoc_, UMount2(_, _)).WillOnce(Return(0));
+    ret = MountManager::GetInstance().UMountUdmfClipFuse(userId, path);
+    EXPECT_EQ(ret, E_OK);
+    ForceRemoveDirectory(path);
+    GTEST_LOG_(INFO) << "Storage_Manager_MountManagerTest_UMountUdmfClipFuse_001 end";
 }
 } // STORAGE_DAEMON
 } // OHOS

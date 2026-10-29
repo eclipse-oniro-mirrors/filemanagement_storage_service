@@ -59,14 +59,6 @@ int32_t UserManager::PrepareUserDirsForUpdate(int32_t userId, uint32_t flags)
     return UserManagerMock::iUserManagerMock_->PrepareUserDirsForUpdate(userId, flags);
 }
 
-int32_t UserManager::CreateUserDir(const std::string &path, mode_t mode, uid_t uid, gid_t gid)
-{
-    if (UserManagerMock::iUserManagerMock_ == nullptr) {
-        return -1;
-    }
-    return UserManagerMock::iUserManagerMock_->CreateUserDir(path, mode, uid, gid);
-}
-
 void UserManager::CheckDirsFromVec(int32_t userId)
 {
     if (UserManagerMock::iUserManagerMock_ == nullptr) {

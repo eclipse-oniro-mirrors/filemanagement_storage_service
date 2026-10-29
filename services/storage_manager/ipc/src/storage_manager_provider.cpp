@@ -63,12 +63,13 @@ constexpr pid_t ACCOUNT_UID = 3058;
 constexpr pid_t BACKUP_SA_UID = 1089;
 constexpr pid_t FOUNDATION_UID = 5523;
 constexpr pid_t DFS_UID = 1009;
-constexpr pid_t AOCO_UID = 7558;
 constexpr pid_t ROOT_UID = 0;
 constexpr pid_t SPACE_ABILITY_SERVICE_UID = 7014;
 constexpr pid_t UPDATE_SERVICE_UID = 6666;
 constexpr pid_t DLP_UID = 3553;
 constexpr pid_t CLOUD_DISK_UID = 6161;
+constexpr pid_t UDMF_UID = 3012;
+constexpr pid_t CLIPBOARD_UID = 3816;
 constexpr bool ENCRYPTED = true;
 constexpr uint32_t MOUNT_MAX_WAIT_TIME = 2;
 const std::string MEDIALIBRARY_BUNDLE_NAME = "com.ohos.medialibrary.medialibrarydata";
@@ -1460,6 +1461,59 @@ int32_t StorageManagerProvider::UMountCloudDiskFuse(int32_t userId, const std::s
     return err;
 }
 
+int32_t StorageManagerProvider::MountUdmfClipFuse(int32_t userId, const std::string &path, int32_t &fuseFd)
+{
+    std::string message = "MountUdmfClipFuse Begin, path:" + path;
+    StorageRadar::ReportFucBehavior("MountUdmfClipFuse", userId, message, E_OK);
+    int32_t err = CheckUserIdRange(userId);
+    if (err != E_OK) {
+        return err;
+    }
+    if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER)) {
+        LOGE("MountUdmfClipFuse CheckClientPermission failed");
+        return E_PERMISSION_DENIED;
+    }
+    auto callUid = IPCSkeleton::GetCallingUid();
+    if (callUid != UDMF_UID && callUid != CLIPBOARD_UID) {
+        LOGE("MountUdmfClipFuse uid check error, calling uid %{public}d is invalid", callUid);
+        return E_PERMISSION_DENIED;
+    }
+    if (IsFilePathInvalid(path) || !IsPathStartWithUdmfClip(userId, path)) {
+        return E_PARAMS_INVALID;
+    }
+    fuseFd = -1;
+    auto& sdCommunication = StorageDaemonCommunication::GetInstance();
+    err = sdCommunication.MountUdmfClipFuse(userId, path, fuseFd);
+    StorageRadar::ReportFucBehavior("MountUdmfClipFuse", userId, "MountUdmfClipFuse End", err);
+    return err;
+}
+
+int32_t StorageManagerProvider::UMountUdmfClipFuse(int32_t userId, const std::string &path)
+{
+    std::string message = "UMountUdmfClipFuse Begin, path:" + path;
+    StorageRadar::ReportFucBehavior("UMountUdmfClipFuse", userId, message, E_OK);
+    int32_t err = CheckUserIdRange(userId);
+    if (err != E_OK) {
+        return err;
+    }
+    if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER)) {
+        LOGE("UMountUdmfClipFuse CheckClientPermission failed");
+        return E_PERMISSION_DENIED;
+    }
+    auto callUid = IPCSkeleton::GetCallingUid();
+    if (callUid != UDMF_UID && callUid != CLIPBOARD_UID) {
+        LOGE("UMountUdmfClipFuse uid check error, calling uid %{public}d is invalid", callUid);
+        return E_PERMISSION_DENIED;
+    }
+    if (IsFilePathInvalid(path) || !IsPathStartWithUdmfClip(userId, path)) {
+        return E_PARAMS_INVALID;
+    }
+    auto& sdCommunication = StorageDaemonCommunication::GetInstance();
+    err = sdCommunication.UMountUdmfClipFuse(userId, path);
+    StorageRadar::ReportFucBehavior("UMountUdmfClipFuse", userId, "UMountUdmfClipFuse End", err);
+    return err;
+}
+
 int32_t StorageManagerProvider::IsFileOccupied(const std::string &path,
                                                const std::vector<std::string> &inputList,
                                                std::vector<std::string> &outputList,
@@ -1688,43 +1742,6 @@ int32_t StorageManagerProvider::UnregisterUeceActivationCallback()
     StorageRadar::ReportFucBehavior("UnregisterUeceActivationCallback", DEFAULT_USERID,
                                     "UnregisterUeceActivationCallback End", err);
     return err;
-}
-
-int32_t StorageManagerProvider::CreateUserDir(const std::string &path, mode_t mode, uid_t uid, gid_t gid)
-{
-    std::string message = "CreateUserDir Begin, path: " + GetAnonyString(path) + ", mode: " + std::to_string(mode) +
-                          ", uid: " + std::to_string(uid) + ", gid: " + std::to_string(gid);
-    StorageRadar::ReportFucBehavior("CreateUserDir", DEFAULT_USERID, message, E_OK);
-    if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER_CRYPT)) {
-        LOGE("Permission check failed, for storage_manager_crypt");
-        StorageRadar::ReportCommonResult("CreateUserDir", E_PERMISSION_DENIED, 0, "CheckClientPermission failed");
-        return E_PERMISSION_DENIED;
-    }
-
-    auto callingUid = IPCSkeleton::GetCallingUid();
-    if (callingUid != AOCO_UID) {
-        LOGE("Permission check failed, the UID is not in the trustlist, uid: %{public}d", callingUid);
-        StorageRadar::ReportCommonResult("CreateUserDir", E_PERMISSION_DENIED, 0, "callingUid not in trustlist");
-        return E_PERMISSION_DENIED;
-    }
-
-    if (IsFilePathInvalid(path)) {
-        LOGE("The path: %{public}s is invalid.", path.c_str());
-        StorageRadar::ReportCommonResult("CreateUserDir", E_PARAMS_INVALID, 0, "path invalid");
-        return E_PARAMS_INVALID;
-    }
-    
-    auto& sdCommunication = StorageDaemonCommunication::GetInstance();
-    auto ret = sdCommunication.CreateUserDir(path, mode, uid, gid);
-    LOGW("CreateUserDir end, uid: %{public}d, ret: %{public}d", callingUid, ret);
-
-    std::string extraData = "path=" + path + ", mode=" + std::to_string(mode) +
-        ", uid=" + std::to_string(uid) + ", gid=" + std::to_string(gid) +
-        ", callingUid=" + std::to_string(callingUid);
-    if (ret != E_OK) {
-        StorageRadar::ReportUserManager("CreateUserDir", 0, ret, extraData);
-    }
-    return ret;
 }
 
 int32_t StorageManagerProvider::NotifyUserChangedEvent(uint32_t userId, uint32_t eventType)

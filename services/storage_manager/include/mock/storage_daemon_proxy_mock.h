@@ -101,6 +101,9 @@ public:
     // cloud disk fuse
     virtual int32_t MountCloudDiskFuse(int32_t userId, const std::string &path, int32_t &fuseFd) override;
     virtual int32_t UMountCloudDiskFuse(int32_t userId, const std::string &path) override;
+    // udmf clip fuse
+    virtual int32_t MountUdmfClipFuse(int32_t userId, const std::string &path, int32_t &fuseFd) override;
+    virtual int32_t UMountUdmfClipFuse(int32_t userId, const std::string &path) override;
     // file lock
     virtual int32_t IsFileOccupied(const std::string &path, const std::vector<std::string> &inputList,
         std::vector<std::string> &outputList, bool &isOccupy) override;
@@ -112,7 +115,6 @@ public:
         const std::map<int32_t, std::string> &bundleNameAndUid, int32_t type) override;
     virtual int32_t RegisterUeceActivationCallback(const sptr<IUeceActivationCallback>& callback);
     virtual int32_t UnregisterUeceActivationCallback();
-    virtual int32_t CreateUserDir(const std::string &path, mode_t mode, uid_t uid, gid_t gid) override;
     virtual int32_t GetDqBlkSpacesByUids(const std::vector<int32_t> &uids, std::vector<NextDqBlk> &dqBlks) override;
     virtual int32_t GetDirListSpace(const std::vector<DirSpaceInfo> &inDirs,
         std::vector<DirSpaceInfo> &outDirs) override;
@@ -161,7 +163,6 @@ public:
                                     const std::string &volumeName,
                                     const std::vector<std::string> &cmd, bool quickFormat = true) override;
     virtual int32_t QueryCDStatus(const std::string &devPath, int32_t &status) override;
-    virtual int32_t EjectCD(const std::string &devPath) override;
     virtual int32_t Erase(const std::string &devPath) override;
     virtual int32_t Eject(const std::string &devName) override;
     virtual int32_t CreateIsoImage(const std::string &devPath,

@@ -96,7 +96,7 @@ nlohmann::json BuildDiagJson(int32_t ret, const VolumeOpDiagContext &ctx)
 
 void SendDiagReport(const nlohmann::json &js)
 {
-    const std::string diagJson = js.dump();
+    const std::string diagJson = js.dump(-1, ' ', false, nlohmann::json::error_handler_t::replace);
     LOGI("VolumeOpDiag report len=%{public}zu func=%{public}s hasTools=%{public}d",
          diagJson.size(), js.value("funcName", "").c_str(), js.contains("tools") ? 1 : 0);
 #ifdef DISK_MANAGER

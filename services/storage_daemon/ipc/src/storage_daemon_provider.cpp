@@ -74,7 +74,8 @@ namespace StorageDaemon {
 using namespace std;
 using namespace StorageService;
 constexpr unsigned int LOCAL_TIME_OUT_SECONDS = 10;
-constexpr unsigned int INACTIVE_USER_KEY_OUT_SECONDS = 25;
+constexpr unsigned int USER_OPERATE_OUT_SECONDS = 30;
+constexpr unsigned int KEY_OPERATE_OUT_SECONDS = 60;
 constexpr unsigned int UPDATE_RADAR_STATISTIC_INTERVAL_SECONDS = 300;
 constexpr unsigned int RADAR_REPORT_STATISTIC_INTERVAL_MINUTES = 1440;
 constexpr unsigned int USER0ID = 0;
@@ -105,6 +106,12 @@ constexpr int32_t DFX_STAGE_GET_PARTITION_TABLE = 46;
 constexpr int32_t DFX_STAGE_CREATE_PARTITION = 47;
 constexpr int32_t DFX_STAGE_DELETE_PARTITION = 48;
 constexpr int32_t DFX_STAGE_FORMAT_PARTITION = 49;
+// Optical drive stages, aligned with disk_manager DFX constants.
+constexpr int32_t DFX_STAGE_ERASE = 60;
+constexpr int32_t DFX_STAGE_EJECT = 61;
+constexpr int32_t DFX_STAGE_BURN = 62;
+constexpr int32_t DFX_STAGE_CREATE_ISO_IMAGE = 63;
+
 constexpr int32_t VOL_OP_MOUNT = 0;
 constexpr int32_t VOL_OP_UNMOUNT = 1;
 constexpr int32_t VOL_OP_FORMAT = 2;
@@ -114,7 +121,11 @@ constexpr int32_t VOL_OP_GET_PARTITION_TABLE = 5;
 constexpr int32_t VOL_OP_CREATE_PARTITION = 6;
 constexpr int32_t VOL_OP_DELETE_PARTITION = 7;
 constexpr int32_t VOL_OP_FORMAT_PARTITION = 8;
-
+// Optical drive op types, aligned with disk_manager VolumeOpType values 20-23.
+constexpr int32_t VOL_OP_ERASE = 20;
+constexpr int32_t VOL_OP_EJECT = 21;
+constexpr int32_t VOL_OP_BURN = 22;
+constexpr int32_t VOL_OP_CREATE_ISO_IMAGE = 23;
 
 VolumeOpDiagContext MakeOpDiagContext(const char *funcName, int32_t bizStage, int32_t opType,
                                       const std::string &devPath, const std::string &fsType)
@@ -165,6 +176,16 @@ void FinishOpDiag(int32_t ret)
         VolumeOpDiagFlushFailureReport(ret);
     }
     VolumeOpDiagEnd();
+}
+
+int32_t ReturnWithOpDiag_optical(int32_t ret, const std::string &devPath)
+{
+    if (devPath.find("disk-11-") != std::string::npos || devPath.find("vol-11-") != std::string::npos) {
+        VolumeOpDiagEnd();
+        return ret;
+    }
+    FinishOpDiag(ret);
+    return ret;
 }
 
 int32_t ReturnWithOpDiag(int32_t ret)
@@ -537,10 +558,12 @@ int32_t StorageDaemonProvider::StartUser(int32_t userId)
         return ret;
     }
     HiAudit::GetInstance().WriteStart("StartUser", "userId: " + std::to_string(userId));
+    int timerId = StorageXCollie::SetTimer("storage:StartUser", USER_OPERATE_OUT_SECONDS);
     auto startTime = StorageService::StorageRadar::RecordCurrentTime();
     isNeedUpdateRadarFile_ = true;
     (void)StorageDaemon::GetInstance().SetPriority();  // set tid priority to 40
     ret = UserManager::GetInstance().StartUser(userId);
+    StorageXCollie::CancelTimer(timerId);
     if (ret != E_OK && ret != E_KEY_NOT_ACTIVED) {
         LOGE("[L1:StorageDaemonProvider] StartUser: <<< EXIT FAILED <<< userId=%{public}d, ret=%{public}d",
             userId, ret);
@@ -570,7 +593,9 @@ int32_t StorageDaemonProvider::StopUser(int32_t userId)
         return ret;
     }
     isNeedUpdateRadarFile_ = true;
+    int timerId = StorageXCollie::SetTimer("storage:StopUser", USER_OPERATE_OUT_SECONDS);
     ret = UserManager::GetInstance().StopUser(userId);
+    StorageXCollie::CancelTimer(timerId);
     LOGE("[L1:StorageDaemonProvider] StopUser end, ret is %{public}d.", ret);
     if (ret != E_OK) {
         StorageService::StorageRadar::ReportUserManager("StopUser", userId, ret, "StopUser failed");
@@ -605,7 +630,9 @@ int32_t StorageDaemonProvider::PrepareUserDirs(int32_t userId, uint32_t flags)
     }
     std::lock_guard<std::mutex> lock(mutex_);
     isNeedUpdateRadarFile_ = true;
+    int timerId = StorageXCollie::SetTimer("storage:PrepareUserDirs", KEY_OPERATE_OUT_SECONDS);
     int32_t err = StorageDaemon::GetInstance().PrepareUserDirs(userId, flags);
+    StorageXCollie::CancelTimer(timerId);
     StorageRadar::ReportFucBehavior("PrepareUserDirs", userId, "PrepareUserDirs End", err);
     HiAudit::GetInstance().WriteEnd("PrepareUserDirs", err, "flags: " + std::to_string(flags));
     SetUserStatistics(userId, err != E_OK ? USER_ADD_FAIL : USER_ADD_SUCCESS);
@@ -638,7 +665,9 @@ int32_t StorageDaemonProvider::DestroyUserDirs(int32_t userId, uint32_t flags)
     }
     std::lock_guard<std::mutex> lock(mutex_);
     isNeedUpdateRadarFile_ = true;
+    int timerId = StorageXCollie::SetTimer("storage:DestroyUserDirs", KEY_OPERATE_OUT_SECONDS);
     int err = StorageDaemon::GetInstance().DestroyUserDirs(userId, flags);
+    StorageXCollie::CancelTimer(timerId);
     StorageRadar::ReportFucBehavior("DestroyUserDirs", userId, "DestroyUserDirs End", err);
     HiAudit::GetInstance().WriteEnd("DestroyUserDirs", err, "flags: " + std::to_string(flags));
     SetUserStatistics(userId, err != E_OK ? USER_REMOVE_FAIL : USER_REMOVE_SUCCESS);
@@ -752,9 +781,11 @@ int32_t StorageDaemonProvider::InitGlobalKey()
     LOGI("[L1:StorageDaemonProvider] InitGlobalKey: >>> ENTER <<<");
     StorageRadar::ReportFucBehavior("InitGlobalKey", DEFAULT_USERID, "InitGlobalKey Begin", E_OK);
     HiAudit::GetInstance().WriteStart("InitGlobalKey");
+    int timerId = StorageXCollie::SetTimer("storage:InitGlobalKey", KEY_OPERATE_OUT_SECONDS);
     std::lock_guard<std::mutex> lock(mutex_);
     isNeedUpdateRadarFile_ = true;
     int err = StorageDaemon::GetInstance().InitGlobalKey();
+    StorageXCollie::CancelTimer(timerId);
     HiAudit::GetInstance().WriteEnd("InitGlobalKey", err);
     SetUserStatistics(USER0ID, err != E_OK ? KEY_LOAD_FAIL : KEY_LOAD_SUCCESS);
     StorageRadar::ReportFucBehavior("InitGlobalKey", DEFAULT_USERID, "InitGlobalKey End", err);
@@ -771,9 +802,11 @@ int32_t StorageDaemonProvider::InitGlobalUserKeys()
     LOGI("[L1:StorageDaemonProvider] InitGlobalUserKeys: >>> ENTER <<<");
     StorageRadar::ReportFucBehavior("InitGlobalUserKeys", DEFAULT_USERID, "InitGlobalUserKeys Begin", E_OK);
     HiAudit::GetInstance().WriteStart("InitGlobalUserKeys");
+    int timerId = StorageXCollie::SetTimer("storage:InitGlobalUserKeys", KEY_OPERATE_OUT_SECONDS);
     std::lock_guard<std::mutex> lock(mutex_);
     isNeedUpdateRadarFile_ = true;
     int32_t err = StorageDaemon::GetInstance().InitGlobalUserKeys();
+    StorageXCollie::CancelTimer(timerId);
     HiAudit::GetInstance().WriteEnd("InitGlobalUserKeys", err);
     SetUserStatistics(USER100ID, err != E_OK ? KEY_LOAD_FAIL : KEY_LOAD_SUCCESS);
     StorageRadar::ReportFucBehavior("InitGlobalUserKeys", DEFAULT_USERID, "InitGlobalUserKeys End", err);
@@ -837,7 +870,7 @@ int32_t StorageDaemonProvider::UpdateUserAuth(uint32_t userId,
         LOGE("[L1:StorageDaemonProvider] UpdateUserAuth: <<< EXIT FAILED <<< userId is invalid");
         return err;
     }
-    int timerId = StorageXCollie::SetTimer("storage:UpdateUserAuth", LOCAL_TIME_OUT_SECONDS);
+    int timerId = StorageXCollie::SetTimer("storage:UpdateUserAuth", KEY_OPERATE_OUT_SECONDS);
     std::lock_guard<std::mutex> lock(mutex_);
     err =  StorageDaemon::GetInstance().UpdateUserAuth(userId, secureUid, token, oldSecret, newSecret);
     StorageXCollie::CancelTimer(timerId);
@@ -902,7 +935,7 @@ int32_t StorageDaemonProvider::ActiveUserKey(uint32_t userId,
         return error;
     }
     auto startTime = StorageService::StorageRadar::RecordCurrentTime();
-    int timerId = StorageXCollie::SetTimer("storage:ActiveUserKey", LOCAL_TIME_OUT_SECONDS);
+    int timerId = StorageXCollie::SetTimer("storage:ActiveUserKey", KEY_OPERATE_OUT_SECONDS);
     std::lock_guard<std::mutex> lock(mutex_);
     isNeedUpdateRadarFile_ = true;
     int32_t err = StorageDaemon::GetInstance().ActiveUserKey(userId, token, secret);
@@ -934,7 +967,7 @@ int32_t StorageDaemonProvider::InactiveUserKey(uint32_t userId)
         StorageService::StorageRadar::ReportUserManager("InactiveUserKey", userId, err, "userId out of range");
         return err;
     }
-    int timerId = StorageXCollie::SetTimer("storage:InactiveUserKey", INACTIVE_USER_KEY_OUT_SECONDS);
+    int timerId = StorageXCollie::SetTimer("storage:InactiveUserKey", KEY_OPERATE_OUT_SECONDS);
     std::lock_guard<std::mutex> lock(mutex_);
     isNeedUpdateRadarFile_ = true;
     int32_t ret = StorageDaemon::GetInstance().InactiveUserKey(userId);
@@ -996,7 +1029,7 @@ int32_t StorageDaemonProvider::LockUserScreen(uint32_t userId)
         StorageService::StorageRadar::ReportUserManager("LockUserScreen", userId, err, "userId out of range");
         return err;
     }
-    int timerId = StorageXCollie::SetTimer("storage:LockUserScreen", LOCAL_TIME_OUT_SECONDS);
+    int timerId = StorageXCollie::SetTimer("storage:LockUserScreen", USER_OPERATE_OUT_SECONDS);
     std::lock_guard<std::mutex> lock(mutex_);
     isNeedUpdateRadarFile_ = true;
     int ret = StorageDaemon::GetInstance().LockUserScreen(userId);
@@ -1033,7 +1066,7 @@ int32_t StorageDaemonProvider::UnlockUserScreen(uint32_t userId,
             "userId out of range");
         return ret;
     }
-    int timerId = StorageXCollie::SetTimer("storage:UnlockUserScreen", LOCAL_TIME_OUT_SECONDS);
+    int timerId = StorageXCollie::SetTimer("storage:UnlockUserScreen", USER_OPERATE_OUT_SECONDS);
     std::unique_lock<std::mutex> lock(mutex_);
     isNeedUpdateRadarFile_ = true;
     ret = StorageDaemon::GetInstance().UnlockUserScreen(userId, token, secret);
@@ -1115,7 +1148,7 @@ int32_t StorageDaemonProvider::GenerateAppkey(uint32_t userId, uint32_t hashId, 
         LOGE("[L1:StorageDaemonProvider] GenerateAppkey: <<< EXIT FAILED <<< userId=%{public}d out of range", userId);
         return err;
     }
-    int timerId = StorageXCollie::SetTimer("storage:GenerateAppkey", LOCAL_TIME_OUT_SECONDS);
+    int timerId = StorageXCollie::SetTimer("storage:GenerateAppkey", USER_OPERATE_OUT_SECONDS);
     int32_t ret = StorageDaemon::GetInstance().GenerateAppkey(userId, hashId, keyId, needReSet);
     StorageXCollie::CancelTimer(timerId);
     message = "hashId: " + std::to_string(hashId)
@@ -1149,7 +1182,7 @@ int32_t StorageDaemonProvider::DeleteAppkey(uint32_t userId, const std::string &
         LOGE("[L1:StorageDaemonProvider] DeleteAppkey: <<< EXIT FAILED <<< keyId is invalid");
         return E_PARAMS_INVALID;
     }
-    int timerId = StorageXCollie::SetTimer("storage:DeleteAppkey", LOCAL_TIME_OUT_SECONDS);
+    int timerId = StorageXCollie::SetTimer("storage:DeleteAppkey", USER_OPERATE_OUT_SECONDS);
     std::lock_guard<std::mutex> lock(mutex_);
     int32_t ret = StorageDaemon::GetInstance().DeleteAppkey(userId, keyId);
     StorageXCollie::CancelTimer(timerId);
@@ -1869,6 +1902,66 @@ int32_t StorageDaemonProvider::UMountCloudDiskFuse(int32_t userId, const std::st
     return err;
 }
 
+int32_t StorageDaemonProvider::MountUdmfClipFuse(int32_t userId, const std::string &path, int32_t &fuseFd)
+{
+    std::lock_guard<std::mutex> lock(udmfClipFuseMutex_);
+    LOGI("[L1:StorageDaemonProvider] MountUdmfClipFuse: >>> ENTER <<< userId=%{public}d, path=%{public}s",
+        userId, path.c_str());
+    HiAudit::GetInstance().WriteStart("MountUdmfClipFuse", "userId: " + std::to_string(userId) + " path: " + path);
+    auto uid = IPCSkeleton::GetCallingUid();
+    if (uid != STORAGE_MANAGER_UID) {
+        LOGE("[L1:StorageDaemonProvider] MountUdmfClipFuse: <<< EXIT FAILED <<< uid=%{public}d is invalid", uid);
+        return E_PERMISSION_DENIED;
+    }
+    int32_t err = CheckUserIdRange(userId);
+    if (err != E_OK) {
+        return err;
+    }
+    if (!IsUdmfClipPathValid(userId, path)) {
+        return E_PARAMS_INVALID;
+    }
+    fuseFd = -1;
+    err = MountManager::GetInstance().MountUdmfClipFuse(userId, path, fuseFd);
+    HiAudit::GetInstance().WriteEnd("MountUdmfClipFuse", err);
+    if (err == E_OK) {
+        LOGI("[L1:StorageDaemonProvider] MountUdmfClipFuse: <<< EXIT SUCCESS <<< userId=%{public}d, fuseFd=%{public}d",
+            userId, fuseFd);
+    } else {
+        LOGE("[L1:StorageDaemonProvider] MountUdmfClipFuse: <<< EXIT FAILED <<< userId=%{public}d, ret=%{public}d",
+            userId, err);
+    }
+    return err;
+}
+
+int32_t StorageDaemonProvider::UMountUdmfClipFuse(int32_t userId, const std::string &path)
+{
+    std::lock_guard<std::mutex> lock(udmfClipFuseMutex_);
+    LOGI("[L1:StorageDaemonProvider] UMountUdmfClipFuse: >>> ENTER <<< userId=%{public}d, path=%{public}s",
+        userId, path.c_str());
+    HiAudit::GetInstance().WriteStart("UMountUdmfClipFuse", "userId: " + std::to_string(userId) + " path: " + path);
+    auto uid = IPCSkeleton::GetCallingUid();
+    if (uid != STORAGE_MANAGER_UID) {
+        LOGE("[L1:StorageDaemonProvider] UMountUdmfClipFuse: <<< EXIT FAILED <<< uid=%{public}d is invalid", uid);
+        return E_PERMISSION_DENIED;
+    }
+    int32_t err = CheckUserIdRange(userId);
+    if (err != E_OK) {
+        return err;
+    }
+    if (!IsUdmfClipPathValid(userId, path)) {
+        return E_PARAMS_INVALID;
+    }
+    err = MountManager::GetInstance().UMountUdmfClipFuse(userId, path);
+    HiAudit::GetInstance().WriteEnd("UMountUdmfClipFuse", err);
+    if (err == E_OK) {
+        LOGI("[L1:StorageDaemonProvider] UMountUdmfClipFuse: <<< EXIT SUCCESS <<< userId=%{public}d", userId);
+    } else {
+        LOGE("[L1:StorageDaemonProvider] UMountUdmfClipFuse: <<< EXIT FAILED <<< userId=%{public}d, ret=%{public}d",
+            userId, err);
+    }
+    return err;
+}
+
 int32_t StorageDaemonProvider::IsFileOccupied(const std::string &path,
                                               const std::vector<std::string> &inputList,
                                               std::vector<std::string> &outputList,
@@ -2199,33 +2292,6 @@ int32_t StorageDaemonProvider::UnregisterUeceActivationCallback()
         LOGD("[L1:StorageDaemonProvider] UnregisterUeceActivationCallback: <<< EXIT SUCCESS <<<");
     } else {
         LOGE("[L1:StorageDaemonProvider] UnregisterUeceActivationCallback: <<< EXIT FAILED <<< ret=%{public}d", ret);
-    }
-    return ret;
-}
-
-int32_t StorageDaemonProvider::CreateUserDir(const std::string &path, mode_t mode, uid_t uid, gid_t gid)
-{
-    LOGI("[L1:StorageDaemonProvider] CreateUserDir: >>> ENTER <<< path=%{public}s, mode=%{public}u, uid=%{public}u,"
-        "gid=%{public}u", path.c_str(), mode, uid, gid);
-    std::string message = "path: " + GetAnonyString(path) + " mode: " + std::to_string(mode)
-        + " uid: " + std::to_string(uid) + " gid: " + std::to_string(gid);
-    HiAudit::GetInstance().WriteStart("CreateUserDir", message);
-    auto callUid = IPCSkeleton::GetCallingUid();
-    if (callUid != STORAGE_MANAGER_UID) {
-        LOGE("[L1:StorageDaemonProvider] CreateUserDir: <<< EXIT FAILED <<< uid=%{public}d is invalid", callUid);
-        return E_PERMISSION_DENIED;
-    }
-    if (IsFilePathInvalid(path)) {
-        LOGE("[L1:StorageDaemonProvider] CreateUserDir: <<< EXIT FAILED <<< path is invalid");
-        return E_PARAMS_INVALID;
-    }
-    int32_t ret = UserManager::GetInstance().CreateUserDir(path, mode, uid, gid);
-    HiAudit::GetInstance().WriteEnd("CreateUserDir", ret);
-    if (ret == E_OK) {
-        LOGI("[L1:StorageDaemonProvider] CreateUserDir: <<< EXIT SUCCESS <<< path=%{public}s", path.c_str());
-    } else {
-        LOGE("[L1:StorageDaemonProvider] CreateUserDir: <<< EXIT FAILED <<< path=%{public}s, ret=%{public}d",
-            path.c_str(), ret);
     }
     return ret;
 }
@@ -2569,35 +2635,6 @@ int32_t StorageDaemonProvider::QueryCDStatus(const std::string &devPath, int32_t
 #endif
 }
 
-int32_t StorageDaemonProvider::EjectCD(const std::string &devPath)
-{
-    LOGI("[L1:StorageDaemonProvider] EjectCD: >>> ENTER <<< devPath=%{public}s", devPath.c_str());
-#ifdef DISK_MANAGER
-    auto uid = IPCSkeleton::GetCallingUid();
-    if (uid != DISK_MANAGER_UID) {
-        LOGE("[L1:StorageDaemonProvider] EjectCD: <<< EXIT FAILED <<< uid=%{public}d is invalid", uid);
-        return E_PERMISSION_DENIED;
-    }
-    std::string verifiedPath;
-    int32_t ret = ValidateMountPath(devPath, verifiedPath);
-    if (ret != E_OK) {
-        LOGE("[L1:StorageDaemonProvider] EjectCD: <<< EXIT FAILED <<< devPath is invalid");
-        return ret;
-    }
-    ret = DiskUtils::EjectCD(verifiedPath);
-    if (ret != E_OK) {
-        LOGE("[L1:StorageDaemonProvider] EjectCD: <<< EXIT FAILED <<< ret=%{public}d", ret);
-        return ret;
-    }
-
-    LOGI("[L1:StorageDaemonProvider] EjectCD: <<< EXIT SUCCESS <<<");
-    return E_OK;
-#else
-    LOGI("[L1:StorageDaemonProvider] EjectCD: <<< EXIT NOT_SUPPORT <<<");
-    return E_NOT_SUPPORT;
-#endif
-}
-
 int32_t StorageDaemonProvider::FormatVolume(const std::string &devPath,
                                             const std::string &fsType,
                                             const std::string &diskPath,
@@ -2625,7 +2662,7 @@ int32_t StorageDaemonProvider::FormatVolume(const std::string &devPath,
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemonProvider] FormatVolume: invalid diskPath=%{public}s",
              GetAnonyString(diskPath).c_str());
-        return ret;
+        return ReturnWithOpDiag(ret);
     }
     if (fsType.empty()) {
         LOGE("[L1:StorageDaemonProvider] FormatVolume: fsType is empty");
@@ -2805,7 +2842,7 @@ int32_t StorageDaemonProvider::ReadMetadata(const std::string &devPath,
     std::string verifiedPath;
     int32_t ret = ValidateBlockDevicePath(devPath, verifiedPath);
     if (ret != E_OK) {
-        return ReturnWithOpDiag(ret);
+        return ReturnWithOpDiag_optical(ret, devPath);
     }
 
     ret = VolumeUtils::ReadMetadata(verifiedPath, uuid, type, label);
@@ -2814,11 +2851,11 @@ int32_t StorageDaemonProvider::ReadMetadata(const std::string &devPath,
             ret = E_READMETADATA;
         }
         LOGE("[L1:StorageDaemonProvider] ReadMetadata: <<< EXIT FAILED <<< ret=%{public}d", ret);
-        return ReturnWithOpDiag(ret);
+        return ReturnWithOpDiag_optical(ret, devPath);
     }
 
     LOGI("[L1:StorageDaemonProvider] ReadMetadata: <<< EXIT SUCCESS <<<");
-    return ReturnWithOpDiag(E_OK);
+    return ReturnWithOpDiag_optical(ret, devPath);
 #else
     return E_NOT_SUPPORT;
 #endif
@@ -3088,20 +3125,22 @@ int32_t StorageDaemonProvider::Erase(const std::string &devPath)
         LOGE("[L1:StorageDaemonProvider] Erase: <<< EXIT FAILED <<< uid=%{public}d is invalid", uid);
         return E_PERMISSION_DENIED;
     }
+    VolumeOpDiagBegin(MakeOpDiagContext("StorageDaemonProvider::Erase",
+                                        DFX_STAGE_ERASE, VOL_OP_ERASE, devPath, ""));
     std::string verifiedPath;
     int32_t ret = ValidateBlockDevicePath(devPath, verifiedPath);
     if (ret != E_OK) {
-        return ret;
+        return ReturnWithOpDiag(ret);
     }
 
     ret = DiskUtils::Erase(verifiedPath);
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemonProvider] Erase: <<< EXIT FAILED <<< ret=%{public}d", ret);
-        return ret;
+        return ReturnWithOpDiag(ret);
     }
 
     LOGI("[L1:StorageDaemonProvider] Erase: <<< EXIT SUCCESS <<<");
-    return E_OK;
+    return ReturnWithOpDiag(E_OK);
 #else
     return E_NOT_SUPPORT;
 #endif
@@ -3117,21 +3156,23 @@ int32_t StorageDaemonProvider::Eject(const std::string &devName)
         LOGE("[L1:StorageDaemonProvider] Eject: <<< EXIT FAILED <<< uid=%{public}d is invalid", uid);
         return E_PERMISSION_DENIED;
     }
+    VolumeOpDiagBegin(MakeOpDiagContext("StorageDaemonProvider::Eject",
+                                        DFX_STAGE_EJECT, VOL_OP_EJECT, devName, ""));
     if (devName.empty() || devName.size() < MIN_SR_DEV_NAME_LEN ||
         devName.substr(0, SR_DEV_PREFIX_LEN) != "sr" ||
         devName.find_first_not_of("0123456789", SR_DEV_PREFIX_LEN) != std::string::npos) {
         LOGE("[L1:StorageDaemonProvider] Eject: <<< EXIT FAILED <<< devName is invalid, devName=%{public}s",
             devName.c_str());
-        return E_PARAMS_INVALID;
+        return ReturnWithOpDiag(E_PARAMS_INVALID);
     }
     int32_t ret = DiskUtils::Eject(devName);
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemonProvider] Eject: <<< EXIT FAILED <<< ret=%{public}d", ret);
-        return ret;
+        return ReturnWithOpDiag(ret);
     }
 
     LOGI("[L1:StorageDaemonProvider] Eject: <<< EXIT SUCCESS <<<");
-    return E_OK;
+    return ReturnWithOpDiag(E_OK);
 #else
     return E_NOT_SUPPORT;
 #endif
@@ -3151,40 +3192,42 @@ int32_t StorageDaemonProvider::CreateIsoImage(const std::string &devPath,
         LOGE("[L1:StorageDaemonProvider] CreateIsoImage: <<< EXIT FAILED <<< uid=%{public}d is invalid", uid);
         return E_PERMISSION_DENIED;
     }
+    VolumeOpDiagBegin(MakeOpDiagContext("StorageDaemonProvider::CreateIsoImage",
+                                        DFX_STAGE_CREATE_ISO_IMAGE, VOL_OP_CREATE_ISO_IMAGE, devPath, fsType));
     std::string verifiedDevPath;
     int32_t ret = ValidateBlockDevicePath(devPath, verifiedDevPath);
     if (ret != E_OK) {
-        return ret;
+        return ReturnWithOpDiag(ret);
     }
     if (filePath.empty() || IsFilePathInvalid(filePath)) {
         LOGE("[L1:StorageDaemonProvider] CreateIsoImage: invalid filePath");
-        return E_PARAMS_INVALID;
+        return ReturnWithOpDiag(E_PARAMS_INVALID);
     }
     if (fsType.empty()) {
         LOGE("[L1:StorageDaemonProvider] CreateIsoImage: fsType is empty");
-        return E_PARAMS_INVALID;
+        return ReturnWithOpDiag(E_PARAMS_INVALID);
     }
     std::string verifiedMountPath;
     ret = ValidateMountPath(mountPath, verifiedMountPath);
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemonProvider] Mount: invalid mountPath");
-        return ret;
+        return ReturnWithOpDiag(ret);
     }
 
     auto op = VolumeOperatorFactory::CreateOperator(fsType);
     if (op == nullptr) {
         LOGE("[L1:StorageDaemonProvider] CreateIsoImage: no operator for fsType=%{public}s", fsType.c_str());
-        return E_NOT_SUPPORT;
+        return ReturnWithOpDiag(E_NOT_SUPPORT);
     }
 
     ret = op->CreateIsoImage(verifiedDevPath, filePath, verifiedMountPath);
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemonProvider] CreateIsoImage: <<< EXIT FAILED <<< ret=%{public}d", ret);
-        return ret;
+        return ReturnWithOpDiag(ret);
     }
 
     LOGI("[L1:StorageDaemonProvider] CreateIsoImage: <<< EXIT SUCCESS <<<");
-    return E_OK;
+    return ReturnWithOpDiag(E_OK);
 #else
     return E_NOT_SUPPORT;
 #endif
@@ -3202,38 +3245,40 @@ int32_t StorageDaemonProvider::Burn(const std::string &devPath,
         LOGE("[L1:StorageDaemonProvider] Burn: <<< EXIT FAILED <<< uid=%{public}d is invalid", uid);
         return E_PERMISSION_DENIED;
     }
+    VolumeOpDiagBegin(MakeOpDiagContext("StorageDaemonProvider::Burn",
+                                        DFX_STAGE_BURN, VOL_OP_BURN, devPath, fsType));
     std::string verifiedPath;
     int32_t ret = ValidateBlockDevicePath(devPath, verifiedPath);
     if (ret != E_OK) {
-        return ret;
+        return ReturnWithOpDiag(ret);
     }
     if (fsType.empty()) {
         LOGE("[L1:StorageDaemonProvider] Burn: <<< EXIT FAILED <<< fsType is empty");
-        return E_PARAMS_INVALID;
+        return ReturnWithOpDiag(E_PARAMS_INVALID);
     }
     BurnOptions parsedOptions;
     ret = ParseBurnOptions(burnOptions, parsedOptions);
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemonProvider] Burn ParseBurnOptions: <<< EXIT FAILED <<< ret=%{public}d", ret);
-        return ret;
+        return ReturnWithOpDiag(ret);
     }
     ret = ValidateBurnOptions(parsedOptions);
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemonProvider] Burn DiskUtils::ValidateBurnOptions: <<< EXIT FAILED <<< ret=%{public}d", ret);
-        return ret;
+        return ReturnWithOpDiag(ret);
     }
     auto op = VolumeOperatorFactory::CreateOperator(parsedOptions.fsType);
     if (op == nullptr) {
         LOGE("[L1:StorageDaemonProvider] Burn: no operator for fsType=%{public}s", parsedOptions.fsType.c_str());
-        return E_NOT_SUPPORT;
+        return ReturnWithOpDiag(E_NOT_SUPPORT);
     }
     ret = op->Burn(verifiedPath, parsedOptions);
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemonProvider] Burn: <<< EXIT FAILED <<< ret=%{public}d", ret);
-        return ret;
+        return ReturnWithOpDiag(ret);
     }
     LOGI("[L1:StorageDaemonProvider] Burn: <<< EXIT SUCCESS <<<");
-    return E_OK;
+    return ReturnWithOpDiag(E_OK);
 #else
     return E_NOT_SUPPORT;
 #endif
@@ -3278,20 +3323,22 @@ int32_t StorageDaemonProvider::VerifyBurnData(const std::string &devPath, int32_
         LOGE("[L1:StorageDaemonProvider] VerifyBurnData: <<< EXIT FAILED <<< uid=%{public}d is invalid", uid);
         return E_PERMISSION_DENIED;
     }
+    VolumeOpDiagBegin(MakeOpDiagContext("StorageDaemonProvider::VerifyBurnData",
+                                        DFX_STAGE_BURN, VOL_OP_BURN, devPath, ""));
     std::string verifiedPath;
     int32_t ret = ValidateBlockDevicePath(devPath, verifiedPath);
     if (ret != E_OK) {
-        return ret;
+        return ReturnWithOpDiag(ret);
     }
 
     ret = DiskUtils::VerifyBurnData(verifiedPath, verifyType);
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemonProvider] VerifyBurnData: <<< EXIT FAILED <<< ret=%{public}d", ret);
-        return ret;
+        return ReturnWithOpDiag(ret);
     }
 
     LOGI("[L1:StorageDaemonProvider] VerifyBurnData: <<< EXIT SUCCESS <<<");
-    return E_OK;
+    return ReturnWithOpDiag(E_OK);
 #else
     return E_NOT_SUPPORT;
 #endif
@@ -3390,13 +3437,25 @@ int32_t StorageDaemonProvider::CreateDmLinear(const std::string &sourceDevPath,
                                               uint64_t &dmDev)
 {
 #ifdef DISK_MANAGER
-    LOGI("[L1:StorageDaemonProvider] CreateDmLinear: >>> ENTER <<< source=%{public}s, "
+    LOGI("[L1:StorageDaemonProvider] CreateDmLinear: >>> ENTER <<< source=%{public}.128s, "
          "start=%{public}llu, count=%{public}llu",
          sourceDevPath.c_str(),
          static_cast<unsigned long long>(startSector),
          static_cast<unsigned long long>(sectorCount));
  
-    DmDevice dmDevice(sourceDevPath, startSector, sectorCount);
+    auto uid = IPCSkeleton::GetCallingUid();
+    if (uid != DISK_MANAGER_UID) {
+        LOGE("[L1:StorageDaemonProvider] CreateDmLinear: <<< EXIT FAILED <<< uid=%{public}d is invalid", uid);
+        return E_PERMISSION_DENIED;
+    }
+    std::string verifiedPath;
+    int32_t ret = ValidateBlockDevicePath(sourceDevPath, verifiedPath);
+    if (ret != E_OK) {
+        LOGE("[L1:StorageDaemonProvider] CreateDmLinear: invalid sourceDevPath");
+        return ret;
+    }
+ 
+    DmDevice dmDevice(verifiedPath, startSector, sectorCount);
     if (!dmDevice.Create()) {
         LOGE("[L1:StorageDaemonProvider] CreateDmLinear: Create failed");
         return E_ERR;

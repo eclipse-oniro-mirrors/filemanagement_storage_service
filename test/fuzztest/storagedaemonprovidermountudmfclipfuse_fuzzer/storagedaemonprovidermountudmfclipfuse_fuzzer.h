@@ -12,9 +12,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef STORAGEDAEMONPROVIDEREJECTCD_FUZZER_H
-#define STORAGEDAEMONPROVIDEREJECTCD_FUZZER_H
+#ifndef STORAGEDAEMONPROVIDERMOUNTUDMFCLIPFUSE_FUZZER_H
+#define STORAGEDAEMONPROVIDERMOUNTUDMFCLIPFUSE_FUZZER_H
 
-#define FUZZ_PROJECT_NAME "storagedaemonproviderejectcd_fuzzer"
+#define FUZZ_PROJECT_NAME "storagedaemonprovidermountudmfclipfuse_fuzzer"
 
 #endif

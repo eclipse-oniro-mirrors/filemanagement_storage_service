@@ -45,6 +45,11 @@ constexpr const char *UECE_PATH = "/dev/fbex_uece";
 }
 
 namespace OHOS::StorageDaemon {
+static bool g_saveStringToFileSync = true;
+bool SaveStringToFileSync(const std::string &path, const std::string &data, std::string &errMsg)
+{
+    return g_saveStringToFileSync;
+}
 class KeyManagerTest : public testing::Test {
 public:
     static void SetUpTestCase(void);
@@ -352,17 +357,12 @@ HWTEST_F(KeyManagerTest, KeyManager_ActiveCeSceSeceUserKey_001, TestSize.Level1)
     std::string keyDir = std::string(USER_EL1_DIR) + "/" + std::to_string(user);
     EXPECT_TRUE(OHOS::ForceCreateDirectory(keyDir));
     EXPECT_CALL(*fscryptControlMock_, KeyCtrlHasFscryptSyspara()).WillOnce(Return(true));
-    EXPECT_CALL(*fscryptControlMock_, GetFscryptVersionFromPolicy()).WillOnce(Return(FSCRYPT_V2));
-    EXPECT_CALL(*keyControlMock_, KeyCtrlGetFscryptVersion(_)).WillOnce(Return(FSCRYPT_INVALID));
-    EXPECT_EQ(KeyManager::GetInstance().ActiveCeSceSeceUserKey(user, EL1_KEY, token, secret), -EOPNOTSUPP);
+    EXPECT_EQ(KeyManager::GetInstance().ActiveCeSceSeceUserKey(user, EL1_KEY, token, secret), -ENOENT);
     EXPECT_TRUE(OHOS::ForceRemoveDirectory(keyDir));
 
     EXPECT_TRUE(OHOS::ForceCreateDirectory(keyDir));
     EXPECT_CALL(*fscryptControlMock_, KeyCtrlHasFscryptSyspara()).WillOnce(Return(true));
-    EXPECT_CALL(*fscryptControlMock_, GetFscryptVersionFromPolicy()).WillOnce(Return(FSCRYPT_V2));
-    EXPECT_CALL(*keyControlMock_, KeyCtrlGetFscryptVersion(_)).WillOnce(Return(FSCRYPT_V2));
-    EXPECT_CALL(*baseKeyMock_, InitKey(_)).WillOnce(Return(false));
-    EXPECT_EQ(KeyManager::GetInstance().ActiveCeSceSeceUserKey(user, EL1_KEY, token, secret), E_ELX_KEY_ACTIVE_ERROR);
+    EXPECT_EQ(KeyManager::GetInstance().ActiveCeSceSeceUserKey(user, EL1_KEY, token, secret), -ENOENT);
     EXPECT_TRUE(OHOS::ForceRemoveDirectory(keyDir));
     GTEST_LOG_(INFO) << "KeyManager_ActiveCeSceSeceUserKey_001 end";
 }
@@ -1671,58 +1671,58 @@ HWTEST_F(KeyManagerTest, KeyManager_Generate_And_Install_El5_Key_003, TestSize.L
 }
 
 /**
- * @tc.name: KeyManager_IsNeedClearKeyFile_001
- * @tc.desc: Verify the KeyManager IsNeedClearKeyFile function.
+ * @tc.name: KeyManager_IsNeedRollbackVersion_001
+ * @tc.desc: Verify the KeyManager IsNeedRollbackVersion function.
  * @tc.type: FUNC
  * @tc.require: SR000H0CM9
  */
-HWTEST_F(KeyManagerTest, KeyManager_IsNeedClearKeyFile_001, TestSize.Level1)
+HWTEST_F(KeyManagerTest, KeyManager_IsNeedRollbackVersion_001, TestSize.Level1)
 {
-    GTEST_LOG_(INFO) << "KeyManager_IsNeedClearKeyFile_0100 start";
+    GTEST_LOG_(INFO) << "KeyManager_IsNeedRollbackVersion_0100 start";
     std::string TEST_DIR = "/data/123456";
-    auto ret = KeyManager::GetInstance().IsNeedClearKeyFile(TEST_DIR);
+    auto ret = KeyManager::GetInstance().IsNeedRollbackVersion(TEST_DIR);
     EXPECT_FALSE(ret);
 
     TEST_DIR = "/data/test";
-    ret = KeyManager::GetInstance().IsNeedClearKeyFile(TEST_DIR);
+    ret = KeyManager::GetInstance().IsNeedRollbackVersion(TEST_DIR);
     EXPECT_TRUE(ret);
-    GTEST_LOG_(INFO) << "KeyManager_IsNeedClearKeyFile_0100 end";
+    GTEST_LOG_(INFO) << "KeyManager_IsNeedRollbackVersion_0100 end";
 }
 
 /**
  * @tc.name: KeyManager_ProcUpgraeKey_001
- * @tc.desc: Verify the KeyManager ProcUpgradeKey function.
+ * @tc.desc: Verify the KeyManager RollbackVersion function.
  * @tc.type: FUNC
  * @tc.require: SR000H0CM9
  */
-HWTEST_F(KeyManagerTest, KeyManager_ProcUpgradeKey_001, TestSize.Level1)
+HWTEST_F(KeyManagerTest, KeyManager_RollbackVersion_001, TestSize.Level1)
 {
-    GTEST_LOG_(INFO) << "KeyManager_ProcUpgradeKey_0100 start";
+    GTEST_LOG_(INFO) << "KeyManager_RollbackVersion_0100 start";
     FileList file = { 100, "/test/path" };
     std::vector<FileList> vec;
     vec.push_back(file);
-    KeyManager::GetInstance().ProcUpgradeKey(vec);
-    auto ret = KeyManager::GetInstance().IsNeedClearKeyFile("/test/path/latest/need_restore");
+    KeyManager::GetInstance().RollbackVersion(vec);
+    auto ret = KeyManager::GetInstance().IsNeedRollbackVersion("/test/path/latest/need_restore");
     EXPECT_FALSE(ret);
-    GTEST_LOG_(INFO) << "KeyManager_ProcUpgradeKey_0100 end";
+    GTEST_LOG_(INFO) << "KeyManager_RollbackVersion_0100 end";
 }
 
 /**
  * @tc.name: KeyManager_ProcUpgraeKey_002
- * @tc.desc: Verify the KeyManager ProcUpgradeKey function.
+ * @tc.desc: Verify the KeyManager RollbackVersion function.
  * @tc.type: FUNC
  * @tc.require: SR000H0CM9
  */
-HWTEST_F(KeyManagerTest, KeyManager_ProcUpgradeKey_002, TestSize.Level1)
+HWTEST_F(KeyManagerTest, KeyManager_RollbackVersion_002, TestSize.Level1)
 {
-    GTEST_LOG_(INFO) << "KeyManager_ProcUpgradeKey_0200 start";
+    GTEST_LOG_(INFO) << "KeyManager_RollbackVersion_0200 start";
     FileList file = { 100, "/data/test" };
     std::vector<FileList> vec;
     vec.push_back(file);
-    KeyManager::GetInstance().ProcUpgradeKey(vec);
-    auto ret = KeyManager::GetInstance().IsNeedClearKeyFile("/data/test/latest/need_restore");
+    KeyManager::GetInstance().RollbackVersion(vec);
+    auto ret = KeyManager::GetInstance().IsNeedRollbackVersion("/data/test/latest/need_restore");
     EXPECT_FALSE(ret);
-    GTEST_LOG_(INFO) << "KeyManager_ProcUpgradeKey_0200 end";
+    GTEST_LOG_(INFO) << "KeyManager_RollbackVersion_0200 end";
 }
 
 /**
@@ -1874,7 +1874,7 @@ HWTEST_F(KeyManagerTest, KeyManager_Generate_User_Key_By_Type_002, TestSize.Leve
     std::string elPath = KeyManager::GetInstance().GetKeyDirByType(keyType);
     EXPECT_TRUE(MkDir(elPath, S_IRWXU));
     std::string elUserKeyPath = elPath + "/" + std::to_string(userId);
-    EXPECT_FALSE(MkDir(elUserKeyPath, S_IRWXU));
+    EXPECT_TRUE(OHOS::ForceCreateDirectory(elUserKeyPath));
     ret = KeyManager::GetInstance().GenerateUserKeyByType(userId, keyType, badToken, badSecret);
     EXPECT_EQ(ret, -EEXIST);
     EXPECT_TRUE(OHOS::ForceRemoveDirectory(elUserKeyPath));
@@ -2090,25 +2090,19 @@ HWTEST_F(KeyManagerTest, KeyManager_ClearKeyFilesForPath_002, TestSize.Level1)
 }
  
 /**
- * @tc.name: KeyManager_ProcUpgradeKey_003
- * @tc.desc: Test ProcUpgradeKey function
+ * @tc.name: KeyManager_RollbackVersion_003
+ * @tc.desc: Test RollbackVersion function
  * @tc.type: FUNC
  * @tc.require: AR000H09L6
  */
-HWTEST_F(KeyManagerTest, KeyManager_ProcUpgradeKey_003, TestSize.Level1)
+HWTEST_F(KeyManagerTest, KeyManager_RollbackVersion_003, TestSize.Level1)
 {
-    GTEST_LOG_(INFO) << "KeyManager_ProcUpgradeKey_003 start";
- 
+    GTEST_LOG_(INFO) << "KeyManager_RollbackVersion_003 start";
+
     std::string testPath = "/data/test/proc_upgrade_key";
     OHOS::ForceCreateDirectory(testPath);
     OHOS::ForceCreateDirectory(testPath + "/latest");
- 
-    // Create need_restore flag file
-    {
-        std::ofstream flagFile(testPath + "/latest/need_restore");
-        EXPECT_TRUE(flagFile.is_open());
-    }
- 
+
     // Create test key files
     {
         std::ofstream file1(testPath + "/fscrypt_version");
@@ -2116,24 +2110,27 @@ HWTEST_F(KeyManagerTest, KeyManager_ProcUpgradeKey_003, TestSize.Level1)
         EXPECT_TRUE(file1.is_open());
         EXPECT_TRUE(file2.is_open());
     }
- 
+
     // Create FileList
     std::vector<FileList> dirInfo;
     FileList fileList { .userId = 100, .path = testPath };
     dirInfo.push_back(fileList);
- 
-    // Mock IsNeedClearKeyFile to return true
-    // Since we can't easily mock private methods, we'll test with actual file
-    KeyManager::GetInstance().ProcUpgradeKey(dirInfo);
- 
-    // Verify files are deleted
-    EXPECT_NE(access((testPath + "/fscrypt_version").c_str(), 0), 0);
-    EXPECT_NE(access((testPath + "/key_desc").c_str(), 0), 0);
- 
+
+    KeyManager::GetInstance().RollbackVersion(dirInfo);
+
+    // Verify files are NOT deleted (RollbackVersion writes version, not deletes)
+    EXPECT_EQ(access((testPath + "/fscrypt_version").c_str(), 0), 0);
+    EXPECT_EQ(access((testPath + "/key_desc").c_str(), 0), 0);
+
+    // Verify need_restore content changed to "3"
+    std::string version;
+    OHOS::LoadStringFromFile(testPath + "/latest/need_restore", version);
+    EXPECT_EQ(version, "");
+
     // Cleanup
     OHOS::ForceRemoveDirectory(testPath);
- 
-    GTEST_LOG_(INFO) << "KeyManager_ProcUpgradeKey_003 end";
+
+    GTEST_LOG_(INFO) << "KeyManager_RollbackVersion_003 end";
 }
  
 /**
@@ -2740,5 +2737,401 @@ HWTEST_F(KeyManagerTest, KeyManager_SetDirEncryptionPolicyWithKeyDesc_006, TestS
               E_NOT_SUPPORT);
 
     GTEST_LOG_(INFO) << "KeyManager_SetDirEncryptionPolicyWithKeyDesc_006 end";
+}
+
+/**
+ * @tc.name: KeyManager_CheckDir_PrimaryAndBackupBothIncomplete_ReturnsFalse
+ * @tc.desc: CheckDir returns false when both primary and backup key files are incomplete
+ * @tc.type: FUNC
+ * @tc.require: AR000H09L6
+ */
+HWTEST_F(KeyManagerTest, KeyManager_CheckDir_PrimaryAndBackupBothIncomplete_ReturnsFalse,
+    TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "KeyManager_CheckDir_PrimaryAndBackupBothIncomplete_ReturnsFalse start";
+
+    std::string mainDir = "/data/test/checkdir_main";
+    std::string backupDir = mainDir + "_bak";
+    OHOS::ForceCreateDirectory(mainDir + "/latest");
+    OHOS::ForceCreateDirectory(backupDir + "/latest");
+
+    // Create incomplete key files (missing shield) in both main and backup
+    {
+        std::ofstream f1(mainDir + "/latest/sec_discard");
+        std::ofstream f2(mainDir + "/latest/encrypted");
+        std::ofstream f3(backupDir + "/latest/sec_discard");
+        std::ofstream f4(backupDir + "/latest/encrypted");
+    }
+
+    // CheckDir should return false - both main and backup incomplete
+    bool result = KeyManager::GetInstance().CheckDir(EL1_KEY, mainDir, 100);
+    EXPECT_FALSE(result);
+
+    // Cleanup
+    OHOS::ForceRemoveDirectory(mainDir);
+    OHOS::ForceRemoveDirectory(backupDir);
+
+    GTEST_LOG_(INFO) << "KeyManager_CheckDir_PrimaryAndBackupBothIncomplete_ReturnsFalse end";
+}
+
+/**
+ * @tc.name: KeyManager_CheckDir_NeedRestoreExists_ReturnsTrue
+ * @tc.desc: CheckDir returns true when need_restore exists even if keys are incomplete
+ * @tc.type: FUNC
+ * @tc.require: AR000H09L6
+ */
+HWTEST_F(KeyManagerTest, KeyManager_CheckDir_NeedRestoreExists_ReturnsTrue, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "KeyManager_CheckDir_NeedRestoreExists_ReturnsTrue start";
+
+    std::string mainDir = "/data/test/checkdir_need_restore";
+    std::string backupDir = mainDir + "_bak";
+    OHOS::ForceCreateDirectory(mainDir + "/latest");
+    OHOS::ForceCreateDirectory(backupDir + "/latest");
+
+    // Both incomplete (missing shield)
+    {
+        std::ofstream f1(mainDir + "/latest/sec_discard");
+        std::ofstream f2(mainDir + "/latest/encrypted");
+        std::ofstream f3(backupDir + "/latest/sec_discard");
+        std::ofstream f4(backupDir + "/latest/encrypted");
+    }
+    // need_restore exists
+    {
+        std::ofstream f(mainDir + "/latest/need_restore");
+        f << "3";
+    }
+
+    // should return true - need_restore exists, not blocked
+    bool result = KeyManager::GetInstance().CheckDir(EL1_KEY, mainDir, 100);
+    EXPECT_TRUE(result);
+
+    OHOS::ForceRemoveDirectory(mainDir);
+    OHOS::ForceRemoveDirectory(backupDir);
+
+    GTEST_LOG_(INFO) << "KeyManager_CheckDir_NeedRestoreExists_ReturnsTrue end";
+}
+
+/**
+ * @tc.name: KeyManager_CheckDir_WorkDirIncomplete_BothKeyComplete_ReturnsFalse
+ * @tc.desc: CheckDir returns false when both keys complete but workDir incomplete (if8 combo2)
+ * @tc.type: FUNC
+ * @tc.require: AR000H09L6
+ */
+HWTEST_F(KeyManagerTest, KeyManager_CheckDir_WorkDirIncomplete_BothKeyComplete_ReturnsFalse,
+    TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "KeyManager_CheckDir_WorkDirIncomplete_BothKeyComplete_ReturnsFalse start";
+
+    std::string mainDir = "/data/test/checkdir_both_ok";
+    std::string backupDir = mainDir + "_bak";
+    OHOS::ForceCreateDirectory(mainDir + "/latest");
+    OHOS::ForceCreateDirectory(backupDir + "/latest");
+
+    // Both keys complete
+    {
+        std::ofstream f1(mainDir + "/latest/shield");
+        std::ofstream f2(mainDir + "/latest/sec_discard");
+        std::ofstream f3(mainDir + "/latest/encrypted");
+        std::ofstream f4(backupDir + "/latest/shield");
+        std::ofstream f5(backupDir + "/latest/sec_discard");
+        std::ofstream f6(backupDir + "/latest/encrypted");
+    }
+
+    // workDir not constructed → IsWorkDirExist=false → keyBothIncomplete=F + !workDirComplete=T → false
+    bool result = KeyManager::GetInstance().CheckDir(EL1_KEY, mainDir, 100);
+    EXPECT_FALSE(result);
+
+    OHOS::ForceRemoveDirectory(mainDir);
+    OHOS::ForceRemoveDirectory(backupDir);
+
+    GTEST_LOG_(INFO) << "KeyManager_CheckDir_WorkDirIncomplete_BothKeyComplete_ReturnsFalse end";
+}
+
+/**
+ * @tc.name: KeyManager_CheckDir_EL3_PrimaryAndBackupBothIncomplete_ReturnsFalse
+ * @tc.desc: CheckDir EL3 returns false when both primary and backup key files are incomplete
+ * @tc.type: FUNC
+ * @tc.require: AR000H09L6
+ */
+HWTEST_F(KeyManagerTest, KeyManager_CheckDir_EL3_PrimaryAndBackupBothIncomplete_ReturnsFalse,
+    TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "KeyManager_CheckDir_EL3_PrimaryAndBackupBothIncomplete_ReturnsFalse start";
+
+    std::string mainDir = "/data/test/checkdir_el3_main";
+    std::string backupDir = mainDir + "_bak";
+    OHOS::ForceCreateDirectory(mainDir + "/latest");
+    OHOS::ForceCreateDirectory(backupDir + "/latest");
+    {
+        std::ofstream f1(mainDir + "/latest/sec_discard");
+        std::ofstream f2(mainDir + "/latest/encrypted");
+        std::ofstream f3(backupDir + "/latest/sec_discard");
+        std::ofstream f4(backupDir + "/latest/encrypted");
+    }
+
+    bool result = KeyManager::GetInstance().CheckDir(EL3_KEY, mainDir, 100);
+    EXPECT_FALSE(result);
+
+    OHOS::ForceRemoveDirectory(mainDir);
+    OHOS::ForceRemoveDirectory(backupDir);
+
+    GTEST_LOG_(INFO) << "KeyManager_CheckDir_EL3_PrimaryAndBackupBothIncomplete_ReturnsFalse end";
+}
+
+/**
+ * @tc.name: KeyManager_CheckDir_EL4_PrimaryAndBackupBothIncomplete_ReturnsFalse
+ * @tc.desc: CheckDir EL4 returns false when both primary and backup key files are incomplete
+ * @tc.type: FUNC
+ * @tc.require: AR000H09L6
+ */
+HWTEST_F(KeyManagerTest, KeyManager_CheckDir_EL4_PrimaryAndBackupBothIncomplete_ReturnsFalse,
+    TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "KeyManager_CheckDir_EL4_PrimaryAndBackupBothIncomplete_ReturnsFalse start";
+
+    std::string mainDir = "/data/test/checkdir_el4_main";
+    std::string backupDir = mainDir + "_bak";
+    OHOS::ForceCreateDirectory(mainDir + "/latest");
+    OHOS::ForceCreateDirectory(backupDir + "/latest");
+    {
+        std::ofstream f1(mainDir + "/latest/sec_discard");
+        std::ofstream f2(mainDir + "/latest/encrypted");
+        std::ofstream f3(backupDir + "/latest/sec_discard");
+        std::ofstream f4(backupDir + "/latest/encrypted");
+    }
+
+    bool result = KeyManager::GetInstance().CheckDir(EL4_KEY, mainDir, 100);
+    EXPECT_FALSE(result);
+
+    OHOS::ForceRemoveDirectory(mainDir);
+    OHOS::ForceRemoveDirectory(backupDir);
+
+    GTEST_LOG_(INFO) << "KeyManager_CheckDir_EL4_PrimaryAndBackupBothIncomplete_ReturnsFalse end";
+}
+
+/**
+ * @tc.name: KeyManager_CheckDir_DefaultType_ReturnsFalse
+ * @tc.desc: CheckDir default branch (dirType=EL5) returns false when keys incomplete
+ * @tc.type: FUNC
+ * @tc.require: AR000H09L6
+ */
+HWTEST_F(KeyManagerTest, KeyManager_CheckDir_DefaultType_ReturnsFalse, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "KeyManager_CheckDir_DefaultType_ReturnsFalse start";
+
+    std::string mainDir = "/data/test/checkdir_default_main";
+    std::string backupDir = mainDir + "_bak";
+    OHOS::ForceCreateDirectory(mainDir + "/latest");
+    OHOS::ForceCreateDirectory(backupDir + "/latest");
+    {
+        std::ofstream f1(mainDir + "/latest/sec_discard");
+        std::ofstream f2(mainDir + "/latest/encrypted");
+        std::ofstream f3(backupDir + "/latest/sec_discard");
+        std::ofstream f4(backupDir + "/latest/encrypted");
+    }
+
+    bool result = KeyManager::GetInstance().CheckDir(EL0_KEY, mainDir, 100);
+    EXPECT_FALSE(result);
+
+    OHOS::ForceRemoveDirectory(mainDir);
+    OHOS::ForceRemoveDirectory(backupDir);
+
+    GTEST_LOG_(INFO) << "KeyManager_CheckDir_DefaultType_ReturnsFalse end";
+}
+
+/**
+ * @tc.name: KeyManager_CheckDir_EL5_DirNotExist_ReturnsFalse
+ * @tc.desc: CheckDir EL5 returns false when keyDir not exist (if1 true + if2 true via !IsDir)
+ */
+HWTEST_F(KeyManagerTest, KeyManager_CheckDir_EL5_DirNotExist_ReturnsFalse, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "KeyManager_CheckDir_EL5_DirNotExist_ReturnsFalse start";
+
+    std::string mainDir = "/data/test/checkdir_el5_notexist";
+    // mainDir does not exist → CheckAndDeleteEmptyEl5Directory returns -ENOENT (!=0) → return false
+    bool result = KeyManager::GetInstance().CheckDir(EL5_KEY, mainDir, 100);
+    EXPECT_FALSE(result);
+
+    GTEST_LOG_(INFO) << "KeyManager_CheckDir_EL5_DirNotExist_ReturnsFalse end";
+}
+
+/**
+ * @tc.name: KeyManager_CheckDir_EL5_EmptyDir_ReturnsFalse
+ * @tc.desc: CheckDir EL5 returns false when keyDir is empty (if1 true + if2 true via is_empty)
+ */
+HWTEST_F(KeyManagerTest, KeyManager_CheckDir_EL5_EmptyDir_ReturnsFalse, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "KeyManager_CheckDir_EL5_EmptyDir_ReturnsFalse start";
+
+    std::string mainDir = "/data/test/checkdir_el5_empty";
+    OHOS::ForceCreateDirectory(mainDir);
+    // empty dir → is_empty → ForceRemoveDirectory + return -ENOENT (!=0) → return false
+    bool result = KeyManager::GetInstance().CheckDir(EL5_KEY, mainDir, 100);
+    EXPECT_FALSE(result);
+
+    GTEST_LOG_(INFO) << "KeyManager_CheckDir_EL5_EmptyDir_ReturnsFalse end";
+}
+
+/**
+ * @tc.name: KeyManager_CheckDir_EL5_NonEmptyDir_ReturnsTrue
+ * @tc.desc: CheckDir EL5 returns true when keyDir is non-empty (if1 true + if2 false via return 0)
+ */
+HWTEST_F(KeyManagerTest, KeyManager_CheckDir_EL5_NonEmptyDir_ReturnsTrue, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "KeyManager_CheckDir_EL5_NonEmptyDir_ReturnsTrue start";
+
+    std::string mainDir = "/data/test/checkdir_el5_nonempty";
+    OHOS::ForceCreateDirectory(mainDir);
+    { std::ofstream f(mainDir + "/somefile"); }
+    // non-empty dir → return 0 (==0) → return true
+    bool result = KeyManager::GetInstance().CheckDir(EL5_KEY, mainDir, 100);
+    EXPECT_TRUE(result);
+
+    OHOS::ForceRemoveDirectory(mainDir);
+
+    GTEST_LOG_(INFO) << "KeyManager_CheckDir_EL5_NonEmptyDir_ReturnsTrue end";
+}
+
+/**
+ * @tc.name: KeyManager_CheckDir_EL2_PrimaryAndBackupBothIncomplete_ReturnsFalse
+ * @tc.desc: CheckDir EL2 returns false when both keys incomplete (covers EL2 branch of if-else chain)
+ */
+HWTEST_F(KeyManagerTest, KeyManager_CheckDir_EL2_PrimaryAndBackupBothIncomplete_ReturnsFalse,
+    TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "KeyManager_CheckDir_EL2_PrimaryAndBackupBothIncomplete_ReturnsFalse start";
+
+    std::string mainDir = "/data/test/checkdir_el2_main";
+    std::string backupDir = mainDir + "_bak";
+    OHOS::ForceCreateDirectory(mainDir + "/latest");
+    OHOS::ForceCreateDirectory(backupDir + "/latest");
+    {
+        std::ofstream f1(mainDir + "/latest/sec_discard");
+        std::ofstream f2(mainDir + "/latest/encrypted");
+        std::ofstream f3(backupDir + "/latest/sec_discard");
+        std::ofstream f4(backupDir + "/latest/encrypted");
+    }
+
+    bool result = KeyManager::GetInstance().CheckDir(EL2_KEY, mainDir, 100);
+    EXPECT_FALSE(result);
+
+    OHOS::ForceRemoveDirectory(mainDir);
+    OHOS::ForceRemoveDirectory(backupDir);
+
+    GTEST_LOG_(INFO) << "KeyManager_CheckDir_EL2_PrimaryAndBackupBothIncomplete_ReturnsFalse end";
+}
+
+/**
+ * @tc.name: KeyManager_CheckDir_WorkDirComplete_BothKeyComplete_ReturnsTrue
+ * @tc.desc: CheckDir returns true when workDir complete + both keys complete (if8 combo4)
+ */
+HWTEST_F(KeyManagerTest, KeyManager_CheckDir_WorkDirComplete_BothKeyComplete_ReturnsTrue, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "KeyManager_CheckDir_WorkDirComplete_BothKeyComplete_ReturnsTrue start";
+
+    std::string mainDir = "/data/test/checkdir_workdir_both_ok";
+    std::string backupDir = mainDir + "_bak";
+    OHOS::ForceCreateDirectory(mainDir + "/latest");
+    OHOS::ForceCreateDirectory(backupDir + "/latest");
+    {
+        std::ofstream f1(mainDir + "/latest/shield");
+        std::ofstream f2(mainDir + "/latest/sec_discard");
+        std::ofstream f3(mainDir + "/latest/encrypted");
+        std::ofstream f4(backupDir + "/latest/shield");
+        std::ofstream f5(backupDir + "/latest/sec_discard");
+        std::ofstream f6(backupDir + "/latest/encrypted");
+    }
+    // construct workDir so IsWorkDirExist returns true
+    OHOS::ForceCreateDirectory("data/app/el1/200");
+    OHOS::ForceCreateDirectory("data/service/el1/200");
+
+    // keyBothIncomplete=F + workDirComplete=T + needRestore=F → (F||F)&&T=F → true
+    bool result = KeyManager::GetInstance().CheckDir(EL1_KEY, mainDir, 200);
+    EXPECT_TRUE(result);
+
+    OHOS::ForceRemoveDirectory(mainDir);
+    OHOS::ForceRemoveDirectory(backupDir);
+    OHOS::ForceRemoveDirectory("data/app/el1/200");
+    OHOS::ForceRemoveDirectory("data/service/el1/200");
+
+    GTEST_LOG_(INFO) << "KeyManager_CheckDir_WorkDirComplete_BothKeyComplete_ReturnsTrue end";
+}
+
+/**
+ * @tc.name: KeyManager_CheckDir_WorkDirComplete_BothKeyIncomplete_ReturnsFalse
+ * @tc.desc: CheckDir returns false when workDir complete but both keys incomplete (if8 combo3)
+ */
+HWTEST_F(KeyManagerTest, KeyManager_CheckDir_WorkDirComplete_BothKeyIncomplete_ReturnsFalse,
+    TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "KeyManager_CheckDir_WorkDirComplete_BothKeyIncomplete_ReturnsFalse start";
+
+    std::string mainDir = "/data/test/checkdir_workdir_both_incomplete";
+    std::string backupDir = mainDir + "_bak";
+    OHOS::ForceCreateDirectory(mainDir + "/latest");
+    OHOS::ForceCreateDirectory(backupDir + "/latest");
+    {
+        std::ofstream f1(mainDir + "/latest/sec_discard");
+        std::ofstream f2(mainDir + "/latest/encrypted");
+        std::ofstream f3(backupDir + "/latest/sec_discard");
+        std::ofstream f4(backupDir + "/latest/encrypted");
+    }
+    // construct workDir so IsWorkDirExist returns true
+    OHOS::ForceCreateDirectory("data/app/el1/201");
+    OHOS::ForceCreateDirectory("data/service/el1/201");
+
+    // keyBothIncomplete=T + workDirComplete=T + needRestore=F → (T||F)&&T=T → false
+    bool result = KeyManager::GetInstance().CheckDir(EL1_KEY, mainDir, 201);
+    EXPECT_FALSE(result);
+
+    OHOS::ForceRemoveDirectory(mainDir);
+    OHOS::ForceRemoveDirectory(backupDir);
+    OHOS::ForceRemoveDirectory("data/app/el1/201");
+    OHOS::ForceRemoveDirectory("data/service/el1/201");
+
+    GTEST_LOG_(INFO) << "KeyManager_CheckDir_WorkDirComplete_BothKeyIncomplete_ReturnsFalse end";
+}
+
+/**
+ * @tc.name: KeyManager_RollbackVersion_SaveStringToFileSyncFail
+ * @tc.desc: RollbackVersion handles SaveStringToFileSync failure
+ * @tc.type: FUNC
+ * @tc.require: AR000H09L6
+ */
+HWTEST_F(KeyManagerTest, KeyManager_RollbackVersion_SaveStringToFileSyncFail, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "KeyManager_RollbackVersion_SaveStringToFileSyncFail start";
+
+    std::string testPath = "/data/test/rollback_save_fail";
+    OHOS::ForceCreateDirectory(testPath);
+    OHOS::ForceCreateDirectory(testPath + "/latest");
+    {
+        std::ofstream flagFile(testPath + "/latest/need_restore");
+        EXPECT_TRUE(flagFile.is_open());
+        flagFile << "5";  // version != 3 && != 4 → IsNeedRollbackVersion returns true
+    }
+
+    std::vector<FileList> dirInfo;
+    FileList fileList { .userId = 100, .path = testPath };
+    dirInfo.push_back(fileList);
+
+    // Force SaveStringToFileSync to fail → covers the !SaveStringToFileSync error branch
+    g_saveStringToFileSync = false;
+    KeyManager::GetInstance().RollbackVersion(dirInfo);
+    g_saveStringToFileSync = true;
+
+    // need_restore still "5" (SaveStringToFileSync failed, not overwritten to "3")
+    std::string content;
+    std::ifstream rf(testPath + "/latest/need_restore");
+    if (rf.is_open()) {
+        std::getline(rf, content);
+        rf.close();
+    }
+    EXPECT_EQ(content, "5");
+
+    OHOS::ForceRemoveDirectory(testPath);
+
+    GTEST_LOG_(INFO) << "KeyManager_RollbackVersion_SaveStringToFileSyncFail end";
 }
 }

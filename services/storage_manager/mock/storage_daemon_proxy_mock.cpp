@@ -263,6 +263,17 @@ int32_t StorageDaemonProxy::UMountCloudDiskFuse(int32_t userId, const std::strin
     return E_OK;
 }
 
+int32_t StorageDaemonProxy::MountUdmfClipFuse(int32_t userId, const std::string &path, int32_t &fuseFd)
+{
+    fuseFd = 5;
+    return E_OK;
+}
+
+int32_t StorageDaemonProxy::UMountUdmfClipFuse(int32_t userId, const std::string &path)
+{
+    return E_OK;
+}
+
 int32_t StorageDaemonProxy::IsFileOccupied(const std::string &path, const std::vector<std::string> &inputList,
     std::vector<std::string> &outputList, bool &isOccupy)
 {
@@ -307,11 +318,6 @@ int32_t StorageDaemonProxy::RegisterUeceActivationCallback(const sptr<IUeceActiv
 }
 
 int32_t StorageDaemonProxy::UnregisterUeceActivationCallback()
-{
-    return E_OK;
-}
-
-int32_t StorageDaemonProxy::CreateUserDir(const std::string &path, mode_t mode, uid_t uid, gid_t gid)
 {
     return E_OK;
 }
@@ -382,11 +388,6 @@ int32_t StorageDaemonProxy::ReadPartitionTable(const std::string &devPath,
 }
 
 int32_t StorageDaemonProxy::QueryCDStatus(const std::string &devPath, int32_t &status)
-{
-    return E_OK;
-}
-
-int32_t StorageDaemonProxy::EjectCD(const std::string &devPath)
 {
     return E_OK;
 }

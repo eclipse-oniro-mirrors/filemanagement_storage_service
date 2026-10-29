@@ -1198,29 +1198,6 @@ HWTEST_F(StorageDaemonCommunicationTest, Daemon_communication_UnregisterUeceActi
 }
 
 /**
- * @tc.number: SUB_STORAGE_Daemon_communication_CreateUserDir_001
- * @tc.name: Daemon_communication_CreateUserDir_001
- * @tc.desc: Test function of CreateUserDir interface for SUCCESS.
- * @tc.size: MEDIUM
- * @tc.type: FUNC
- * @tc.level Level 1
- * @tc.require: issueI9G5A0
- */
-HWTEST_F(StorageDaemonCommunicationTest, Daemon_communication_CreateUserDir_001, testing::ext::TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "StorageDaemonCommunicationTest-begin Daemon_communication_CreateUserDir_001 SUCCESS";
-    auto& sdCommunication = StorageDaemonCommunication::GetInstance();
-    std::string path = "/data/test";
-    mode_t mode = 0771;
-    uid_t uid = 100;
-    gid_t gid = 100;
-    int32_t result = sdCommunication.CreateUserDir(path, mode, uid, gid);
-    EXPECT_EQ(result, E_OK);
-
-    GTEST_LOG_(INFO) << "StorageDaemonCommunicationTest-end Daemon_communication_CreateUserDir_001 SUCCESS";
-}
-
-/**
  * @tc.number: SUB_STORAGE_Daemon_communication_GetDqBlkSpacesByUids_001
  * @tc.name: Daemon_communication_GetDqBlkSpacesByUids_001
  * @tc.desc: Test function of GetDqBlkSpacesByUids interface for SUCCESS.
@@ -1408,6 +1385,45 @@ HWTEST_F(StorageDaemonCommunicationTest, Daemon_communication_UMountCloudDiskFus
                 ret == E_SERVICE_IS_NULLPTR || ret == E_REMOTE_IS_NULLPTR);
 
     GTEST_LOG_(INFO) << "StorageDaemonCommunicationTest-end Daemon_communication_UMountCloudDiskFuse_001";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_Daemon_communication_MountUdmfClipFuse_001
+ * @tc.name: Daemon_communication_MountUdmfClipFuse_001
+ * @tc.desc: Test function of MountUdmfClipFuse interface when Daemon SA is not running.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(StorageDaemonCommunicationTest, Daemon_communication_MountUdmfClipFuse_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonCommunicationTest-begin Daemon_communication_MountUdmfClipFuse_001";
+    auto& sdCommunication = StorageDaemonCommunication::GetInstance();
+    int32_t userId = 100;
+    std::string path = "/mnt/data/100/udmf_fuse/test";
+    int32_t fuseFd = -1;
+    int32_t ret = sdCommunication.MountUdmfClipFuse(userId, path, fuseFd);
+    EXPECT_TRUE(ret == E_OK || ret == E_SA_IS_NULLPTR ||
+                ret == E_SERVICE_IS_NULLPTR || ret == E_REMOTE_IS_NULLPTR);
+    GTEST_LOG_(INFO) << "StorageDaemonCommunicationTest-end Daemon_communication_MountUdmfClipFuse_001";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_Daemon_communication_UMountUdmfClipFuse_001
+ * @tc.name: Daemon_communication_UMountUdmfClipFuse_001
+ * @tc.desc: Test function of UMountUdmfClipFuse interface when Daemon SA is not running.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(StorageDaemonCommunicationTest, Daemon_communication_UMountUdmfClipFuse_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonCommunicationTest-begin Daemon_communication_UMountUdmfClipFuse_001";
+    auto& sdCommunication = StorageDaemonCommunication::GetInstance();
+    int32_t userId = 100;
+    std::string path = "/mnt/data/100/clipboard_fuse/test";
+    int32_t ret = sdCommunication.UMountUdmfClipFuse(userId, path);
+    EXPECT_TRUE(ret == E_OK || ret == E_SA_IS_NULLPTR ||
+                ret == E_SERVICE_IS_NULLPTR || ret == E_REMOTE_IS_NULLPTR);
+    GTEST_LOG_(INFO) << "StorageDaemonCommunicationTest-end Daemon_communication_UMountUdmfClipFuse_001";
 }
 
 } // namespace

@@ -86,6 +86,8 @@ public:
     MOCK_METHOD1(UMountDlpFuse, int32_t (const std::string &));
     MOCK_METHOD3(MountCloudDiskFuse, int32_t (int32_t, const std::string &, int32_t &));
     MOCK_METHOD2(UMountCloudDiskFuse, int32_t (int32_t, const std::string &));
+    MOCK_METHOD3(MountUdmfClipFuse, int32_t (int32_t, const std::string &, int32_t &));
+    MOCK_METHOD2(UMountUdmfClipFuse, int32_t (int32_t, const std::string &));
     MOCK_METHOD1(AddDeathRecipient, bool(const sptr<DeathRecipient> &));
     MOCK_METHOD1(RemoveDeathRecipient, bool(const sptr<DeathRecipient> &));
     MOCK_METHOD4(IsFileOccupied, int32_t (const std::string &, const std::vector<std::string> &,
@@ -100,7 +102,6 @@ public:
     MOCK_METHOD0(UnregisterUeceActivationCallback, int32_t(void));
     MOCK_METHOD3(SetDirEncryptionPolicy, int32_t(uint32_t, const std::string &, uint32_t));
     MOCK_METHOD3(SetDirEncryptionPolicyWithKeyDesc, int32_t(const std::string &, uint32_t, const std::string &));
-    MOCK_METHOD4(CreateUserDir, int32_t(const std::string &, mode_t, uid_t, gid_t));
     MOCK_METHOD2(GetDqBlkSpacesByUids, int32_t(const std::vector<int32_t> &, std::vector<NextDqBlk> &));
     MOCK_METHOD2(GetDirListSpace, int32_t(const std::vector<DirSpaceInfo> &, std::vector<DirSpaceInfo> &));
     MOCK_METHOD1(SetStopScanFlag, int32_t(bool));
@@ -120,7 +121,6 @@ public:
                                           const std::vector<std::string> &, bool));
 
     MOCK_METHOD3(GetBlockInfoByType, int32_t(const std::string &, const std::string &, std::string &));
-    MOCK_METHOD1(EjectCD, int32_t(const std::string &));
     MOCK_METHOD1(Erase, int32_t(const std::string &));
     MOCK_METHOD1(Eject, int32_t(const std::string &));
     MOCK_METHOD4(CreateIsoImage, int32_t(const std::string &, const std::string &,

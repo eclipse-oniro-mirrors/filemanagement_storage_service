@@ -173,7 +173,7 @@ int32_t StorageSpaceManagerProvider::CreateUnloadHandler()
         return E_OK;
     }
     unloadHandler_ = std::make_shared<AppExecFwk::EventHandler>(
-        AppExecFwk::EventRunner::Create(false));
+        AppExecFwk::EventRunner::Create("space_handler"));
     if (unloadHandler_ == nullptr) {
         LOGE("Create unload handler failed");
         return E_FAIL;
@@ -362,6 +362,7 @@ int32_t StorageSpaceManagerProvider::CleanBundleCache(int32_t userId)
         LOGE("Permission denied, caller is not SA");
         return E_PERMISSION_DENIED;
     }
+    DelayUnloadTask();
     if (!ExitIdleState()) {
         return E_SERVICE_ON_IDLE;
     }
@@ -378,6 +379,7 @@ int32_t StorageSpaceManagerProvider::GetDataShareService(const std::string &uri,
         LOGE("Service is not ready");
         return E_SERVICE_NOT_READY;
     }
+    DelayUnloadTask();
     AddRunningIpcCount();
     if (!ExitIdleState()) {
         SubtractRunningIpcCount();

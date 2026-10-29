@@ -59,6 +59,7 @@ private:
     bool IsValidNvmeDevice(const std::string &deviceName);
     bool ParseStringToUlongLong(const std::string &str, unsigned long long &result);
     bool GetExternalDiskSize(const std::string &path, uint64_t *size);
+    uint64_t GetDiskSizeByIoctl(const std::string &deviceName);
     std::string ReadFileContent(const std::string &path);
     std::string GetDevnum(const std::string &deviceName);
     std::string GetBusnum(const std::string &deviceName);

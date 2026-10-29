@@ -82,7 +82,6 @@ public:
     int32_t ResetSecretWithRecoveryKey(uint32_t userId, uint32_t rkType, const std::vector<uint8_t> &key) override;
     int32_t RegisterUeceActivationCallback(const sptr<IUeceActivationCallback>& callback) override;
     int32_t UnregisterUeceActivationCallback() override;
-    int32_t CreateUserDir(const std::string &path, uint32_t mode, uint32_t uid, uint32_t gid) override;
     int32_t CreateShareFile(const StorageFileRawData &rawData,
                             uint32_t tokenId,
                             uint32_t flag,
@@ -102,6 +101,8 @@ public:
     int32_t UMountDlpFuse(const std::string &dstPath) override;
     int32_t MountCloudDiskFuse(int32_t userId, const std::string &path, int32_t &fuseFd) override;
     int32_t UMountCloudDiskFuse(int32_t userId, const std::string &path) override;
+    int32_t MountUdmfClipFuse(int32_t userId, const std::string &path, int32_t &fuseFd) override;
+    int32_t UMountUdmfClipFuse(int32_t userId, const std::string &path) override;
     int32_t IsFileOccupied(const std::string &path, const std::vector<std::string> &inputList,
         std::vector<std::string> &outputList, bool &isOccupy) override;
     int32_t MountDisShareFile(int32_t userId, const std::map<std::string, std::string> &shareFiles) override;

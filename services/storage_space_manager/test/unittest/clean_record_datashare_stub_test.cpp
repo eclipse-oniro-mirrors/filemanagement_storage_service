@@ -2138,5 +2138,228 @@ HWTEST_F(CleanRecordDataShareStubTest, Query_LargeTimeRange, TestSize.Level2)
     GTEST_LOG_(INFO) << "CleanRecordDataShareStubTest_Query_LargeTimeRange end";
 }
 
+/* ---------- HandlingIndividualConditions Return Value Checking Tests ---------- */
+
+/**
+ * @tc.number: SUB_STORAGE_CleanRecordDataShareStub_HandlingConditions_0001
+ * @tc.name: HandlingIndividualConditions_NegativeFreedSize
+ * @tc.desc: Test HandlingIndividualConditions skips records with negative freed_size
+ * @tc.size: MEDIUM
+ * @tc.type: FUNC
+ * @tc.level Level 1
+ */
+HWTEST_F(CleanRecordDataShareStubTest, HandlingIndividualConditions_NegativeFreedSize, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "CleanRecordDataShareStubTest_HandlingIndividualConditions_NegativeFreedSize start";
+
+    ASSERT_NE(stub_, nullptr);
+    ASSERT_NE(store_, nullptr);
+
+    int64_t baseTime = 1718000000000LL;
+    NativeRdb::ValuesBucket values;
+    values.PutLong("clean_time", baseTime);
+    values.PutLong("freed_size", -1024000LL);
+    values.PutLong("clean_before", 2048000LL);
+    values.PutLong("clean_after", 1024000LL);
+    store_->Insert(values);
+
+    nlohmann::json conditions;
+    conditions["week_index"] = 1;
+    conditions["begin_time"] = baseTime - 1000;
+    conditions["end_time"] = baseTime + 10000;
+
+    nlohmann::json resultItem;
+    int32_t ret = stub_->HandlingIndividualConditions(conditions, resultItem);
+    EXPECT_EQ(ret, E_OK);
+    EXPECT_TRUE(resultItem.contains("revenue"));
+    EXPECT_EQ(resultItem["revenue"].get<int64_t>(), 0);
+
+    GTEST_LOG_(INFO) << "CleanRecordDataShareStubTest_HandlingIndividualConditions_NegativeFreedSize end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_CleanRecordDataShareStub_HandlingConditions_0002
+ * @tc.name: HandlingIndividualConditions_MixedFreedSize
+ * @tc.desc: Test HandlingIndividualConditions only accumulates positive freed_size records
+ * @tc.size: MEDIUM
+ * @tc.type: FUNC
+ * @tc.level Level 1
+ */
+HWTEST_F(CleanRecordDataShareStubTest, HandlingIndividualConditions_MixedFreedSize, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "CleanRecordDataShareStubTest_HandlingIndividualConditions_MixedFreedSize start";
+
+    ASSERT_NE(stub_, nullptr);
+    ASSERT_NE(store_, nullptr);
+
+    int64_t baseTime = 1718100000000LL;
+    int64_t positiveSum = 0;
+    {
+        NativeRdb::ValuesBucket values;
+        values.PutLong("clean_time", baseTime);
+        values.PutLong("freed_size", 1024000LL);
+        values.PutLong("clean_before", 2048000LL);
+        values.PutLong("clean_after", 1024000LL);
+        store_->Insert(values);
+        positiveSum += 1024000LL;
+    }
+    {
+        NativeRdb::ValuesBucket values;
+        values.PutLong("clean_time", baseTime + 1000);
+        values.PutLong("freed_size", -512000LL);
+        values.PutLong("clean_before", 2048000LL);
+        values.PutLong("clean_after", 1024000LL);
+        store_->Insert(values);
+    }
+    {
+        NativeRdb::ValuesBucket values;
+        values.PutLong("clean_time", baseTime + 2000);
+        values.PutLong("freed_size", 2048000LL);
+        values.PutLong("clean_before", 2048000LL);
+        values.PutLong("clean_after", 1024000LL);
+        store_->Insert(values);
+        positiveSum += 2048000LL;
+    }
+
+    nlohmann::json conditions;
+    conditions["week_index"] = 1;
+    conditions["begin_time"] = baseTime - 1000;
+    conditions["end_time"] = baseTime + 10000;
+
+    nlohmann::json resultItem;
+    int32_t ret = stub_->HandlingIndividualConditions(conditions, resultItem);
+    EXPECT_EQ(ret, E_OK);
+    EXPECT_TRUE(resultItem.contains("revenue"));
+    EXPECT_EQ(resultItem["revenue"].get<int64_t>(), positiveSum);
+
+    GTEST_LOG_(INFO) << "CleanRecordDataShareStubTest_HandlingIndividualConditions_MixedFreedSize end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_CleanRecordDataShareStub_HandlingConditions_0003
+ * @tc.name: HandlingIndividualConditions_FreedSizeOverflow
+ * @tc.desc: Test HandlingIndividualConditions caps revenue at INT64_MAX on overflow
+ * @tc.size: MEDIUM
+ * @tc.type: FUNC
+ * @tc.level Level 1
+ */
+HWTEST_F(CleanRecordDataShareStubTest, HandlingIndividualConditions_FreedSizeOverflow, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "CleanRecordDataShareStubTest_HandlingIndividualConditions_FreedSizeOverflow start";
+
+    ASSERT_NE(stub_, nullptr);
+    ASSERT_NE(store_, nullptr);
+
+    int64_t baseTime = 1718200000000LL;
+    {
+        NativeRdb::ValuesBucket values;
+        values.PutLong("clean_time", baseTime);
+        values.PutLong("freed_size", INT64_MAX - 100);
+        values.PutLong("clean_before", 2048000LL);
+        values.PutLong("clean_after", 1024000LL);
+        store_->Insert(values);
+    }
+    {
+        NativeRdb::ValuesBucket values;
+        values.PutLong("clean_time", baseTime + 1000);
+        values.PutLong("freed_size", 200);
+        values.PutLong("clean_before", 2048000LL);
+        values.PutLong("clean_after", 1024000LL);
+        store_->Insert(values);
+    }
+
+    nlohmann::json conditions;
+    conditions["week_index"] = 1;
+    conditions["begin_time"] = baseTime - 1000;
+    conditions["end_time"] = baseTime + 10000;
+
+    nlohmann::json resultItem;
+    int32_t ret = stub_->HandlingIndividualConditions(conditions, resultItem);
+    EXPECT_EQ(ret, E_OK);
+    EXPECT_TRUE(resultItem.contains("revenue"));
+    EXPECT_EQ(resultItem["revenue"].get<int64_t>(), INT64_MAX);
+
+    GTEST_LOG_(INFO) << "CleanRecordDataShareStubTest_HandlingIndividualConditions_FreedSizeOverflow end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_CleanRecordDataShareStub_HandlingConditions_0004
+ * @tc.name: HandlingIndividualConditions_ZeroFreedSize
+ * @tc.desc: Test HandlingIndividualConditions processes zero freed_size without skipping
+ * @tc.size: MEDIUM
+ * @tc.type: FUNC
+ * @tc.level Level 2
+ */
+HWTEST_F(CleanRecordDataShareStubTest, HandlingIndividualConditions_ZeroFreedSize, TestSize.Level2)
+{
+    GTEST_LOG_(INFO) << "CleanRecordDataShareStubTest_HandlingIndividualConditions_ZeroFreedSize start";
+
+    ASSERT_NE(stub_, nullptr);
+    ASSERT_NE(store_, nullptr);
+
+    int64_t baseTime = 1718300000000LL;
+    NativeRdb::ValuesBucket values;
+    values.PutLong("clean_time", baseTime);
+    values.PutLong("freed_size", 0);
+    values.PutLong("clean_before", 2048000LL);
+    values.PutLong("clean_after", 1024000LL);
+    store_->Insert(values);
+
+    nlohmann::json conditions;
+    conditions["week_index"] = 1;
+    conditions["begin_time"] = baseTime - 1000;
+    conditions["end_time"] = baseTime + 10000;
+
+    nlohmann::json resultItem;
+    int32_t ret = stub_->HandlingIndividualConditions(conditions, resultItem);
+    EXPECT_EQ(ret, E_OK);
+    EXPECT_TRUE(resultItem.contains("revenue"));
+    EXPECT_EQ(resultItem["revenue"].get<int64_t>(), 0);
+
+    GTEST_LOG_(INFO) << "CleanRecordDataShareStubTest_HandlingIndividualConditions_ZeroFreedSize end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_CleanRecordDataShareStub_HandlingConditions_0005
+ * @tc.name: HandlingIndividualConditions_PositiveFreedSizeAccumulation
+ * @tc.desc: Test HandlingIndividualConditions accumulates multiple positive freed_size records
+ * @tc.size: MEDIUM
+ * @tc.type: FUNC
+ * @tc.level Level 1
+ */
+HWTEST_F(CleanRecordDataShareStubTest, HandlingIndividualConditions_PositiveFreedSizeAccumulation, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "CleanRecordDataShareStubTest_HandlingIndividualConditions_PositiveFreedSizeAccumulation start";
+
+    ASSERT_NE(stub_, nullptr);
+    ASSERT_NE(store_, nullptr);
+
+    int64_t baseTime = 1718400000000LL;
+    int64_t expectedRevenue = 0;
+    for (int i = 0; i < 3; i++) {
+        int64_t freedSize = 1024000LL * (i + 1);
+        NativeRdb::ValuesBucket values;
+        values.PutLong("clean_time", baseTime + i * 1000);
+        values.PutLong("freed_size", freedSize);
+        values.PutLong("clean_before", 2048000LL);
+        values.PutLong("clean_after", 1024000LL);
+        store_->Insert(values);
+        expectedRevenue += freedSize;
+    }
+
+    nlohmann::json conditions;
+    conditions["week_index"] = 1;
+    conditions["begin_time"] = baseTime - 1000;
+    conditions["end_time"] = baseTime + 10000;
+
+    nlohmann::json resultItem;
+    int32_t ret = stub_->HandlingIndividualConditions(conditions, resultItem);
+    EXPECT_EQ(ret, E_OK);
+    EXPECT_TRUE(resultItem.contains("revenue"));
+    EXPECT_EQ(resultItem["revenue"].get<int64_t>(), expectedRevenue);
+
+    GTEST_LOG_(INFO) << "CleanRecordDataShareStubTest_HandlingIndividualConditions_PositiveFreedSizeAccumulation end";
+}
+
 } // namespace StorageSpaceManager
 } // namespace OHOS

@@ -85,8 +85,6 @@ interface OHOS.StorageDaemon.IStorageDaemon{
          [in] OrderedMap<int, String> bundleNameAndUid, [in] int type);
      [ipccode 55] void RegisterUeceActivationCallback([in] IUeceActivationCallback ueceCallback);
      [ipccode 56] void UnregisterUeceActivationCallback();
-     [ipccode 57] void CreateUserDir([in] String path, [in] unsigned int mode,
-                                     [in] unsigned int uid, [in] unsigned int gid);
      [ipccode 59] void SetDirEncryptionPolicy([in] unsigned int userId, [in] String dirPath, [in] unsigned int level);
      [ipccode 60] void UpdateUserPublicDirPolicy([in] unsigned int userId);
      [ipccode 61] void GetDqBlkSpacesByUids([in] int[] uids, [out] NextDqBlk[] dqBlks);
@@ -153,7 +151,6 @@ interface OHOS.StorageDaemon.IStorageDaemon{
                                         [in] boolean quickFormat);
      [ipccode 221] void UMountDisShareFile([in] String[] distributeDirs);
      [ipccode 251] void GetCapacity([in] String devPath, [out] long totalSize, [out] long freeSize);
-     [ipccode 252] void EjectCD([in] String devPath);
      [ipccode 253] void QueryCDStatus([in] String devPath, [out] int status);
      [ipccode 254] void Erase([in] String devPath);
      [ipccode 255] void Eject([in] String devName);
@@ -172,4 +169,6 @@ interface OHOS.StorageDaemon.IStorageDaemon{
                                        [out] unsigned long dmDev);
      [ipccode 265] void MountCloudDiskFuse([in] int userId, [in] String path, [out] FileDescriptor fuseFd);
      [ipccode 266] void UMountCloudDiskFuse([in] int userId, [in] String path);
+     [ipccode 267] void MountUdmfClipFuse([in] int userId, [in] String path, [out] FileDescriptor fuseFd);
+     [ipccode 268] void UMountUdmfClipFuse([in] int userId, [in] String path);
 }

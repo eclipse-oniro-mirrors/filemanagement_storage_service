@@ -15,7 +15,7 @@ import("//build/config/features.gni")
 import("//build/test.gni")
 import("//foundation/filemanagement/storage_service/storage_service_aafwk.gni")
 
-ohos_static_library("storagedaemonprovider_ejectcd_fuzztest") {
+ohos_static_library("storage_daemon_umountudmfclipfuse_fuzztest") {
   branch_protector_ret = "pac_ret"
   sanitize = {
     integer_overflow = true
@@ -33,13 +33,11 @@ ohos_static_library("storagedaemonprovider_ejectcd_fuzztest") {
     "${storage_daemon_path}/ipc/src/storage_daemon_provider.cpp",
     "${storage_daemon_path}/ipc/src/storage_manager_client.cpp",
     "${storage_daemon_path}/quota/quota_manager.cpp",
-    "${storage_daemon_path}/disk/src/disk_info.cpp",
-    "${storage_daemon_path}/disk/src/disk_manager.cpp",
     "${storage_daemon_path}/user/src/mount_manager.cpp",
     "${storage_daemon_path}/user/src/mount_manager_ext.cpp",
-    "${storage_daemon_path}/user/src/user_manager.cpp",
     "${storage_daemon_path}/user/src/system_mount_manager.cpp",
     "${storage_daemon_path}/user/src/user_path_resolver.cpp",
+    "${storage_daemon_path}/user/src/user_manager.cpp",
     "${storage_daemon_path}/utils/storage_xcollie.cpp",
   ]
 
@@ -54,10 +52,7 @@ ohos_static_library("storagedaemonprovider_ejectcd_fuzztest") {
     "-O2",
   ]
 
-  configs = [
-    "${storage_daemon_path}:storage_daemon_config",
-    "${storage_service_path}/test/fuzztest:storage_daemon_fuzz_no_lto",
-  ]
+  configs = [ "${storage_daemon_path}:storage_daemon_config" ]
 
   deps = [
     "${storage_daemon_path}/crypto:libsdcrypto",
@@ -101,65 +96,26 @@ ohos_static_library("storagedaemonprovider_ejectcd_fuzztest") {
     external_deps += [ "user_auth_framework:userauth_client" ]
   }
 
-  if (enable_disk_manager) {
-    defines += [ "DISK_MANAGER" ]
-    sources += [
-      "${storage_daemon_path}/disk_manager/src/disk/dm_device.cpp",
-      "${storage_daemon_path}/disk_manager/src/disk/disk_utils.cpp",
-      "${storage_daemon_path}/disk_manager/src/disk/scan_device.cpp",
-      "${storage_daemon_path}/disk_manager/src/volume/volume_utils.cpp",
-      "${storage_daemon_path}/disk_manager/src/volume/volume_operator_factory.cpp",
-      "${storage_daemon_path}/disk_manager/src/volume/udf_operator.cpp",
-      "${storage_daemon_path}/disk_manager/src/volume/iso9660_operator.cpp",
-      "${storage_daemon_path}/disk_manager/src/volume/exfat_operator.cpp",
-      "${storage_daemon_path}/disk_manager/src/volume/ntfs_operator.cpp",
-      "${storage_daemon_path}/disk_manager/src/volume/vfat_operator.cpp",
-      "${storage_daemon_path}/disk_manager/src/volume/hmfs_operator.cpp",
-      "${storage_daemon_path}/disk_manager/src/volume/ext4_operator.cpp",
-      "${storage_daemon_path}/disk_manager/src/volume/ivolume_operator.cpp",
-    ]
-    external_deps += [ "disk_manager:disk_manager_innerkits" ]
-  }
-
-
   subsystem_name = "filemanagement"
   part_name = "storage_service"
 }
 
-ohos_fuzztest("StorageDaemonProviderEjectCDFuzzTest") {
+ohos_fuzztest("StorageDaemonProviderUMountUdmfClipFuseFuzzTest") {
   module_out_path = "storage_service/storage_service"
-  fuzz_config_file = "${storage_service_path}/test/fuzztest/storagedaemonproviderejectcd_fuzzer"
-  include_dirs = [
-    "${storage_service_common_path}/include",
-    "${storage_daemon_path}/include",
-    "${storage_daemon_path}/include/crypto",
-    "${storage_daemon_path}/include/disk",
-    "${storage_daemon_path}/include/ipc",
-    "${storage_daemon_path}/include/quota",
-    "${storage_daemon_path}/include/user",
-    "${storage_daemon_path}/include/utils",
-    "${storage_interface_path}/innerkits/storage_manager/native",
-  ]
-  cflags = [
-    "-g",
-    "-O0",
-    "-Wno-unused-variable",
-    "-fno-omit-frame-pointer",
-  ]
-  sources = [
-    "${storage_service_path}/test/fuzztest/storagedaemonproviderejectcd_fuzzer/storagedaemonproviderejectcd_fuzzer.cpp",
-  ]
+  fuzz_config_file = "${storage_service_path}/test/fuzztest/storagedaemonproviderumountudmfclipfuse_fuzzer"
 
   defines = [
     "STORAGE_LOG_TAG = \"storage_service\"",
     "STORAGE_DAEMON_FUZZ_TEST",
   ]
   deps = [
-    ":storagedaemonprovider_ejectcd_fuzztest",
-    "${storage_daemon_path}:storage_common_utils",
+    ":storage_daemon_umountudmfclipfuse_fuzztest",
     "${storage_daemon_path}/crypto:libsdcrypto",
-    "${storage_daemon_path}/libfscrypt:libfscryptutils",
+    "${storage_daemon_path}:storage_common_utils",
     "${storage_interface_path}/innerkits/storage_manager/native:storage_manager_sa_proxy",
+  ]
+  sources = [
+    "${storage_service_path}/test/fuzztest/storagedaemonproviderumountudmfclipfuse_fuzzer/storagedaemonproviderumountudmfclipfuse_fuzzer.cpp",
   ]
 
   configs = [
@@ -168,33 +124,47 @@ ohos_fuzztest("StorageDaemonProviderEjectCDFuzzTest") {
   ]
 
   external_deps = [
+    "ability_base:base",
+    "ability_base:want",
     "ability_base:zuri",
-    "ability_runtime:abilitykit_native",
     "app_file_service:fileshare_native",
     "app_file_service:fileuri_native",
     "app_file_service:sandbox_helper_native",
+    "bounds_checking_function:libsec_shared",
+    "bundle_framework:appexecfwk_base",
     "bundle_framework:appexecfwk_core",
     "cJSON:cjson",
-    "config_policy:configpolicy_util",
     "c_utils:utils",
+    "crypto_framework:crypto_framework_lib",
+    "zlib:shared_libz",
     "eventhandler:libeventhandler",
     "hicollie:libhicollie",
     "hilog:libhilog",
     "hisysevent:libhisysevent",
+    "hitrace:hitrace_meter",
     "huks:libhukssdk",
     "init:libbegetutil",
     "ipc:ipc_single",
+    "openssl:libcrypto_shared",
     "os_account:os_account_innerkits",
     "safwk:system_ability_fwk",
     "samgr:samgr_proxy",
-    "crypto_framework:crypto_framework_lib",
-    "zlib:shared_libz",
   ]
 
-  use_exceptions = true
+  if (enable_user_auth_framework) {
+    defines += [ "USER_AUTH_FRAMEWORK" ]
+    external_deps += [ "user_auth_framework:userauth_client" ]
+  }
+
+  cflags = [
+    "-g",
+    "-O0",
+    "-Wno-unused-variable",
+    "-fno-omit-frame-pointer",
+  ]
 }
 
 group("fuzztest") {
   testonly = true
-  deps = [ ":StorageDaemonProviderEjectCDFuzzTest" ]
+  deps = [ ":StorageDaemonProviderUMountUdmfClipFuseFuzzTest" ]
 }

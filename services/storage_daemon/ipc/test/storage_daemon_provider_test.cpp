@@ -249,9 +249,6 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_PermissionInvalid_
     EXPECT_EQ(result, E_PERMISSION_DENIED);
     result = storageDaemonProviderTest_->UnregisterUeceActivationCallback();
     EXPECT_EQ(result, E_PERMISSION_DENIED);
-    mode_t mode = S_IRWXU | S_IRWXG | S_IXOTH;
-    result = storageDaemonProviderTest_->CreateUserDir("path", mode, 0, 0);
-    EXPECT_EQ(result, E_PERMISSION_DENIED);
     std::vector<NextDqBlk> dqBlks;
     result = storageDaemonProviderTest_->GetDqBlkSpacesByUids({100}, dqBlks);
     EXPECT_EQ(result, E_PERMISSION_DENIED);
@@ -307,8 +304,6 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_PermissionInvalid_
     EXPECT_EQ(result, E_PERMISSION_DENIED);
     result = storageDaemonProviderTest_->QueryCDStatus("path", maxVolume);
     EXPECT_EQ(result, E_PERMISSION_DENIED);
-    result = storageDaemonProviderTest_->EjectCD("path");
-    EXPECT_EQ(result, E_PERMISSION_DENIED);
     result = storageDaemonProviderTest_->FormatVolume("path", "type", "/dev/disk", "get", 1);
     EXPECT_EQ(result, E_PERMISSION_DENIED);
     result = storageDaemonProviderTest_->Check("path", "type", true);
@@ -353,7 +348,6 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_PermissionInvalid_
     EXPECT_EQ(storageDaemonProviderTest_->Mount("path", "path", "type", 0, "data"), E_NOT_SUPPORT);
     EXPECT_EQ(storageDaemonProviderTest_->Unmount("path", "type", true), E_NOT_SUPPORT);
     EXPECT_EQ(storageDaemonProviderTest_->QueryCDStatus("path", maxVolume), E_NOT_SUPPORT);
-    EXPECT_EQ(storageDaemonProviderTest_->EjectCD("path"), E_NOT_SUPPORT);
     EXPECT_EQ(storageDaemonProviderTest_->FormatVolume("path", "type", "/dev/disk", "gpt", 1), E_NOT_SUPPORT);
     EXPECT_EQ(storageDaemonProviderTest_->Check("path", "type", true), E_NOT_SUPPORT);
     EXPECT_EQ(storageDaemonProviderTest_->Repair("path", "type"), E_NOT_SUPPORT);
@@ -2532,29 +2526,6 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_GetDqBlkSpacesByUi
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_GetDqBlkSpacesByUids_001 end";
 }
 
-HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_CreateUserDir_001, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_CreateUserDir_001 start";
-    SetCallingUid(STORAGE_MANAGER_UID);
-    const std::string path = "";
-    mode_t mode = S_IRWXU | S_IRWXG | S_IXOTH;
-    uid_t uid = 0;
-    gid_t gid = 0;
-    EXPECT_CALL(*userManagerMock_, CreateUserDir(_, _, _, _)).WillOnce(Return(E_OK));
-    auto ret = storageDaemonProviderTest_->CreateUserDir(path, mode, uid, gid);
-    EXPECT_TRUE(ret != E_OK);
-    ret = storageDaemonProviderTest_->CreateUserDir(path, mode, uid, gid);
-    EXPECT_TRUE(ret != -1);
-
-    const std::string newPath = "/data/system/hiview/unzip_configs/sys_event_def";
-    ret = storageDaemonProviderTest_->CreateUserDir(newPath, mode, uid, gid);
-    EXPECT_TRUE(ret == E_OK);
-    EXPECT_CALL(*userManagerMock_, CreateUserDir(_, _, _, _)).WillOnce(Return(-1));
-    ret = storageDaemonProviderTest_->CreateUserDir(newPath, mode, uid, gid);
-    EXPECT_TRUE(ret == -1);
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_CreateUserDir_001 end";
-}
-
 #ifdef EL5_FILEKEY_MANAGER
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_UnregisterUeceActivationCallback_001, TestSize.Level1)
 {
@@ -2811,6 +2782,62 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_ValidateBlockDevic
 #endif
 }
 
+/**
+ * @tc.name: StorageDaemonProviderTest_CreateDmLinear_001
+ * @tc.desc: Verify CreateDmLinear returns E_PERMISSION_DENIED when calling uid is not DISK_MANAGER_UID.
+ * @tc.type: FUNC
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_CreateDmLinear_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_CreateDmLinear_001 start";
+    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
+    uint64_t dmDev = 0;
+    SetCallingUid(STORAGE_MANAGER_UID);
+#ifdef DISK_MANAGER
+    EXPECT_EQ(storageDaemonProviderTest_->CreateDmLinear("/dev/block/ut_test_dev", 0, 100, dmDev),
+              E_PERMISSION_DENIED);
+#else
+    EXPECT_EQ(storageDaemonProviderTest_->CreateDmLinear("/dev/block/ut_test_dev", 0, 100, dmDev),
+              E_NOT_SUPPORT);
+#endif
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_CreateDmLinear_001 end";
+}
+ 
+/**
+ * @tc.name: StorageDaemonProviderTest_CreateDmLinear_002
+ * @tc.desc: Verify CreateDmLinear rejects invalid sourceDevPath via ValidateBlockDevicePath.
+ * @tc.type: FUNC
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_CreateDmLinear_002, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_CreateDmLinear_002 start";
+    SetCallingUid(DISK_MANAGER_UID);
+    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
+    uint64_t dmDev = 0;
+#ifdef DISK_MANAGER
+    // empty path
+    EXPECT_EQ(storageDaemonProviderTest_->CreateDmLinear("", 0, 100, dmDev), E_PARAMS_INVALID);
+    // path traversal
+    EXPECT_EQ(storageDaemonProviderTest_->CreateDmLinear("/dev/block/../sda", 0, 100, dmDev),
+              E_PARAMS_INVALID);
+    // wrong prefix
+    EXPECT_EQ(storageDaemonProviderTest_->CreateDmLinear("/dev/invalid/sda1", 0, 100, dmDev),
+              E_PARAMS_INVALID);
+    // path length >= PATH_MAX
+    EXPECT_EQ(storageDaemonProviderTest_->CreateDmLinear(std::string(PATH_MAX, 'a'), 0, 100, dmDev),
+              E_PARAMS_INVALID);
+#else
+    EXPECT_EQ(storageDaemonProviderTest_->CreateDmLinear("", 0, 100, dmDev), E_NOT_SUPPORT);
+    EXPECT_EQ(storageDaemonProviderTest_->CreateDmLinear("/dev/block/../sda", 0, 100, dmDev),
+              E_NOT_SUPPORT);
+    EXPECT_EQ(storageDaemonProviderTest_->CreateDmLinear("/dev/invalid/sda1", 0, 100, dmDev),
+              E_NOT_SUPPORT);
+    EXPECT_EQ(storageDaemonProviderTest_->CreateDmLinear(std::string(PATH_MAX, 'a'), 0, 100, dmDev),
+              E_NOT_SUPPORT);
+#endif
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_CreateDmLinear_002 end";
+}
+
 HWTEST_F(StorageDaemonProviderTest, FormatPartition_CmdPathTraversal_001, TestSize.Level1)
 {
     SetCallingUid(DISK_MANAGER_UID);
@@ -2940,28 +2967,6 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_QueryCDStatus_002,
     auto ret = storageDaemonProviderTest_->QueryCDStatus(devPath, status);
     EXPECT_NE(ret, E_OK);
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_QueryCDStatus_002 end";
-}
-
-HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_EjectCD_001, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_EjectCD_001 start";
-    SetCallingUid(DISK_MANAGER_UID);
-    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
-    std::string devPath = "";
-    auto ret = storageDaemonProviderTest_->EjectCD(devPath);
-    EXPECT_NE(ret, E_OK);
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_EjectCD_001 end";
-}
-
-HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_EjectCD_002, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_EjectCD_002 start";
-    SetCallingUid(DISK_MANAGER_UID);
-    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
-    std::string devPath = "/dev/block/../sr0";
-    auto ret = storageDaemonProviderTest_->EjectCD(devPath);
-    EXPECT_NE(ret, E_OK);
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_EjectCD_002 end";
 }
 
 /**
@@ -3480,5 +3485,286 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_UMountCloudDiskFus
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_UMountCloudDiskFuse_006 end";
 }
 
+/**
+ * @tc.name: StorageDaemonProviderTest_OpticalEraseDfx_001
+ * @tc.desc: Erase failure on non-optical device keeps return and flushes op diag.
+ * @tc.type: FUNC
+ * @tc.require: AR000H09L6
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_OpticalEraseDfx_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalEraseDfx_001 start";
+    SetCallingUid(DISK_MANAGER_UID);
+    int32_t ret = storageDaemonProviderTest_->Erase("/dev/block/ut_test_dev");
+    EXPECT_NE(ret, E_OK);
+    SetCallingUid(999);
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalEraseDfx_001 end";
+}
+
+/**
+ * @tc.name: StorageDaemonProviderTest_OpticalEjectDfx_001
+ * @tc.desc: Eject failure on non-exist sr device keeps return and flushes op diag.
+ * @tc.type: FUNC
+ * @tc.require: AR000H09L6
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_OpticalEjectDfx_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalEjectDfx_001 start";
+    SetCallingUid(DISK_MANAGER_UID);
+    int32_t ret = storageDaemonProviderTest_->Eject("sr99");
+    EXPECT_NE(ret, E_OK);
+    SetCallingUid(999);
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalEjectDfx_001 end";
+}
+
+/**
+ * @tc.name: StorageDaemonProviderTest_OpticalEjectInvalidNameDfx_001
+ * @tc.desc: Eject with invalid dev name returns E_PARAMS_INVALID via op diag.
+ * @tc.type: FUNC
+ * @tc.require: AR000H09L6
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_OpticalEjectInvalidNameDfx_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalEjectInvalidNameDfx_001 start";
+    SetCallingUid(DISK_MANAGER_UID);
+    int32_t ret = storageDaemonProviderTest_->Eject("invalid_name");
+    EXPECT_EQ(ret, E_PARAMS_INVALID);
+    SetCallingUid(999);
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalEjectInvalidNameDfx_001 end";
+}
+
+/**
+ * @tc.name: StorageDaemonProviderTest_OpticalBurnDfx_001
+ * @tc.desc: Burn with empty fsType returns E_PARAMS_INVALID via op diag.
+ * @tc.type: FUNC
+ * @tc.require: AR000H09L6
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_OpticalBurnDfx_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalBurnDfx_001 start";
+    SetCallingUid(DISK_MANAGER_UID);
+    int32_t ret = storageDaemonProviderTest_->Burn("/dev/block/ut_test_dev", "{}", "");
+    EXPECT_EQ(ret, E_PARAMS_INVALID);
+    SetCallingUid(999);
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalBurnDfx_001 end";
+}
+
+/**
+ * @tc.name: StorageDaemonProviderTest_OpticalCreateIsoImageDfx_001
+ * @tc.desc: CreateIsoImage with empty fsType returns E_PARAMS_INVALID via op diag.
+ * @tc.type: FUNC
+ * @tc.require: AR000H09L6
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_OpticalCreateIsoImageDfx_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalCreateIsoImageDfx_001 start";
+    SetCallingUid(DISK_MANAGER_UID);
+    int32_t ret = storageDaemonProviderTest_->CreateIsoImage("/dev/block/ut_test_dev", "/data/local/tmp/iso.img",
+                                                             "", "/mnt/data/ut_test_mnt");
+    EXPECT_EQ(ret, E_PARAMS_INVALID);
+    SetCallingUid(999);
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalCreateIsoImageDfx_001 end";
+}
+
+/**
+ * @tc.name: StorageDaemonProviderTest_MountUdmfClipFuse_001
+ * @tc.desc: Verify the MountUdmfClipFuse function with valid uid and valid params.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_MountUdmfClipFuse_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_MountUdmfClipFuse_001 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
+    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
+    int32_t userId = 100;
+    std::string path = "/mnt/data/100/udmf_fuse/test";
+    OHOS::ForceCreateDirectory(path);
+    int32_t fuseFd = 0;
+    EXPECT_CALL(*mountManagerMoc_, MountUdmfClipFuse(_, _, _)).WillOnce(Return(E_OK));
+    int32_t ret = storageDaemonProviderTest_->MountUdmfClipFuse(userId, path, fuseFd);
+    EXPECT_EQ(ret, E_OK);
+    OHOS::ForceRemoveDirectory(path);
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_MountUdmfClipFuse_001 end";
+}
+
+/**
+ * @tc.name: StorageDaemonProviderTest_MountUdmfClipFuse_002
+ * @tc.desc: Verify the MountUdmfClipFuse function with path not start with udmf_fuse or clipboard_fuse.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_MountUdmfClipFuse_002, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_MountUdmfClipFuse_002 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
+    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
+    int32_t userId = 100;
+    std::string path = "/mnt/data/100/cloud_disk_fuse/test";
+    OHOS::ForceCreateDirectory(path);
+    int32_t fuseFd = 0;
+    int32_t ret = storageDaemonProviderTest_->MountUdmfClipFuse(userId, path, fuseFd);
+    EXPECT_EQ(ret, E_PARAMS_INVALID);
+    OHOS::ForceRemoveDirectory(path);
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_MountUdmfClipFuse_002 end";
+}
+
+/**
+ * @tc.name: StorageDaemonProviderTest_MountUdmfClipFuse_003
+ * @tc.desc: Verify the MountUdmfClipFuse function with invalid userId range.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_MountUdmfClipFuse_003, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_MountUdmfClipFuse_003 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
+    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
+    int32_t userId = -1;
+    std::string path = "/mnt/data/100/udmf_fuse/test";
+    int32_t fuseFd = 0;
+    int32_t ret = storageDaemonProviderTest_->MountUdmfClipFuse(userId, path, fuseFd);
+    EXPECT_EQ(ret, E_USERID_RANGE);
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_MountUdmfClipFuse_003 end";
+}
+
+/**
+ * @tc.name: StorageDaemonProviderTest_MountUdmfClipFuse_004
+ * @tc.desc: Verify the MountUdmfClipFuse function with invalid uid.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_MountUdmfClipFuse_004, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_MountUdmfClipFuse_004 start";
+    SetCallingUid(999);
+    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
+    int32_t userId = 100;
+    std::string path = "/mnt/data/100/udmf_fuse/test";
+    int32_t fuseFd = 0;
+    int32_t ret = storageDaemonProviderTest_->MountUdmfClipFuse(userId, path, fuseFd);
+    EXPECT_EQ(ret, E_PERMISSION_DENIED);
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_MountUdmfClipFuse_004 end";
+}
+
+/**
+ * @tc.name: StorageDaemonProviderTest_MountUdmfClipFuse_005
+ * @tc.desc: Verify the MountUdmfClipFuse function when MountManager call fails.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_MountUdmfClipFuse_005, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_MountUdmfClipFuse_005 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
+    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
+    int32_t userId = 100;
+    std::string path = "/mnt/data/100/udmf_fuse/test";
+    OHOS::ForceCreateDirectory(path);
+    int32_t fuseFd = 0;
+    EXPECT_CALL(*mountManagerMoc_, MountUdmfClipFuse(_, _, _)).WillOnce(Return(E_MOUNT_UDMF_CLIP_FUSE));
+    int32_t ret = storageDaemonProviderTest_->MountUdmfClipFuse(userId, path, fuseFd);
+    EXPECT_EQ(ret, E_MOUNT_UDMF_CLIP_FUSE);
+    OHOS::ForceRemoveDirectory(path);
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_MountUdmfClipFuse_005 end";
+}
+
+/**
+ * @tc.name: StorageDaemonProviderTest_UMountUdmfClipFuse_001
+ * @tc.desc: Verify the UMountUdmfClipFuse function with valid params.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_UMountUdmfClipFuse_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_UMountUdmfClipFuse_001 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
+    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
+    int32_t userId = 100;
+    std::string path = "/mnt/data/100/clipboard_fuse/test";
+    OHOS::ForceCreateDirectory(path);
+    EXPECT_CALL(*mountManagerMoc_, UMountUdmfClipFuse(_, _)).WillOnce(Return(E_OK));
+    int32_t ret = storageDaemonProviderTest_->UMountUdmfClipFuse(userId, path);
+    EXPECT_EQ(ret, E_OK);
+    OHOS::ForceRemoveDirectory(path);
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_UMountUdmfClipFuse_001 end";
+}
+
+/**
+ * @tc.name: StorageDaemonProviderTest_UMountUdmfClipFuse_002
+ * @tc.desc: Verify the UMountUdmfClipFuse function with invalid path prefix.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_UMountUdmfClipFuse_002, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_UMountUdmfClipFuse_002 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
+    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
+    int32_t userId = 100;
+    std::string path = "/mnt/data/100/cloud_disk_fuse/test";
+    OHOS::ForceCreateDirectory(path);
+    int32_t ret = storageDaemonProviderTest_->UMountUdmfClipFuse(userId, path);
+    EXPECT_EQ(ret, E_PARAMS_INVALID);
+    OHOS::ForceRemoveDirectory(path);
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_UMountUdmfClipFuse_002 end";
+}
+
+/**
+ * @tc.name: StorageDaemonProviderTest_UMountUdmfClipFuse_003
+ * @tc.desc: Verify the UMountUdmfClipFuse function with invalid uid.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_UMountUdmfClipFuse_003, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_UMountUdmfClipFuse_003 start";
+    SetCallingUid(999);
+    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
+    int32_t userId = 100;
+    std::string path = "/mnt/data/100/clipboard_fuse/test";
+    int32_t ret = storageDaemonProviderTest_->UMountUdmfClipFuse(userId, path);
+    EXPECT_EQ(ret, E_PERMISSION_DENIED);
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_UMountUdmfClipFuse_003 end";
+}
+
+/**
+ * @tc.name: StorageDaemonProviderTest_UMountUdmfClipFuse_004
+ * @tc.desc: Verify the UMountUdmfClipFuse function with invalid userId range.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_UMountUdmfClipFuse_004, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_UMountUdmfClipFuse_004 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
+    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
+    int32_t userId = -1;
+    std::string path = "/mnt/data/100/clipboard_fuse/test";
+    int32_t ret = storageDaemonProviderTest_->UMountUdmfClipFuse(userId, path);
+    EXPECT_EQ(ret, E_USERID_RANGE);
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_UMountUdmfClipFuse_004 end";
+}
+
+/**
+ * @tc.name: StorageDaemonProviderTest_UMountUdmfClipFuse_005
+ * @tc.desc: Verify the UMountUdmfClipFuse function when MountManager call fails.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_UMountUdmfClipFuse_005, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_UMountUdmfClipFuse_005 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
+    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
+    int32_t userId = 100;
+    std::string path = "/mnt/data/100/clipboard_fuse/test";
+    OHOS::ForceCreateDirectory(path);
+    EXPECT_CALL(*mountManagerMoc_, UMountUdmfClipFuse(_, _)).WillOnce(Return(E_UMOUNT_UDMF_CLIP_FUSE));
+    int32_t ret = storageDaemonProviderTest_->UMountUdmfClipFuse(userId, path);
+    EXPECT_EQ(ret, E_UMOUNT_UDMF_CLIP_FUSE);
+    OHOS::ForceRemoveDirectory(path);
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_UMountUdmfClipFuse_005 end";
+}
 } // namespace StorageDaemon
 } // namespace OHOS

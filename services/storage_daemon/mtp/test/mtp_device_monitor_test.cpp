@@ -537,5 +537,125 @@ HWTEST_F(MtpDeviceMonitorTest, NeedCameraFallbackTest_002, TestSize.Level1)
 
     GTEST_LOG_(INFO) << "NeedCameraFallbackTest_002 end";
 }
+
+/**
+ * @tc.name: GetMtpDevicesTest_001
+ * @tc.desc: Test GetMtpDevices returns E_MTP_MOUNT_FAILED when no MTP device attached.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MtpDeviceMonitorTest, GetMtpDevicesTest_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetMtpDevicesTest_001 start";
+
+    MtpDeviceMonitor& monitor = MtpDeviceMonitor::GetInstance();
+    std::vector<MtpDeviceInfo> devInfos;
+    int32_t result = monitor.GetMtpDevices(devInfos, 0, 0);
+    EXPECT_EQ(result, E_MTP_MOUNT_FAILED);
+    EXPECT_TRUE(devInfos.empty());
+
+    GTEST_LOG_(INFO) << "GetMtpDevicesTest_001 end";
+}
+
+#ifdef SUPPORT_OPEN_SOURCE_GPHOTO2_DEVICE
+/**
+ * @tc.name: GetGphotoDevicesTest_001
+ * @tc.desc: Test GetGphotoDevices returns E_MTP_MOUNT_FAILED when InitGphoto fails without camera.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MtpDeviceMonitorTest, GetGphotoDevicesTest_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetGphotoDevicesTest_001 start";
+
+    MtpDeviceMonitor& monitor = MtpDeviceMonitor::GetInstance();
+    std::vector<MtpDeviceInfo> devInfos;
+    int32_t result = monitor.GetGphotoDevices(devInfos, 0, 0);
+    EXPECT_EQ(result, E_MTP_MOUNT_FAILED);
+
+    GTEST_LOG_(INFO) << "GetGphotoDevicesTest_001 end";
+}
+
+/**
+ * @tc.name: GetGphotoDevicesTest_002
+ * @tc.desc: Test GetGphotoDevices with reportFault=false skips fault report and returns E_MTP_MOUNT_FAILED.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MtpDeviceMonitorTest, GetGphotoDevicesTest_002, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetGphotoDevicesTest_002 start";
+
+    MtpDeviceMonitor& monitor = MtpDeviceMonitor::GetInstance();
+    std::vector<MtpDeviceInfo> devInfos;
+    int32_t result = monitor.GetGphotoDevices(devInfos, 0, 0, false);
+    EXPECT_EQ(result, E_MTP_MOUNT_FAILED);
+
+    GTEST_LOG_(INFO) << "GetGphotoDevicesTest_002 end";
+}
+#endif
+
+/**
+ * @tc.name: MountDeviceByTypeTest_001
+ * @tc.desc: Test MountDeviceByType with camera fallback probe returns E_MTP_MOUNT_FAILED without device.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MtpDeviceMonitorTest, MountDeviceByTypeTest_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "MountDeviceByTypeTest_001 start";
+
+    MtpDeviceMonitor& monitor = MtpDeviceMonitor::GetInstance();
+    std::vector<MtpDeviceInfo> devInfos;
+    EXPECT_EQ(monitor.MountDeviceByType(DeviceType::CAMERA, devInfos, 0, 0, true), E_MTP_MOUNT_FAILED);
+    EXPECT_TRUE(devInfos.empty());
+
+    GTEST_LOG_(INFO) << "MountDeviceByTypeTest_001 end";
+}
+
+/**
+ * @tc.name: MountDeviceByTypeTest_002
+ * @tc.desc: Test MountDeviceByType with mobile type returns E_MTP_MOUNT_FAILED when no device attached.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MtpDeviceMonitorTest, MountDeviceByTypeTest_002, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "MountDeviceByTypeTest_002 start";
+
+    MtpDeviceMonitor& monitor = MtpDeviceMonitor::GetInstance();
+    std::vector<MtpDeviceInfo> devInfos;
+    EXPECT_EQ(monitor.MountDeviceByType(DeviceType::MOBILE, devInfos, 0, 0), E_MTP_MOUNT_FAILED);
+    EXPECT_TRUE(devInfos.empty());
+
+    GTEST_LOG_(INFO) << "MountDeviceByTypeTest_002 end";
+}
+
+/**
+ * @tc.name: MountMtpDeviceByBroadcastTest_001
+ * @tc.desc: Test camera broadcast falls back to mobile probe when camera detection fails.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MtpDeviceMonitorTest, MountMtpDeviceByBroadcastTest_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "MountMtpDeviceByBroadcastTest_001 start";
+
+    MtpDeviceMonitor& monitor = MtpDeviceMonitor::GetInstance();
+    monitor.MountMtpDeviceByBroadcast(DeviceType::CAMERA, 0, 0);
+    EXPECT_TRUE(monitor.lastestMtpDevList_.empty());
+
+    GTEST_LOG_(INFO) << "MountMtpDeviceByBroadcastTest_001 end";
+}
+
+/**
+ * @tc.name: MountMtpDeviceByBroadcastTest_002
+ * @tc.desc: Test mobile broadcast falls back to camera probe when no mtp device detected.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MtpDeviceMonitorTest, MountMtpDeviceByBroadcastTest_002, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "MountMtpDeviceByBroadcastTest_002 start";
+
+    MtpDeviceMonitor& monitor = MtpDeviceMonitor::GetInstance();
+    monitor.MountMtpDeviceByBroadcast(DeviceType::MOBILE, 0, 0);
+    EXPECT_TRUE(monitor.lastestMtpDevList_.empty());
+
+    GTEST_LOG_(INFO) << "MountMtpDeviceByBroadcastTest_002 end";
+}
 } // STORAGE_DAEMON
 } // OHOS

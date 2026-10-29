@@ -129,6 +129,7 @@ public:
     int UpdateUserAuthByKeyType(unsigned int user, struct UserTokenSecret &userTokenSecret,
         KeyType keyType, bool needFixFiles = true);
     int UpdateKeyContextByKeyType(uint32_t userId, KeyType keyType);
+    int DoDeleteUserCeEceSeceKeys(unsigned int user, const std::string userDir, KeyType type);
 
 private:
     KeyManager()
@@ -151,19 +152,18 @@ private:
     int LoadAllUsersEl1Key(void);
     int InitUserElkeyStorageDir(void);
     int DoDeleteUserKeys(unsigned int user);
-    int DoDeleteUserCeEceSeceKeys(unsigned int user, const std::string userDir, KeyType type);
     int UpgradeKeys(const std::vector<FileList> &dirInfo);
     int UpdateESecret(unsigned int user, struct UserTokenSecret &tokenSecret);
     bool ResetESecret(unsigned int user, std::shared_ptr<BaseKey> &elKey);
     std::shared_ptr<BaseKey> GetBaseKey(const std::string& dir);
-    bool IsNeedClearKeyFile(std::string file);
+    bool IsNeedRollbackVersion(std::string file);
     void ClearKeyFilesForPath(const std::string &path);
     bool CheckDir(KeyType type, std::string keyDir, unsigned int user);
     int ActiveUece(unsigned int user,
                    std::shared_ptr<BaseKey> elKey,
                    const std::vector<uint8_t> &token,
                    const std::vector<uint8_t> &secret);
-    void ProcUpgradeKey(const std::vector<FileList> &dirInfo);
+    void RollbackVersion(const std::vector<FileList> &dirInfo);
     int GenerateElxAndInstallUserKey(unsigned int user);
     int ActiveUeceUserKey(unsigned int user,
                           const std::vector<uint8_t> &token,
@@ -181,10 +181,8 @@ private:
     int32_t UnlockUece(uint32_t user, const std::vector<uint8_t> &token, const std::vector<uint8_t> &secret);
     int CheckUserPinProtect(unsigned int userId, const std::vector<uint8_t> &token, const std::vector<uint8_t> &secret);
     bool IsWorkDirExist(std::string type, int32_t userId);
-#ifdef GLASSES_DEVICE
     bool CheckLatestDirFilesExist(const std::string &latestDir);
     bool IsLatestDirEmptyOrNotExist(const std::string &el1Dir, const std::string &backupEl1Dir);
-#endif
     int GenerateIntegrityDirs(int32_t userId, KeyType type);
     int CheckAndFixUserKeyDirectory(unsigned int user);
     int DoChangerPinCodeClassE(unsigned int user, std::shared_ptr<BaseKey> &el5Key);

@@ -463,5 +463,42 @@ HWTEST_F(StorageManagerClientTest, Client_manager_service_UMountCloudDiskFuse_00
 
     GTEST_LOG_(INFO) << "Client_manager_service_UMountCloudDiskFuse_0001 end";
 }
+
+/**
+ * @tc.number: Client_manager_service_MountUdmfClipFuse_0001
+ * @tc.name: Client_manager_service_MountUdmfClipFuse_0001
+ * @tc.desc: Test function of MountUdmfClipFuse interface.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(StorageManagerClientTest, Client_manager_service_MountUdmfClipFuse_0001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageManagerClientTest-begin Client_manager_service_MountUdmfClipFuse_0001";
+    int32_t userId = 100;
+    std::string path = "/mnt/data/100/udmf_fuse/test";
+    int32_t fuseFd = -1;
+    int32_t ret = storageManagerClient_->MountUdmfClipFuse(userId, path, fuseFd);
+    EXPECT_TRUE(ret == E_OK || ret == E_SA_IS_NULLPTR);
+
+    GTEST_LOG_(INFO) << "Client_manager_service_MountUdmfClipFuse_0001 end";
+}
+
+/**
+ * @tc.number: Client_manager_service_UMountUdmfClipFuse_0001
+ * @tc.name: Client_manager_service_UMountUdmfClipFuse_0001
+ * @tc.desc: Test function of UMountUdmfClipFuse interface.
+ * @tc.type: FUNC
+ * @tc.require: 20260807938859
+ */
+HWTEST_F(StorageManagerClientTest, Client_manager_service_UMountUdmfClipFuse_0001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageManagerClientTest-begin Client_manager_service_UMountUdmfClipFuse_0001";
+    int32_t userId = 100;
+    std::string path = "/mnt/data/100/clipboard_fuse/test";
+    int32_t ret = storageManagerClient_->UMountUdmfClipFuse(userId, path);
+    EXPECT_TRUE(ret == E_OK || ret == E_SA_IS_NULLPTR);
+
+    GTEST_LOG_(INFO) << "Client_manager_service_UMountUdmfClipFuse_0001 end";
+}
 }
 }

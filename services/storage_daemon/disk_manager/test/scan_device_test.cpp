@@ -2093,5 +2093,92 @@ HWTEST_F(ScanDeviceTest, Storage_Service_ScanDeviceTest_ParseWodimPrcapOutput_Re
     GTEST_LOG_(INFO) << "ParseWodimPrcapOutput_RealWorldSingleChunk end";
 }
 
+/**
+ * @tc.name: Storage_Service_ScanDeviceTest_GetDiskSize_003
+ * @tc.desc: Test GetDiskSize with hierarchical path (e.g. sda/sda1) where sysfs size node exists
+ * @tc.type: FUNC
+ */
+HWTEST_F(ScanDeviceTest, Storage_Service_ScanDeviceTest_GetDiskSize_003, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "Storage_Service_ScanDeviceTest_GetDiskSize_003 start";
+ 
+    // 创建层级目录 mockSysPath/sda/sda1/size
+    CreateDirectory(mockSysPath);
+    CreateDirectory(mockSysPath + "/sda");
+    CreateDirectory(mockSysPath + "/sda/sda1");
+    CreateFileWithContent(mockSysPath + "/sda/sda1/size", "2097152\n");
+ 
+    ScanDevice scanner(mockSysPath);
+    // 传层级路径 "sda/sda1"，sysfs 路径拼成 mockSysPath/sda/sda1/size
+    uint64_t size = scanner.GetDiskSize("sda/sda1");
+    EXPECT_EQ(size, 1073741824ULL); // 2097152 sectors * 512 bytes/sector
+ 
+    system(("rm -rf " + mockSysPath + "/sda").c_str());
+    GTEST_LOG_(INFO) << "Storage_Service_ScanDeviceTest_GetDiskSize_003 end";
+}
+ 
+/**
+ * @tc.name: Storage_Service_ScanDeviceTest_GetDiskSize_004
+ * @tc.desc: Test GetDiskSize with hierarchical path where sysfs size node missing, fallback ioctl fails
+ * @tc.type: FUNC
+ */
+HWTEST_F(ScanDeviceTest, Storage_Service_ScanDeviceTest_GetDiskSize_004, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "Storage_Service_ScanDeviceTest_GetDiskSize_004 start";
+ 
+    // 用不存在的设备名，sysfs 读不到 → fallback ioctl /dev/block/nonexist_part → 失败 → 返回 0
+    ScanDevice scanner(mockSysPath);
+    uint64_t size = scanner.GetDiskSize("nonexist_disk/nonexist_part");
+    EXPECT_EQ(size, 0);
+ 
+    GTEST_LOG_(INFO) << "Storage_Service_ScanDeviceTest_GetDiskSize_004 end";
+}
+ 
+/**
+ * @tc.name: Storage_Service_ScanDeviceTest_GetDiskSize_005
+ * @tc.desc: Test GetDiskSize with hierarchical path, sysfs content invalid, return 0 (no fallback)
+ * @tc.type: FUNC
+ */
+HWTEST_F(ScanDeviceTest, Storage_Service_ScanDeviceTest_GetDiskSize_005, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "Storage_Service_ScanDeviceTest_GetDiskSize_005 start";
+ 
+    CreateDirectory(mockSysPath);
+    CreateDirectory(mockSysPath + "/nonexist_disk");
+    CreateDirectory(mockSysPath + "/nonexist_disk/nonexist_part");
+    CreateFileWithContent(mockSysPath + "/nonexist_disk/nonexist_part/size", "invalid_number\n");
+ 
+    ScanDevice scanner(mockSysPath);
+    // sysfs 解析失败 → return 0（不走 ioctl fallback）
+    uint64_t size = scanner.GetDiskSize("nonexist_disk/nonexist_part");
+    EXPECT_EQ(size, 0);
+ 
+    system(("rm -rf " + mockSysPath + "/nonexist_disk").c_str());
+    GTEST_LOG_(INFO) << "Storage_Service_ScanDeviceTest_GetDiskSize_005 end";
+}
+ 
+/**
+ * @tc.name: Storage_Service_ScanDeviceTest_GetDiskSize_006
+ * @tc.desc: Test GetDiskSize with hierarchical path, sysfs size empty, return 0 (no fallback)
+ * @tc.type: FUNC
+ */
+HWTEST_F(ScanDeviceTest, Storage_Service_ScanDeviceTest_GetDiskSize_006, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "Storage_Service_ScanDeviceTest_GetDiskSize_006 start";
+ 
+    CreateDirectory(mockSysPath);
+    CreateDirectory(mockSysPath + "/nonexist_disk");
+    CreateDirectory(mockSysPath + "/nonexist_disk/nonexist_part");
+    CreateFileWithContent(mockSysPath + "/nonexist_disk/nonexist_part/size", "   \n");
+ 
+    ScanDevice scanner(mockSysPath);
+    // sysfs 读到空内容 → return 0（不走 ioctl fallback）
+    uint64_t size = scanner.GetDiskSize("nonexist_disk/nonexist_part");
+    EXPECT_EQ(size, 0);
+ 
+    system(("rm -rf " + mockSysPath + "/nonexist_disk").c_str());
+    GTEST_LOG_(INFO) << "Storage_Service_ScanDeviceTest_GetDiskSize_006 end";
+}
+
 } // namespace StorageDaemon
 } // namespace OHOS

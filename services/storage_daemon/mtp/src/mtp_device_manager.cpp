@@ -19,6 +19,7 @@
 #include "disk_manager_client.h"
 #endif
 #include "ipc/storage_manager_client.h"
+#include "storage_radar.h"
 #include "storage_service_errno.h"
 #include "storage_service_log.h"
 #include "utils/file_utils.h"
@@ -40,6 +41,7 @@ constexpr int32_t DEFAULT_DEV_INDEX = 1;
 constexpr uid_t FILE_MANAGER_UID = 1006;
 constexpr gid_t FILE_MANAGER_GID = 1006;
 constexpr mode_t PUBLIC_DIR_MODE = 02770;
+constexpr size_t MAX_FORK_EXEC_OUTPUT_LEN = 512;
 
 MtpDeviceManager::MtpDeviceManager()
 {
@@ -72,7 +74,7 @@ int32_t MtpDeviceManager::MountDevice(const MtpDeviceInfo &device)
     LOGI("[L2:MtpDeviceManager] MountDevice: >>> ENTER <<< id=%{public}s, path=%{public}s",
         device.id.c_str(), device.path.c_str());
     if (isMounting_) {
-        LOGI("MountDevice: mtp device is mounting, try again later.");
+        LOGW("MountDevice: mtp device is mounting, try again later.");
         return E_MTP_IS_MOUNTING;
     }
     isMounting_ = true;
@@ -80,6 +82,7 @@ int32_t MtpDeviceManager::MountDevice(const MtpDeviceInfo &device)
     if (ret != E_OK) {
         isMounting_ = false;
         LOGE("[L2:MtpDeviceManager] MountDevice: <<< EXIT FAILED <<< PrepareMtpMountPath failed, err=%{public}d", ret);
+        StorageService::StorageRadar::ReportMtpResult("MountDevice::PrepareMtpMountPath", ret, device.path);
         return ret;
     }
     std::vector<std::string> cmdVec = {
@@ -90,12 +93,19 @@ int32_t MtpDeviceManager::MountDevice(const MtpDeviceInfo &device)
         "--device", std::to_string(DEFAULT_DEV_INDEX), device.path,
     };
     std::vector<std::string> result;
-    int32_t err = ForkExec(cmdVec, &result);
+    int exitStatus = 0;
+    int32_t err = ForkExec(cmdVec, &result, &exitStatus);
+    std::string output;
     for (auto str : result) {
-        LOGI("[L2:MtpDeviceManager] MountDevice: result=%{public}s", str.c_str());
+        LOGE("[L2:MtpDeviceManager] MountDevice: result=%{public}s", str.c_str());
+        output += str + ";";
     }
     if ((err != 0) || (result.size() != 0)) {
         LOGE("[L2:MtpDeviceManager] MountDevice: <<< EXIT FAILED <<< mtpfs cmd failed, err=%{public}d", err);
+        output += "exit=" + std::to_string(exitStatus);
+        StorageService::StorageRadar::ReportMtpResult("MTP/PTP MountFailed",
+            err != 0 ? err : E_MTP_MOUNT_FAILED,
+            device.id + ",output=" + output.substr(0, MAX_FORK_EXEC_OUTPUT_LEN));
         rmdir(device.path.c_str());
         isMounting_ = false;
         return err != 0 ? err : E_MTP_MOUNT_FAILED;
@@ -114,28 +124,20 @@ int32_t MtpDeviceManager::UmountDevice(const MtpDeviceInfo &device, bool needNot
     LOGI("[L2:MtpDeviceManager] UmountDevice: >>> ENTER <<< id=%{public}s, path=%{public}s, needNotify=%{public}d,"
         "isBadRemove=%{public}d", device.id.c_str(), device.path.c_str(), needNotify, isBadRemove);
     if (isBadRemove) {
-        LOGI("[L2:MtpDeviceManager] UmountDevice: force umount mode");
+        LOGW("[L2:MtpDeviceManager] UmountDevice: force umount mode");
         int ret = umount2(device.path.c_str(), MNT_DETACH);
         if (ret != 0) {
             LOGW("[L2:MtpDeviceManager] UmountDevice: umount2 failed in force mode, errno=%{public}d", errno);
-            if (needNotify) {
-#ifdef DISK_MANAGER
-                OHOS::DiskManager::DiskManagerClient::GetInstance().NotifyMtpUnmounted(
-                    device.id, isBadRemove);
-#endif
-            }
+            StorageService::StorageRadar::ReportMtpResult("UmountDevice::ForceUmount", E_MTP_UMOUNT_FAILED,
+                device.id + ",errno=" + std::to_string(errno));
+            NotifyUmountResult(device, needNotify, isBadRemove);
             return E_OK;
         }
         ret = rmdir(device.path.c_str());
         if (ret != 0) {
             LOGW("[L2:MtpDeviceManager] UmountDevice: remove failed in force mode, errno=%{public}d", errno);
         }
-        if (needNotify) {
-#ifdef DISK_MANAGER
-            OHOS::DiskManager::DiskManagerClient::GetInstance().NotifyMtpUnmounted(
-                device.id, isBadRemove);
-#endif
-        }
+        NotifyUmountResult(device, needNotify, isBadRemove);
         rmdir(device.path.c_str());
         LOGI("[L2:MtpDeviceManager] UmountDevice: <<< EXIT SUCCESS <<< force umount completed");
         return E_OK;
@@ -143,6 +145,8 @@ int32_t MtpDeviceManager::UmountDevice(const MtpDeviceInfo &device, bool needNot
     int ret = umount(device.path.c_str());
     if (ret != E_OK) {
         LOGE("[L2:MtpDeviceManager] UmountDevice: <<< EXIT FAILED <<< umount failed, errno=%{public}d", errno);
+        StorageService::StorageRadar::ReportMtpResult("UmountDevice", E_MTP_UMOUNT_FAILED,
+            device.id + ",errno=" + std::to_string(errno));
         return E_MTP_UMOUNT_FAILED;
     }
     int err = rmdir(device.path.c_str());
@@ -150,15 +154,20 @@ int32_t MtpDeviceManager::UmountDevice(const MtpDeviceInfo &device, bool needNot
         LOGE("[L2:MtpDeviceManager] UmountDevice: <<< EXIT FAILED <<< remove failed, errno=%{public}d", errno);
         return E_SYS_KERNEL_ERR;
     }
-    if (needNotify) {
-#ifdef DISK_MANAGER
-        OHOS::DiskManager::DiskManagerClient::GetInstance().NotifyMtpUnmounted(
-            device.id, isBadRemove);
-#endif
-    }
+    NotifyUmountResult(device, needNotify, isBadRemove);
     rmdir(device.path.c_str());
     LOGI("[L2:MtpDeviceManager] UmountDevice: <<< EXIT SUCCESS <<< id=%{public}s", device.id.c_str());
     return E_OK;
+}
+
+void MtpDeviceManager::NotifyUmountResult(const MtpDeviceInfo &device, bool needNotify, bool isBadRemove)
+{
+    if (!needNotify) {
+        return;
+    }
+#ifdef DISK_MANAGER
+    OHOS::DiskManager::DiskManagerClient::GetInstance().NotifyMtpUnmounted(device.id, isBadRemove);
+#endif
 }
 } // namespace StorageDaemon
 } // namespace OHOS

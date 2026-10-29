@@ -86,7 +86,7 @@ void GetSubDirs(const std::string &path, std::vector<std::string> &dirList)
 
 void ReadDigitDir(const std::string &path, std::vector<FileList> &dirInfo)
 {
-    return;
+    return IFileUtilMoc::fileUtilMoc->ReadDigitDir(path, dirInfo);
 }
 
 void OpenSubFile(const std::string &path, std::vector<std::string>  &file)
@@ -167,6 +167,11 @@ void CheckAndReportOverLoop(const std::string &funcName, uint32_t &loopCount)
 void CheckAndReportOverLoop(const std::string &funcName, uint32_t &loopCount, uint32_t maxCount)
 {
     loopCount++;
+}
+
+bool ContainsInvalidChars(const std::string &filePath)
+{
+    return IFileUtilMoc::fileUtilMoc->ContainsInvalidChars(filePath);
 }
 } // namespace StorageDaemon
 } // namespace OHOS

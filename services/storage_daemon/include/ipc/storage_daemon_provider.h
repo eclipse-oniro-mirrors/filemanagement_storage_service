@@ -109,6 +109,9 @@ public:
     // clouddisk fuse
     virtual int32_t MountCloudDiskFuse(int32_t userId, const std::string &path, int32_t &fuseFd) override;
     virtual int32_t UMountCloudDiskFuse(int32_t userId, const std::string &path) override;
+    // udmf clip fuse
+    virtual int32_t MountUdmfClipFuse(int32_t userId, const std::string &path, int32_t &fuseFd) override;
+    virtual int32_t UMountUdmfClipFuse(int32_t userId, const std::string &path) override;
     virtual int32_t IsFileOccupied(const std::string &path,
                                    const std::vector<std::string> &inputList,
                                    std::vector<std::string> &outputList,
@@ -129,7 +132,6 @@ public:
     virtual int32_t SetDirEncryptionPolicy(uint32_t userId, const std::string &dirPath, uint32_t level) override;
     virtual int32_t SetDirEncryptionPolicyWithKeyDesc(const std::string &dirPath, uint32_t level,
                                                       const std::string &keyDesc) override;
-    virtual int32_t CreateUserDir(const std::string &path, mode_t mode, uid_t uid, gid_t gid) override;
     virtual int32_t GetDqBlkSpacesByUids(const std::vector<int32_t> &uids,
         std::vector<NextDqBlk> &dqBlks) override;
     virtual int32_t GetDirListSpace(const std::vector<DirSpaceInfo> &inDirs,
@@ -155,7 +157,6 @@ public:
                                        std::string &output,
                                        int32_t &maxVolume) override;
     virtual int32_t QueryCDStatus(const std::string &devPath, int32_t &status) override;
-    virtual int32_t EjectCD(const std::string &devPath) override;
     virtual int32_t Mount(const std::string &devPath,
                           const std::string &mountPath,
                           const std::string &fsType,
@@ -228,6 +229,7 @@ private:
     std::mutex mutex_;
     std::mutex mutexStats_;
     std::mutex cloudDiskFuseMutex_;
+    std::mutex udmfClipFuseMutex_;
 
     std::atomic<bool> stopRadarReport_{false};
     std::condition_variable execRadarReportCon_;

@@ -124,6 +124,9 @@ public:
     // cloud disk fuse
     int32_t MountCloudDiskFuse(int32_t userId, const std::string &path, int32_t &fuseFd) override;
     int32_t UMountCloudDiskFuse(int32_t userId, const std::string &path) override;
+    // udmf clip fuse
+    int32_t MountUdmfClipFuse(int32_t userId, const std::string &path, int32_t &fuseFd) override;
+    int32_t UMountUdmfClipFuse(int32_t userId, const std::string &path) override;
     int32_t IsFileOccupied(const std::string &path,
                            const std::vector<std::string> &inputList,
                            std::vector<std::string> &outputList,
@@ -136,7 +139,6 @@ public:
     int32_t InactiveUserPublicDirKey(uint32_t userId) override;
     int32_t RegisterUeceActivationCallback(const sptr<IUeceActivationCallback> &ueceCallback) override;
     int32_t UnregisterUeceActivationCallback() override;
-    int32_t CreateUserDir(const std::string &path, mode_t mode, uid_t uid, gid_t gid) override;
     int32_t CheckUserIdRange(int32_t userId);
     int32_t NotifyUserChangedEvent(uint32_t userId, uint32_t eventType) override;
     int32_t SetExtBundleStats(uint32_t userId, const ExtBundleStats &stats) override;
