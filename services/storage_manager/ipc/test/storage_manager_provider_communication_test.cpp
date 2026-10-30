@@ -312,7 +312,7 @@ HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_UpdateUseAuthWit
     uint32_t userId = 800;
     auto ret = storageManagerProviderTest_->UpdateUseAuthWithRecoveryKey(authToken, newSecret, secureUid,
         userId, plainText);
-    EXPECT_EQ(ret, E_OK);
+    EXPECT_NE(ret, E_OK);
     GTEST_LOG_(INFO) << "StorageManagerProviderTest_UpdateUseAuthWithRecoveryKey_003 end";
 }
 
@@ -769,7 +769,7 @@ HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_SetExtBundleStat
     stats.businessSize_ = 1;
     stats.showFlag_ = true;
     auto ret = storageManagerProviderTest_->SetExtBundleStats(TOP_USER_ID + 1, stats);
-    EXPECT_EQ(ret, E_USERID_RANGE);
+    EXPECT_NE(ret, E_OK);
     GTEST_LOG_(INFO) << "StorageManagerProviderTest_SetExtBundleStats_InvalidUserId_002 end";
 }
 

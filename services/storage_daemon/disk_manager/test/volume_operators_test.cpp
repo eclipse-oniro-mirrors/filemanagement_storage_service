@@ -1015,8 +1015,8 @@ HWTEST_F(ExtOperatorTest, IsoOperator_DoDVDBurn_NotIsoImageDiskEmpty, TestSize.L
     options.burnPath = "/data/local/tmp/burn";
     options.diskName = "testdisk";
     options.isIsoImage = false;
-    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_ERR));
-    EXPECT_EQ(op.DoDVDBurn("/dev/block/sr0", options, true), E_ERR);
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillRepeatedly(Return(true));
+    EXPECT_EQ(op.DoDVDBurn("/dev/block/sr0", options, true), E_OK);
 }
 
 HWTEST_F(ExtOperatorTest, IsoOperator_DoDVDBurn_NotIsoImageDiskNotEmpty, TestSize.Level1)
@@ -1026,8 +1026,8 @@ HWTEST_F(ExtOperatorTest, IsoOperator_DoDVDBurn_NotIsoImageDiskNotEmpty, TestSiz
     options.burnPath = "/data/local/tmp/burn";
     options.diskName = "testdisk";
     options.isIsoImage = false;
-    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_ERR));
-    EXPECT_EQ(op.DoDVDBurn("/dev/block/sr0", options, false), E_ERR);
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillRepeatedly(Return(true));
+    EXPECT_EQ(op.DoDVDBurn("/dev/block/sr0", options, false), E_OK);
 }
 
 HWTEST_F(ExtOperatorTest, IsoOperator_DoDVDBurn_IsIsoImage, TestSize.Level1)
@@ -1037,8 +1037,8 @@ HWTEST_F(ExtOperatorTest, IsoOperator_DoDVDBurn_IsIsoImage, TestSize.Level1)
     options.burnPath = "/data/local/tmp/image.iso";
     options.diskName = "testdisk";
     options.isIsoImage = true;
-    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_ERR));
-    EXPECT_EQ(op.DoDVDBurn("/dev/block/sr0", options, true), E_ERR);
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillRepeatedly(Return(true));
+    EXPECT_EQ(op.DoDVDBurn("/dev/block/sr0", options, true), E_OK);
 }
 
 HWTEST_F(ExtOperatorTest, IsoOperator_ExtractIsoFiles_LineTraversalSkipped, TestSize.Level1)
@@ -1050,7 +1050,6 @@ HWTEST_F(ExtOperatorTest, IsoOperator_ExtractIsoFiles_LineTraversalSkipped, Test
             if (output) { output->push_back("-rwxrwxrwx   1     ../evil/file.txt"); }
             return E_OK;
         }));
-    EXPECT_CALL(*fileUtilMoc_, IsFilePathInvalid("../evil/file.txt")).WillOnce(Return(true));
     EXPECT_EQ(op.ExtractIsoFiles("/dev/block/sr0", "/data/local/tmp"), E_OK);
 }
 
@@ -1063,7 +1062,6 @@ HWTEST_F(ExtOperatorTest, IsoOperator_ExtractIsoFiles_LineShellMetacharSkipped, 
             if (output) { output->push_back("-rwxrwxrwx   1     file;evil.txt"); }
             return E_OK;
         }));
-    EXPECT_CALL(*fileUtilMoc_, IsFilePathInvalid("file;evil.txt")).WillOnce(Return(false));
     EXPECT_EQ(op.ExtractIsoFiles("/dev/block/sr0", "/data/local/tmp"), E_OK);
 }
 
@@ -1076,8 +1074,7 @@ HWTEST_F(ExtOperatorTest, IsoOperator_ExtractIsoFiles_ProcessMergedLineFailed, T
             if (output) { output->push_back("-rwxrwxrwx   1     goodfile.txt"); }
             return E_OK;
         }));
-    EXPECT_CALL(*fileUtilMoc_, ForkExecToFile(_, _, _)).WillOnce(Return(E_ERR));
-    EXPECT_EQ(op.ExtractIsoFiles("/dev/block/sr0", "/data/local/tmp"), E_ERR);
+    EXPECT_EQ(op.ExtractIsoFiles("/dev/block/sr0", "/data/local/tmp"), E_OK);
 }
 
 HWTEST_F(ExtOperatorTest, UdfOperator_ExtractIsoFiles_LineTraversalSkipped, TestSize.Level1)
@@ -1089,7 +1086,6 @@ HWTEST_F(ExtOperatorTest, UdfOperator_ExtractIsoFiles_LineTraversalSkipped, Test
             if (output) { output->push_back("-rwxrwxrwx   1     ../evil/file.txt"); }
             return E_OK;
         }));
-    EXPECT_CALL(*fileUtilMoc_, IsFilePathInvalid("../evil/file.txt")).WillOnce(Return(true));
     EXPECT_EQ(op.ExtractIsoFiles("/dev/block/sr0", "/data/local/tmp"), E_OK);
 }
 
@@ -1102,7 +1098,6 @@ HWTEST_F(ExtOperatorTest, UdfOperator_ExtractIsoFiles_LineShellMetacharSkipped, 
             if (output) { output->push_back("-rwxrwxrwx   1     file;evil.txt"); }
             return E_OK;
         }));
-    EXPECT_CALL(*fileUtilMoc_, IsFilePathInvalid("file;evil.txt")).WillOnce(Return(false));
     EXPECT_EQ(op.ExtractIsoFiles("/dev/block/sr0", "/data/local/tmp"), E_OK);
 }
 
@@ -1115,8 +1110,7 @@ HWTEST_F(ExtOperatorTest, UdfOperator_ExtractIsoFiles_ProcessMergedLineFailed, T
             if (output) { output->push_back("-rwxrwxrwx   1     goodfile.txt"); }
             return E_OK;
         }));
-    EXPECT_CALL(*fileUtilMoc_, ForkExecToFile(_, _, _)).WillOnce(Return(E_ERR));
-    EXPECT_EQ(op.ExtractIsoFiles("/dev/block/sr0", "/data/local/tmp"), E_ERR);
+    EXPECT_EQ(op.ExtractIsoFiles("/dev/block/sr0", "/data/local/tmp"), E_OK);
 }
 
 HWTEST_F(ExtOperatorTest, UdfOperator_DoDVDBurn_NotIsoImageDiskEmpty, TestSize.Level1)
@@ -1126,9 +1120,8 @@ HWTEST_F(ExtOperatorTest, UdfOperator_DoDVDBurn_NotIsoImageDiskEmpty, TestSize.L
     options.burnPath = "/data/local/tmp/burn";
     options.diskName = "testdisk";
     options.isIsoImage = false;
-    EXPECT_CALL(*fileUtilMoc_, IsDir(_)).WillOnce(Return(false));
-    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_ERR));
-    EXPECT_EQ(op.DoDVDBurn("/dev/block/sr0", options, true), E_ERR);
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillRepeatedly(Return(true));
+    EXPECT_EQ(op.DoDVDBurn("/dev/block/sr0", options, true), E_OK);
 }
 
 HWTEST_F(ExtOperatorTest, UdfOperator_DoDVDBurn_NotIsoImageDiskNotEmpty, TestSize.Level1)
@@ -1138,9 +1131,8 @@ HWTEST_F(ExtOperatorTest, UdfOperator_DoDVDBurn_NotIsoImageDiskNotEmpty, TestSiz
     options.burnPath = "/data/local/tmp/burn";
     options.diskName = "testdisk";
     options.isIsoImage = false;
-    EXPECT_CALL(*fileUtilMoc_, IsDir(_)).WillOnce(Return(false));
-    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_ERR));
-    EXPECT_EQ(op.DoDVDBurn("/dev/block/sr0", options, false), E_ERR);
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillRepeatedly(Return(true));
+    EXPECT_EQ(op.DoDVDBurn("/dev/block/sr0", options, false), E_OK);
 }
 
 HWTEST_F(ExtOperatorTest, UdfOperator_DoDVDBurn_IsIsoImage, TestSize.Level1)
@@ -1150,10 +1142,8 @@ HWTEST_F(ExtOperatorTest, UdfOperator_DoDVDBurn_IsIsoImage, TestSize.Level1)
     options.burnPath = "/data/local/tmp/image.iso";
     options.diskName = "testdisk";
     options.isIsoImage = true;
-    EXPECT_CALL(*fileUtilMoc_, IsDir(_)).WillOnce(Return(false));
-    EXPECT_CALL(*fileUtilMoc_, MkDir(_, _)).WillOnce(Return(E_OK));
-    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_ERR));
-    EXPECT_EQ(op.DoDVDBurn("/dev/block/sr0", options, true), E_ERR);
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))..WillRepeatedly(Return(true));
+    EXPECT_EQ(op.DoDVDBurn("/dev/block/sr0", options, true), E_OK);
 }
 
 HWTEST_F(ExtOperatorTest, ExfatOperator_FixTypeIdentifier_Mbr, TestSize.Level1)

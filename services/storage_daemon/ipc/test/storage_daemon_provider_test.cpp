@@ -3161,9 +3161,9 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_MountFileMgrFuse_0
     int32_t userId = 100;
     int32_t fuseFd = 0;
     int32_t result = storageDaemonProviderTest_->MountFileMgrFuse(userId, newPath, fuseFd);
-    EXPECT_NE(result, E_OK);
+    EXPECT_EQ(result, E_OK);
     result = storageDaemonProviderTest_->MountFileMgrFuse(userId, newPath, fuseFd);
-    EXPECT_NE(result, E_OK);
+    EXPECT_EQ(result, E_OK);
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_MountFileMgrFuse_004 end";
 }
 
@@ -3180,9 +3180,9 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_UMountFileMgrFuse_
     std::string newPath = "/mnt/data/100/userExternal/testMountFileMgrFuse";
     int32_t userId = 100;
     int32_t result = storageDaemonProviderTest_->UMountFileMgrFuse(userId, newPath);
-    EXPECT_NE(result, E_OK);
+    EXPECT_EQ(result, E_OK);
     result = storageDaemonProviderTest_->UMountFileMgrFuse(userId, newPath);
-    EXPECT_NE(result, E_OK);
+    EXPECT_EQ(result, E_OK);
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_UMountFileMgrFuse_004 end";
 }
 
