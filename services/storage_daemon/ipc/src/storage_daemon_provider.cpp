@@ -2680,12 +2680,11 @@ int32_t StorageDaemonProvider::FormatVolume(const std::string &devPath,
 }
 
 int32_t StorageDaemonProvider::Check(const std::string &devPath,
-                                     const std::string &fsType,
-                                     bool autoFix)
+                                     const std::string &fsType)
 {
 #ifdef DISK_MANAGER
-    LOGI("[L1:StorageDaemonProvider] Check: >>> ENTER <<< devPath=%{public}s, fsType=%{public}s, autoFix=%{public}d",
-        devPath.c_str(), fsType.c_str(), autoFix);
+    LOGI("[L1:StorageDaemonProvider] Check: >>> ENTER <<< devPath=%{public}s, fsType=%{public}s",
+        devPath.c_str(), fsType.c_str());
     auto uid = IPCSkeleton::GetCallingUid();
     if (uid != DISK_MANAGER_UID) {
         LOGE("[L1:StorageDaemonProvider] Check: <<< EXIT FAILED <<< uid=%{public}d is invalid", uid);
@@ -2710,16 +2709,6 @@ int32_t StorageDaemonProvider::Check(const std::string &devPath,
     }
 
     ret = op->Check(verifiedPath);
-    if (ret == E_VOL_NEED_FIX && autoFix) {
-        LOGI("[L1:StorageDaemonProvider] Check: need fix, auto repairing devPath=%{public}s", devPath.c_str());
-        ret = op->Repair(verifiedPath);
-        if (ret != E_OK) {
-            LOGE("[L1:StorageDaemonProvider] Check: auto repair failed, ret=%{public}d", ret);
-            return ReturnWithOpDiag(ret);
-        }
-        LOGI("[L1:StorageDaemonProvider] Check: auto repair success");
-        return ReturnWithOpDiag(E_OK);
-    }
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemonProvider] Check: <<< EXIT FAILED <<< ret=%{public}d", ret);
         return ReturnWithOpDiag(ret);
