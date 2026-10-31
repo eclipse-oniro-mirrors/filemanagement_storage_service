@@ -306,7 +306,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_PermissionInvalid_
     EXPECT_EQ(result, E_PERMISSION_DENIED);
     result = storageDaemonProviderTest_->FormatVolume("path", "type", "/dev/disk", "get", 1);
     EXPECT_EQ(result, E_PERMISSION_DENIED);
-    result = storageDaemonProviderTest_->Check("path", "type", true);
+    result = storageDaemonProviderTest_->Check("path", "type");
     EXPECT_EQ(result, E_PERMISSION_DENIED);
     result = storageDaemonProviderTest_->Repair("path", "type");
     EXPECT_EQ(result, E_PERMISSION_DENIED);
@@ -349,7 +349,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_PermissionInvalid_
     EXPECT_EQ(storageDaemonProviderTest_->Unmount("path", "type", true), E_NOT_SUPPORT);
     EXPECT_EQ(storageDaemonProviderTest_->QueryCDStatus("path", maxVolume), E_NOT_SUPPORT);
     EXPECT_EQ(storageDaemonProviderTest_->FormatVolume("path", "type", "/dev/disk", "gpt", 1), E_NOT_SUPPORT);
-    EXPECT_EQ(storageDaemonProviderTest_->Check("path", "type", true), E_NOT_SUPPORT);
+    EXPECT_EQ(storageDaemonProviderTest_->Check("path", "type"), E_NOT_SUPPORT);
     EXPECT_EQ(storageDaemonProviderTest_->Repair("path", "type"), E_NOT_SUPPORT);
     EXPECT_EQ(storageDaemonProviderTest_->SetLabel("path", "type", "label"), E_NOT_SUPPORT);
     EXPECT_EQ(storageDaemonProviderTest_->ReadMetadata("path", uuid, type, label), E_NOT_SUPPORT);
@@ -2668,12 +2668,12 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_Check_002, TestSiz
     SetCallingUid(DISK_MANAGER_UID);
     ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
 #ifdef EXTERNAL_STORAGE_MANAGER
-    EXPECT_EQ(storageDaemonProviderTest_->Check("", "ext4", false), E_PARAMS_INVALID);
-    EXPECT_EQ(storageDaemonProviderTest_->Check("/dev/block/ut_test_dev", "", false), E_PARAMS_INVALID);
-    EXPECT_EQ(storageDaemonProviderTest_->Check("/dev/block/ut_test_dev", "ext4", false), E_OK);
-    storageDaemonProviderTest_->Check("/dev/block/ut_test_dev", "vfat", false);
+    EXPECT_EQ(storageDaemonProviderTest_->Check("", "ext4"), E_PARAMS_INVALID);
+    EXPECT_EQ(storageDaemonProviderTest_->Check("/dev/block/ut_test_dev", ""), E_PARAMS_INVALID);
+    EXPECT_EQ(storageDaemonProviderTest_->Check("/dev/block/ut_test_dev", "ext4"), E_OK);
+    storageDaemonProviderTest_->Check("/dev/block/ut_test_dev", "vfat");
 #else
-    EXPECT_EQ(storageDaemonProviderTest_->Check("", "ext4", false), E_NOT_SUPPORT);
+    EXPECT_EQ(storageDaemonProviderTest_->Check("", "ext4"), E_NOT_SUPPORT);
 #endif
 }
 
