@@ -2391,19 +2391,28 @@ int KeyManager::UnregisterUeceActivationCallback()
 int KeyManager::NotifyUeceActivation(uint32_t userId, int32_t resultCode, bool needGetAllAppKey)
 {
 #ifdef EL5_FILEKEY_MANAGER
-    if (ueceCallback_ == nullptr) {
-        LOGE("el5 activation callback invalid");
-        return E_OK;
+    sptr<StorageManager::IUeceActivationCallback> callback = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(ueceMutex_);
+        if (ueceCallback_ == nullptr) {
+            LOGE("el5 activation callback invalid");
+            return E_OK;
+        }
+        callback = ueceCallback_;
     }
     resultCode = (resultCode == E_ACTIVE_REPEATED ? E_OK : resultCode);
     std::promise<int32_t> promise;
     std::future<int32_t> future = promise.get_future();
     auto startTime = StorageService::StorageRadar::RecordCurrentTime();
-    std::thread callbackThread ([this, userId, resultCode, needGetAllAppKey, p = std::move(promise)]() mutable {
+    std::thread callbackThread ([callback, userId, resultCode, needGetAllAppKey, p = std::move(promise)]() mutable {
         int32_t retValue = E_OK;
         LOGI("ready for callback, El5 activation result = %{public}d, userId=%{public}u, needGetAllAppKey=%{public}d",
             resultCode, userId, needGetAllAppKey);
-        ueceCallback_->OnEl5Activation(resultCode, userId, needGetAllAppKey, retValue);
+        if (callback != nullptr) {
+            callback->OnEl5Activation(resultCode, userId, needGetAllAppKey, retValue);
+            std::string extraData = "EL5 callback executed, resultCode=" + std::to_string(resultCode);
+            StorageRadar::ReportFucBehavior("NotifyUeceActivation", userId, extraData, resultCode);
+        }
         p.set_value(retValue);
     });
 
