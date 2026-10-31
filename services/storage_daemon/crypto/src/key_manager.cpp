@@ -2790,7 +2790,6 @@ int KeyManager::NotifyUeceActivation(uint32_t userId, int32_t resultCode, bool n
         int32_t retValue = E_OK;
         LOGD("[L3:KeyManager] NotifyUeceActivation: ready for callback, El5 activation result=%{public}d,"
             "userId=%{public}u, needGetAllAppKey=%{public}d", resultCode, userId, needGetAllAppKey);
-        std::lock_guard<std::mutex> lock(ueceMutex_);
         if (callback != nullptr) {
             callback->OnEl5Activation(resultCode, userId, needGetAllAppKey, retValue);
             StorageRadar::ReportUpdateUserAuth("NotifyUeceActivation", userId, resultCode, "EL5",
