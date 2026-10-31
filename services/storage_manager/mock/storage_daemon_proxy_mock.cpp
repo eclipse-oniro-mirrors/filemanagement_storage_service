@@ -407,7 +407,7 @@ int32_t StorageDaemonProxy::FormatVolume(const std::string &devPath, const std::
     return E_OK;
 }
 
-int32_t StorageDaemonProxy::Check(const std::string &devPath, const std::string &fsType)
+int32_t StorageDaemonProxy::Check(const std::string &devPath, const std::string &fsType, bool autoFix)
 {
     return E_OK;
 }
