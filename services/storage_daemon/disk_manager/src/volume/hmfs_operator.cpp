@@ -131,15 +131,16 @@ int32_t HmfsOperator::Check(const std::string& devPath)
         return E_PARAMS_INVALID;
     }
 
-    std::vector<std::string> cmdP7 = {
+    std::vector<std::string> cmd = {
         "fsck.f2fs",
-        "-p7",
+        "--dry-run",
+        "-p1",
         devPath
     };
 
-    int32_t execRet = ForkExecWithExit(cmdP7);
+    int32_t execRet = ForkExecWithExit(cmd);
     if (execRet != E_OK) {
-        LOGE("HmfsOperator::Check dirty flag abnormal, execRet=%{public}d", execRet);
+        LOGE("HmfsOperator::Check need fix, execRet=%{public}d", execRet);
         return E_VOL_NEED_FIX;
     }
 
@@ -167,7 +168,7 @@ int32_t HmfsOperator::Repair(const std::string& devPath)
     LOGI("HmfsOperator::Repair forkExecRes=%{public}d, exitStatus=%{public}d",
          forkExecRes, exitStatus);
 
-    if (forkExecRes != E_OK) {
+    if (exitStatus != 1 || forkExecRes != E_OK) {
         LOGE("HmfsOperator::Repair failed, exitStatus=%{public}d, res=%{public}d",
              exitStatus, forkExecRes);
         return E_VOL_FIX_FAILED;

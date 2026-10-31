@@ -170,7 +170,8 @@ public:
                                  const std::string &partitionType,
                                  const int32_t partitionNum) override;
     virtual int32_t Check(const std::string &devPath,
-                          const std::string &fsType) override;
+                          const std::string &fsType,
+                          bool autoFix) override;
     virtual int32_t Repair(const std::string &devPath,
                            const std::string &fsType) override;
     virtual int32_t SetLabel(const std::string &devPath,
