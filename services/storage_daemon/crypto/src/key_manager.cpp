@@ -2794,7 +2794,8 @@ int KeyManager::NotifyUeceActivation(uint32_t userId, int32_t resultCode, bool n
         if (callback != nullptr) {
             callback->OnEl5Activation(resultCode, userId, needGetAllAppKey, retValue);
             std::string extraData = "EL5 callback executed, resultCode=" + std::to_string(resultCode);
-            StorageRadar::ReportFucBehavior("NotifyUeceActivation", userId, extraData, resultCode);
+            StorageRadar::ReportUpdateUserAuth("NotifyUeceActivation", userId, resultCode, "EL5",
+                "callback is not nullptr");
         }
         p.set_value(retValue);
     });
