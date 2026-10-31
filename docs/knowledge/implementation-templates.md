@@ -19,37 +19,37 @@
 
 ### 卷操作
 
-- Mount 前：置 CHECKING → 执行 Check → 成功置 MOUNTED，失败置 DAMAGED 或 UNMOUNTED
-- Unmount 前：置 EJECTING → 执行 UMount → 成功置 REMOVED，失败置 MOUNTED
+- 卷挂载/卸载通过 `IVolumeOperator`（`VolumeOperatorFactory::CreateOperator(fsType)` 分发）执行；`VolumeState` 枚举仍定义于 `volume_core.h`，但当前生产路径不再由 `VolumeInfo` 状态机驱动（`VolumeCore::SetState` 无生产调用方）。
+- 新增卷操作继承 `IVolumeOperator` 并在 `VolumeOperatorFactory::RegisterOperators` 注册；Mount 前仍应遵循 CHECKING、Unmount 前 EJECTING 的状态语义。
 
 ### 密钥操作
 
-- 操作前：HUKS 可用性检查（`IsHuksAvailable()`）
-- userId 校验：范围 [100, 10738]，超出返回 `E_USERID_RANGE`
-- 失败必须 `StorageRadar::ReportUserKeyResult` 或 `ReportActiveUserKey`
+- 操作前：确认 fscrypt/加密已启用（`KeyCtrlHasFscryptSyspara` / `IsUeceSupport`），HUKS 通过 `HuksMaster::GenerateKey` 返回值判断失败（无 `IsHuksAvailable` 方法）。
+- userId 校验：范围 [0, 10738]（`START_USER_ID=0`，含 ZERO_USER），超出返回 `E_USERID_RANGE`
+- 失败必须 `StorageRadar::ReportUserKeyResult` 或 `ReportActiveUserKey`（按场景选用对应 `Report*`）
 
 ### 用户目录操作
 
-- 创建失败必须回滚全部已创建目录（`RollbackUserDirs`）
-- 密钥生成失败也必须销毁已创建目录
-- 权限设置：SELinux context 必须设置
+- 创建失败直接返回错误码（如 `E_PREPARE_DIR`），当前 `UserManager::PrepareUserDirs` 不做已建目录递归回滚（无 `RollbackUserDirs`）；如需回滚须由调用方（`StorageDaemon::PrepareUserDirs`）保证 `GenerateUserKeys` 与目录创建的失败清理
+- 密钥生成失败直接返回，不创建目录（返回 `-EEXIST` 走 `RestoreUserKey`）
+- 权限设置：SELinux context 必须设置（`RestoreconRecurse`/`RestoreconDir`）
 
 ### 配额操作
 
-- 设置前：检查文件系统是否支持 quota
-- 查询失败降级：quotactl 失败降级为目录遍历，不要直接报错
+- 设置前：初始化配额挂载表 `InitialiseQuotaMounts()` 并查 `/data` quota 设备（无 `IsQuotaSupported`）
+- 查询失败无自动降级：`quotactl` 失败直接返回错误码，如需目录级统计显式调 `GetDirListSpace`
 
 ### IPC 层
 
-- Stub 解析：MessageParcel 读取后必须校验参数非空
+- Stub 由 IDL 自动生成（`IStorageManager.idl`/`IStorageDaemon.idl`），无需手写 MessageParcel 解析；参数校验在 Provider 实现层完成
 - Manager Provider：必须权限校验 + 状态检查 + 调用 Daemon
-- Daemon Provider：必须路径校验 + 调用核心类
+- Daemon Provider：必须路径校验（`ValidateBlockDevicePath`/`ValidateMountPath`）+ 调用核心类
 
 ## 新增文件系统 Operator
 
 1. 新增 `xxx_operator.h/.cpp` 继承 `IVolumeOperator`
-2. 实现 `Mount/UMount/Format/Check/GetFsType`
-3. 在 `volume_operator_factory.cpp` 的 `CreateOperator()` 注册
+2. 实现 `Mount`/`Unmount`（注意是 `Unmount` 非 `UMount`）/`Format`/`Check`（及按需 `ReadMetadata`/`Repair`/`SetLabel`/`CreateIsoImage`/`Burn`）；`fsType` 由 `CreateOperator` 入参提供，**不需要** `GetFsType` 方法
+3. 在 `volume_operator_factory.cpp` 的 `RegisterOperators()` 中向 operators map 注册（`CreateOperator` 经 `EnsureOperatorsInit`/`call_once` 触发一次性注册）
 
 ## 修改前检查
 

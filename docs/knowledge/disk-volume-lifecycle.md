@@ -11,9 +11,10 @@
 | 挂载 | UNMOUNTED → CHECKING → MOUNTED | 禁止 UNMOUNTED → MOUNTED |
 | 卸载 | MOUNTED → EJECTING → REMOVED | 禁止 MOUNTED → REMOVED |
 | 修复 | DAMAGED → DAMAGED_MOUNTED（TryToFix） | 禁止 DAMAGED → MOUNTED |
-| 异常拔出 | MOUNTED → BADREMOVABLE | 无需经过 EJECTING |
+| 异常拔出 | MOUNTED → BAD_REMOVAL | 无需经过 EJECTING |
+| FUSE 卷移除 | → FUSE_REMOVED | FUSE 后端卷的独立移除态 |
 
-状态预更新原则：Mount 前先置 CHECKING，Unmount 前先置 EJECTING。操作失败时回退到操作前状态，不要停留在中间状态。
+状态预更新原则：Mount 前先置 CHECKING，Unmount 前先置 EJECTING。操作失败时回退到操作前状态，不要停留在中间状态。`VolumeState` 状态机转换实现在 disk_manager SA（跨组件）；本仓库 `VolumeCore::SetState` 无生产调用方，对外卷操作经 `IVolumeOperator` 直接执行。
 
 ## Netlink 事件约束
 
@@ -23,10 +24,13 @@ Netlink 回调中不可执行阻塞操作（mount、fsck、格式化），必须
 
 | 类型 | 分区限制 | 格式化限制 | 挂载方式 | 不可折叠进通用路径的规则 |
 |------|----------|------------|----------|--------------------------|
-| SD_CARD | ≤8 分区 | 支持 | 内核 mount | 分区/格式化逻辑 |
-| USB_FLASH | ≤16 分区 | 支持 | 内核 mount | 分区数限制、60s 超时 |
-| CD_DVD_BD | 不支持 | 不支持 | 内核 mount | 只读、Eject 弹出 |
-| MTP_PTP | 不支持 | 不支持 | FUSE (gphotofs) | 特殊挂载流程，不走内核 mount |
+| SD_CARD | ≤8 分区（动态读 `/sys/module/mmcblk/parameters/perdev_minors`，典型 8） | 支持 | 内核 mount | 分区/格式化逻辑 |
+| USB_FLASH | ≤15 分区（`MAX_SCSI_VOLUMES=15`） | 支持 | 内核 mount | 分区数限制、60s 超时 |
+| CD_DVD_BD | 不支持 | 不支持 | `mount -t` 命令（非 FUSE） | 只读、Eject 弹出、刻录/擦除 |
+| DATA_DISK_SSD | 同 SCSI 规则 | 支持 | 内核 mount | 数据盘 SSD |
+| DATA_DISK_HDD | 同 SCSI 规则 | 支持 | 内核 mount | 数据盘 HDD |
+
+MTP/gphotofs 由独立的 FUSE 守护进程模块（`services/storage_daemon/gphotofs/`）处理，**不**作为 `DiskType` 也**不**经 `VolumeOperatorFactory` 注册。
 
 不要把不同磁盘类型的处理规则折叠进通用路径，每种类型的限制必须保持显式。
 
@@ -34,11 +38,13 @@ Netlink 回调中不可执行阻塞操作（mount、fsck、格式化），必须
 
 | 文件系统 | 挂载超时 | fsck 要求 | 特殊约束 |
 |------|:------:|------|------|
-| ext4 | 60s | `e2fsck -y` 挂载前检查 | SELinux context |
+| ext4 | 60s | 无（`Ext4Operator` 未实现 `Check`，默认 `E_OK`） | SELinux context `u:object_r:mnt_external_file:s0` |
 | exFAT | 60s | `fsck.exfat` | `uid/gid` 参数必须设置 |
-| NTFS | 60s | `ntfsfix`（非真正 fsck） | 不支持格式化 |
-| VFAT/FAT32 | 60s | `fsck.vfat -y` | `utf8,shortname=mixed` |
-| HMFS | 无 | 无 | 内部分区专用 |
+| NTFS | 60s | `fsck.ntfs`（Check）/ `ntfsfix -d`（Repair） | 不支持格式化 |
+| VFAT/FAT32 | 60s | 无（`VfatOperator` 未实现 `Check`） | `uid/gid,dmask=0006,fmask=0007,utf8` |
+| HMFS(f2fs) | 60s | `fsck.f2fs -p7`（Check）/ `fsck.f2fs -p1`（Repair） | 内部分区专用，RO 迁移模式 `MOUNT_FLAG_MIGRATION_RO` |
+| UDF | 60s | 无 | 只读、光盘刻录（wodim/growisofs/genisoimage） |
+| ISO9660 | 60s | 无 | 只读、光盘刻录/校验 |
 
 挂载超时 60s 后必须回退状态并返回 `E_TIMEOUT_MOUNT`，不要停留在 CHECKING。
 
@@ -51,5 +57,5 @@ Netlink 回调中不可执行阻塞操作（mount、fsck、格式化），必须
 
 ## 测试指引
 
-- 状态转换：`VolumeManagerTest`，必须覆盖非法跳转拒绝
+- 状态转换：`VolumeState` 跳转在 disk_manager SA（跨组件），本仓库通过 `storage_manager_provider_test`、`storagemanagerstub_fuzzer` 及 `disk_manager/test/`（`ext_volume_operator_factory_test` 等）覆盖；非法跳转拒绝必须覆盖
 - 磁盘热插拔：需要板侧验证（真实 SD 卡/USB）

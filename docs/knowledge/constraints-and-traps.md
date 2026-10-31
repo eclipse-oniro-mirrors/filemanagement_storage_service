@@ -4,17 +4,19 @@
 
 ## 硬性约束
 
-- 用户时序不可跳步：`PrepareAddUser → StartUser → CompleteAddUser`。
+- 用户时序不可跳步：`PrepareAddUser`（生成 EL1-EL5 密钥+建目录）→ `CompleteAddUser`（清 need_restore）→ `ActiveUserKey`（解锁时激活 EL2-EL5）→ `PrepareStartUser`（触发 Daemon `StartUser`：建 EL2-EL5 服务目录+挂载，须在密钥激活后）。
 - 卷状态不可跳转：`MOUNTED → EJECTING → REMOVED`。
-- EL2 密钥锁屏移除、解锁安装，锁屏时不可访问 EL2 数据。
+- EL4/EL5 密钥锁屏移除（EL5 立即、EL4 延迟 10s）、解锁恢复，锁屏时不可访问 EL4/EL5 数据；EL2 不随锁屏移除。
 - 用户隔离：密钥和目录的 userId 必须匹配。
 - 错误码必须具体：禁止 E_ERR。
+- 升级/恢复异常走版本回退标记（写 `need_restore` 版本），禁止删除密钥材料；密钥完整性校验须检查密钥文件是否完整，不得仅校验目录存在（详见 `crypto-key-management.md`）。
+- EL5 解密窗口期禁令：`PrepareAddUser`/`CompleteAddUser` 完成后到 EL5 完全解密（`NotifyUeceActivation` 回调完成）前，禁止以非删除用户为目的调用 `InactiveKey(USER_DESTROY)`/`ClearKey` 销毁用户密钥，否则 EL5 无法解密（详见 `crypto-key-management.md`）。
 
 ## 6 个常见陷阱
 
 ### 陷阱 1：用户目录创建跳步
 
-跳过 StartUser 直接 CompleteAddUser → EL2-EL4 密钥未激活，加密数据不可访问。
+跳过 `ActiveUserKey` 直接 `PrepareStartUser`/`StartUser` → EL2-EL5 密钥未激活，加密服务目录与挂载不可访问（密钥在 `PrepareAddUser` 生成、在 `ActiveUserKey` 解锁时激活；`PrepareStartUser`/`StartUser` 建服务目录+挂载但不激活密钥，必须在 `ActiveUserKey` 之后）。
 
 ### 陷阱 2：卷状态非法跳转
 
@@ -24,9 +26,9 @@
 
 Daemon 重启后内存状态为空，Manager 的缓存可能过期。必须重新同步状态，不要假设之前的 IPC 结果仍有效。
 
-### 陷阱 4：锁屏时访问 EL2 数据
+### 陷阱 4：锁屏时访问 EL4/EL5 数据
 
-`LockUserScreen` 后 EL2 密钥已从内核移除。此后访问 EL2 加密文件会失败，必须等 `UnlockUserScreen` 完成。
+`LockUserScreen` 后 EL5 立即锁定、EL4 延迟 10s 锁定（已从内核移除）。此后访问 EL4/EL5 加密文件会失败，必须等 `UnlockUserScreen` 完成。EL2 不受锁屏影响，锁屏期间仍可访问。
 
 ### 陷阱 5：跨用户密钥操作
 

@@ -8,25 +8,31 @@
 
 | 步骤 | 触发 | 不可跳过的原因 |
 |------|------|----------------|
-| PrepareAddUser | OsAccount READY | 创建目录和生成 EL1 密钥，后续步骤依赖目录存在 |
-| StartUser | OsAccount STARTING | 挂载存储、激活 EL1 密钥，EL2-EL4 封装在此之后才可激活 |
-| CompleteAddUser | OsAccount UNLOCKED | 激活 EL2-EL4 密钥，跳过则这些等级的加密数据不可访问 |
+| PrepareAddUser | OsAccount READY（Account SA 直接 IPC） | 创建目录并生成 EL1–EL5 全部密钥（flags 强制补齐 EL3/EL4/EL5），后续步骤依赖目录/密钥存在 |
+| CompleteAddUser | OsAccount UNLOCKED（Account SA 直接 IPC） | 清除 `need_restore` 迁移标记（不激活密钥） |
+| ActiveUserKey | 用户解锁（Account SA 直接 IPC） | 激活 EL2→EL3→EL4→EL5（`ActiveUserKey4Single`）；跳过则这些等级加密数据不可访问 |
+| PrepareStartUser | OsAccount（启动前，Account SA 直接 IPC） | 准备启动存储（优先级提升 + 转发 Daemon `PrepareStartUser`→`StartUser`）；**必须在 `ActiveUserKey` 之后**，否则加密目录密钥未激活、不可访问 |
+| StartUser（Daemon 内部） | PrepareStartUser 触发 | 创建 EL2–EL5 service 目录 + `MountManager::MountByUser`；**不激活密钥**（EL1 在 PrepareAddUser 已生成，EL2–EL5 已由 `ActiveUserKey` 激活，此处仅建目录+挂载） |
+| StopUser | OsAccount 停止 | `MountManager::UmountByUser` 卸载存储 |
+| RemoveUser | OsAccount 移除 | `DestroyUserDirs` 销毁目录 + `DeleteUserKeys` 删除 EL1–EL5 密钥 |
 
-`AccountSubscriber` 监听 `OsAccountState` 事件自动触发对应步骤，不要绕过它直接调用 Daemon。
+`PrepareAddUser`/`CompleteAddUser`/`ActiveUserKey`/`PrepareStartUser`/`StopUser`/`RemoveUser` 由 OsAccount SA 通过 IPC 直接调用 `StorageManagerProvider`（调用方 UID 校验为 `ACCOUNT_UID`）。`AccountSubscriber` 仅监听 `USER_UNLOCKED`/`USER_SWITCHED`，负责二次挂载（`MountCryptoPathAgain`）与媒体库连接，**不**驱动用户创建时序，不要绕过 Account SA 直接调用 Daemon。
 
 ## 失败回滚
 
-目录创建是链式操作（EL1→EL2→EL3→EL4→EL5→权限设置），任何一步失败必须回滚全部已创建目录。密钥生成失败也必须销毁已创建的目录，不要保留半成品状态。
+`PrepareUserDirs` 顺序：`GenerateUserKeys` →（失败直接返回，不创建目录；返回 `-EEXIST` 走 `RestoreUserKey`）→ 预清理 `DestroyUserDirs` → 创建目录 → `PrepareAppdataDir`。目录创建失败仅返回错误码（如 `E_PREPARE_DIR`），**未实现链式回滚**（已建目录保留，无 `RollbackUserDirs`）。`need_restore` 是密钥迁移标记，由 `CompleteAddUser` 清除，非创建失败回滚机制。如需回滚须由调用方保证。
 
 ## EL 等级隔离
 
 | 等级 | 路径 | 密钥激活时机 | 不可访问条件 |
 |------|------|--------------|--------------|
-| EL1 | `/data/service/el1/public/{userId}` | StartUser | 密钥未激活时 |
-| EL2 | `/data/service/el2/{userId}` | CompleteAddUser / UnlockUserScreen | **锁屏时不可访问** |
-| EL3 | `/data/service/el3/{userId}` | CompleteAddUser | 密钥未激活时 |
-| EL4 | `/data/service/el4/{userId}` | CompleteAddUser | 密钥未激活时 |
-| EL5 | `/data/app/el5/{userId}` | UECE 回调 | 回调未触发时 |
+| EL1 | `/data/service/el1/{userId}`、`/data/app/el1/{userId}`、`/data/chipset/el1/{userId}` | PrepareAddUser（生成）；设备启动(全局 user 0) | 密钥未生成时 |
+| EL2 | `/data/service/el2/{userId}`、`/data/app/el2/{userId}`、`/data/chipset/el2/{userId}` | `ActiveUserKey`（解锁） | `ActiveUserKey` 未完成时（**锁屏不移除**） |
+| EL3 | `/data/service/el3/{userId}`、`/data/app/el3/{userId}` | `ActiveUserKeyAndPrepareElX`（解锁） | 密钥未激活时 |
+| EL4 | `/data/service/el4/{userId}`、`/data/app/el4/{userId}` | `ActiveUserKeyAndPrepareElX`（解锁） | **锁屏时不可访问**（EL4 延迟 10s 移除） |
+| EL5 | `/data/service/el5/{userId}`、`/data/app/el5/{userId}` | `ActiveUserKeyAndPrepareElX(EL5_KEY)` 激活后 `NotifyUeceActivation` 回调 | **锁屏时不可访问**（EL5 立即移除） |
+
+EL 目录路径由 `/etc/storage_daemon/storage_user_path.json` 配置驱动（`config_default`/`config_pc` 两套），`EL1`–`EL5` 仅为 JSON 键名，`<userId>` 在运行时由 `UserPathResolver` 替换。
 
 不可用 EL1 密钥操作 EL2 目录，密钥和目录等级必须匹配。
 
@@ -36,7 +42,7 @@
 
 ## NATO 和 AppClone
 
-- NATO 用户有独立的恢复密钥目录（`el2_NATO/{userId}`），不要与普通用户密钥路径混用。
+- NATO 用户有独立的恢复密钥目录 EL2/EL3/EL4（`/data/service/el1/public/storage_daemon/sd/el2_NATO/{userId}`、`el3_NATO/{userId}`、`el4_NATO/{userId}`），不要与普通用户密钥路径混用。`ActiveUserKey` 在存在 `natoRestore` 时分发到 `ActiveUserKey4Nato`。
 - AppClone 用户 ID 范围独立，密钥管理使用 `AppCloneKeyManager` 而非 `KeyManager`，不要用 `KeyManager::GetInstance()` 操作 AppClone 用户。
 
 ## 修改前检查

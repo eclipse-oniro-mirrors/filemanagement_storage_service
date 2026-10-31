@@ -6,8 +6,8 @@
 
 | 新功能类型 | 放置位置 | 必须修改的文件 |
 |------------|----------|----------------|
-| 新增 IPC 接口 | Manager + Daemon 双侧 | Manager Stub + Provider + Daemon Stub + Provider + 核心类 |
-| 修改挂载逻辑 | Daemon 侧 | `VolumeManager` 或 `VolumeInfo` |
+| 新增 IPC 接口 | Manager + Daemon 双侧 | `IStorageManager.idl`/`IStorageDaemon.idl`（IDL 生成 Stub/Proxy） + Provider 实现 + 核心类 |
+| 修改挂载逻辑 | Daemon 侧 | `MountManager`（挂载协调）或 `IVolumeOperator` 子类（具体 FS 操作） |
 | 新增密钥操作 | Daemon KeyManager | `key_manager.h/.cpp`，可选新增 BaseKey 子类 |
 | 新增用户操作 | Daemon + Manager | Daemon `UserManager` + Manager Provider + Stub |
 | 新增空间统计 | Manager 侧 | `StorageStatusManager` 或 `StorageTotalStatusService` |
@@ -29,9 +29,9 @@
 | HuksMaster | `GetInstance()` | 不要用 `Instance()` |
 | StorageRadar | `GetInstance()` | 不要用 `Instance()` |
 | DiskManager | **`Instance()`** | **不是 GetInstance**，最容易出错 |
-| VolumeManager | **`Instance()`** | **不是 GetInstance** |
+| MountManager | `GetInstance()` | 挂载协调单例（取代旧的 `VolumeManager`，后者已不存在） |
 | NetlinkManager | **`Instance()`** | **不是 GetInstance** |
-| StorageDaemonCommunication | `DelayedSingleton<...>::GetInstance()` | 必须用 DelayedSingleton 包装 |
+| StorageDaemonCommunication | `GetInstance()` | 普通 static-local 单例（函数内 static），**不是** `DelayedSingleton` |
 | BundleMgrConnector | `GetInstance()` | 类名是 **BundleMgrConnector** 不是 BundleManagerConnector |
 
 使用单例前必须确认对应类的获取方式，不要默认全部用 `GetInstance()`。
@@ -40,7 +40,8 @@
 
 - Daemon IPC 入口：`services/storage_daemon/include/ipc/storage_daemon_provider.h`
 - Manager IPC 入口：`services/storage_manager/include/ipc/storage_manager_provider.h`
-- Manager Stub：`services/storage_manager/include/ipc/storage_manager_stub.h`
+- Manager Stub（IDL 生成）：由 `services/storage_manager/IStorageManager.idl` 生成，源码目录下无 stub 头文件（`storage_manager_provider.h` include 生成的 `storage_manager_stub.h`）
+- Daemon Stub（IDL 生成）：由 `services/storage_daemon/IStorageDaemon.idl` 生成
 - Daemon 通信代理：`services/storage_manager/include/storage_daemon_communication/storage_daemon_communication.h`
 - 共享常量：`services/common/include/storage_service_constant.h`
 - 错误码：`interfaces/innerkits/storage_manager/native/storage_service_errno.h`
