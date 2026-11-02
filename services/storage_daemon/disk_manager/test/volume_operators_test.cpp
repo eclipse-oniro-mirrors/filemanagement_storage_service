@@ -1142,7 +1142,7 @@ HWTEST_F(ExtOperatorTest, UdfOperator_DoDVDBurn_IsIsoImage, TestSize.Level1)
     options.burnPath = "/data/local/tmp/image.iso";
     options.diskName = "testdisk";
     options.isIsoImage = true;
-    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))..WillRepeatedly(Return(true));
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillRepeatedly(Return(true));
     EXPECT_EQ(op.DoDVDBurn("/dev/block/sr0", options, true), E_OK);
 }
 
