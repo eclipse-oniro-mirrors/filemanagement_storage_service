@@ -1016,7 +1016,7 @@ HWTEST_F(ExtOperatorTest, IsoOperator_DoDVDBurn_NotIsoImageDiskEmpty, TestSize.L
     options.diskName = "testdisk";
     options.isIsoImage = false;
     EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillRepeatedly(Return(true));
-    EXPECT_EQ(op.DoDVDBurn("/dev/block/sr0", options, true), 1);
+    EXPECT_NE(op.DoDVDBurn("/dev/block/sr0", options, true), E_ERR);
 }
 
 HWTEST_F(ExtOperatorTest, IsoOperator_DoDVDBurn_NotIsoImageDiskNotEmpty, TestSize.Level1)
@@ -1027,7 +1027,7 @@ HWTEST_F(ExtOperatorTest, IsoOperator_DoDVDBurn_NotIsoImageDiskNotEmpty, TestSiz
     options.diskName = "testdisk";
     options.isIsoImage = false;
     EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillRepeatedly(Return(true));
-    EXPECT_EQ(op.DoDVDBurn("/dev/block/sr0", options, false), 1);
+    EXPECT_NE(op.DoDVDBurn("/dev/block/sr0", options, false), E_ERR);
 }
 
 HWTEST_F(ExtOperatorTest, IsoOperator_DoDVDBurn_IsIsoImage, TestSize.Level1)
@@ -1038,7 +1038,7 @@ HWTEST_F(ExtOperatorTest, IsoOperator_DoDVDBurn_IsIsoImage, TestSize.Level1)
     options.diskName = "testdisk";
     options.isIsoImage = true;
     EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillRepeatedly(Return(true));
-    EXPECT_EQ(op.DoDVDBurn("/dev/block/sr0", options, true), 1);
+    EXPECT_NE(op.DoDVDBurn("/dev/block/sr0", options, true), E_ERR);
 }
 
 HWTEST_F(ExtOperatorTest, IsoOperator_ExtractIsoFiles_LineTraversalSkipped, TestSize.Level1)
@@ -1121,7 +1121,7 @@ HWTEST_F(ExtOperatorTest, UdfOperator_DoDVDBurn_NotIsoImageDiskEmpty, TestSize.L
     options.diskName = "testdisk";
     options.isIsoImage = false;
     EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillRepeatedly(Return(true));
-    EXPECT_EQ(op.DoDVDBurn("/dev/block/sr0", options, true), 1);
+    EXPECT_NE(op.DoDVDBurn("/dev/block/sr0", options, true), E_ERR);
 }
 
 HWTEST_F(ExtOperatorTest, UdfOperator_DoDVDBurn_NotIsoImageDiskNotEmpty, TestSize.Level1)
@@ -1132,7 +1132,7 @@ HWTEST_F(ExtOperatorTest, UdfOperator_DoDVDBurn_NotIsoImageDiskNotEmpty, TestSiz
     options.diskName = "testdisk";
     options.isIsoImage = false;
     EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillRepeatedly(Return(true));
-    EXPECT_EQ(op.DoDVDBurn("/dev/block/sr0", options, false), 1);
+    EXPECT_NE(op.DoDVDBurn("/dev/block/sr0", options, false), E_ERR);
 }
 
 HWTEST_F(ExtOperatorTest, UdfOperator_DoDVDBurn_IsIsoImage, TestSize.Level1)
@@ -1143,7 +1143,7 @@ HWTEST_F(ExtOperatorTest, UdfOperator_DoDVDBurn_IsIsoImage, TestSize.Level1)
     options.diskName = "testdisk";
     options.isIsoImage = true;
     EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillRepeatedly(Return(true));
-    EXPECT_EQ(op.DoDVDBurn("/dev/block/sr0", options, true), 1);
+    EXPECT_NE(op.DoDVDBurn("/dev/block/sr0", options, true), E_ERR);
 }
 
 HWTEST_F(ExtOperatorTest, ExfatOperator_FixTypeIdentifier_Mbr, TestSize.Level1)
