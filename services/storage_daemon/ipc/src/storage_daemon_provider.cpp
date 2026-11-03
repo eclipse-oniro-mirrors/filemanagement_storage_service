@@ -808,6 +808,14 @@ int32_t StorageDaemonProvider::InitGlobalUserKeys()
     return err;
 }
 
+int32_t StorageDaemonProvider::GenerateUserKeys(uint32_t userId, uint32_t flags)
+{
+    int timerId = StorageXCollie::SetTimer("storage:GenerateUserKeys", LOCAL_TIME_OUT_SECONDS);
+    int err = StorageDaemon::GetInstance().GenerateUserKeys(userId, flags);
+    StorageXCollie::CancelTimer(timerId);
+    return err;
+}
+
 int32_t StorageDaemonProvider::EraseAllUserEncryptedKeys(const std::vector<int32_t> &localIdList)
 {
     HiAudit::GetInstance().WriteStart("EraseAllUserEncryptedKeys");
@@ -3055,7 +3063,7 @@ int32_t StorageDaemonProvider::FormatPartition(const std::string &devPath, const
     VolumeOpDiagBegin(MakeOpDiagContext("StorageDaemonProvider::FormatPartition",
                                         DFX_STAGE_FORMAT_PARTITION, VOL_OP_FORMAT_PARTITION, devPath, fsType));
     std::string verifiedPath;
-    int32_t ret = ValidateMountPath(devPath, verifiedPath);
+    int32_t ret = ValidateBlockDevicePath(devPath, verifiedPath);
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemonProvider] FormatPartition: <<< EXIT FAILED <<< devPath is invalid");
         return ReturnWithOpDiag(ret);
@@ -3071,25 +3079,14 @@ int32_t StorageDaemonProvider::FormatPartition(const std::string &devPath, const
             return ReturnWithOpDiag(E_PARAMS_INVALID);
         }
     }
-
     LOGI("[L1:StorageDaemonProvider] FormatPartition: >>> ENTER <<< devPath=%{public}s, fsType=%{public}s"
          ", volumeName=%{public}s", verifiedPath.c_str(), fsType.c_str(), volumeName.c_str());
-    ret = DiskUtils::FormatPartition(verifiedPath, fsType, volumeName, quickFormat);
+    ret = DiskUtils::FormatPartition(verifiedPath, fsType, volumeName, cmd, quickFormat);
     if (ret == E_OK) {
-        std::vector<std::string> output;
-        std::vector<std::string> cmdArgs = cmd;
-        ret = ForkExec(cmdArgs, &output);
-        for (const auto str : output) {
-            LOGI("FormatPartition FixTypeIdentifier output: %{public}s", str.c_str());
-        }
-        if (ret != E_OK) {
-            LOGE("FormatPartition FixTypeIdentifier failed, ret=%{public}d", ret);
-            return ReturnWithOpDiag(ret);
-        }
+        LOGI("[L1:StorageDaemonProvider] FormatPartition: <<< EXIT SUCCESS <<<");
     } else {
         LOGE("[L1:StorageDaemonProvider] FormatPartition: <<< EXIT FAILED <<< ret=%{public}d", ret);
     }
-    LOGI("[L1:StorageDaemonProvider] FormatPartition: <<< EXIT SUCCESS <<<");
     return ReturnWithOpDiag(ret);
 #else
     LOGI("[L1:StorageDaemonProvider] FormatPartition: <<< EXIT <<< not support");

@@ -16,15 +16,15 @@
 #include <chrono>
 #include <ctime>
 #include <thread>
-#include "storage_daemon_client.h"
 #include "iservice_registry.h"
 #include "libfscrypt/fscrypt_utils.h"
+#include "storage_daemon_client.h"
 #include "storage_service_errno.h"
 #include "storage_service_log.h"
 #include "system_ability_definition.h"
 #include "userdata_dir_info.h"
 #include "utils/storage_radar.h"
-#include "utils/storage_utils.h"
+#include "utils/file_utils.h"
 
 using namespace OHOS::StorageService;
 namespace {
@@ -338,6 +338,24 @@ int32_t StorageDaemonClient::InitGlobalUserKeys(void)
         LOGE("[L1:IPC] InitGlobalUserKeys: <<< EXIT FAILED <<< err=%{public}d", ret);
     }
     return ret;
+}
+
+int32_t StorageDaemonClient::GenerateUserKeys(uint32_t userId, uint32_t flags)
+{
+    LOGI("StorageDaemonClient::GenerateUserKeys, userId: %{public}u, flags:%{public}u", userId, flags);
+    int32_t status = CheckServiceStatus(STORAGE_SERVICE_FLAG);
+    if (status != E_OK) {
+        LOGE("service check failed");
+        return status;
+    }
+
+    sptr<IStorageDaemon> client = GetStorageDaemonProxy();
+    if (client == nullptr) {
+        LOGE("get storage daemon service failed");
+        return E_SA_IS_NULLPTR;
+    }
+
+    return client->GenerateUserKeys(userId, flags);
 }
 
 int32_t StorageDaemonClient::EraseAllUserEncryptedKeys(const std::vector<int32_t> &localIdList)

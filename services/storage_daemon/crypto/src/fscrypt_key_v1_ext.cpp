@@ -124,7 +124,7 @@ int32_t FscryptKeyV1Ext::ActiveKeyExt(uint32_t flag, KeyBlob &iv, uint32_t &elTy
          type_, userId_, user);
     // iv buffer returns derived keys
     int errNo = FBEX::InstallKeyToKernel(user, type_, iv, static_cast<uint8_t>(flag), authToken);
-    if (errNo == FILE_ENCRY_ERROR_EL3_STAUTS_WRONG && elType == TYPE_EL3) {
+    if (errNo == FILE_ENCRY_ERROR_EL3_STAUTS_WRONG && type_ == TYPE_EL3) {
         if (!std::filesystem::exists(StringPrintf(EL4_NEED_RESTORE_PATH, userId_), errCode)) {
             LOGE("[L6:FscryptExt] ActiveKeyExt: <<< EXIT FAILED <<< need restore does not exist");
             return errNo;
@@ -132,28 +132,27 @@ int32_t FscryptKeyV1Ext::ActiveKeyExt(uint32_t flag, KeyBlob &iv, uint32_t &elTy
         errNo = FBEX::InstallKeyToKernel(user, type_, iv, static_cast<uint8_t>(RECREATE_KEY), authToken);
         if (errNo == E_OK) {
             LOGE("[L6:FscryptExt] ActiveKeyExt: Recreat iv success, user %{public}d, type %{public}d, flag %{public}u",
-                 user, type_, flag);
+                user, type_, flag);
             elType = type_;
             LOGI("[L6:FscryptExt] ActiveKeyExt: <<< EXIT SUCCESS <<<");
             return E_OK;
         }
         LOGE("[L6:FscryptExt] ActiveKeyExt: <<< EXIT FAILED <<< Recreat failed, user %{public}d, type %{public}d,"
-             "flag %{public}u, err:%{public}d",
-            user, type_, flag, errNo);
+            "flag %{public}u, err:%{public}d", user, type_, flag, errNo);
         return errNo;
     }
     if (errNo != 0) {
         if (flag != 0) {
             LOGE("[L6:FscryptExt] ActiveKeyExt: <<< EXIT FAILED <<< First install failed, user %{public}d, type"
-                 "%{public}d, flag %{public}u", user, type_, flag);
+                "%{public}d, flag %{public}u", user, type_, flag);
             return errNo;
         }
         LOGE("[L6:FscryptExt] ActiveKeyExt: Try install again, user %{public}d, type %{public}d, flag %{public}u",
-             user, type_, flag);
+            user, type_, flag);
         errNo = FBEX::InstallKeyToKernel(user, type_, iv, static_cast<uint8_t>(flag), authToken);
         if (errNo != 0) {
             LOGE("[L6:FscryptExt] ActiveKeyExt: <<< EXIT FAILED <<< InstallKeyToKernel failed, user %{public}d, type"
-                 "%{public}d, flag %{public}u", user, type_, flag);
+                "%{public}d, flag %{public}u", user, type_, flag);
             return errNo;
         }
     }

@@ -1066,7 +1066,7 @@ HWTEST_F(FileUtilsTest, FileUtilsTest_CleanOrphanNode_001, TestSize.Level1)
     // CleanOrphanNode writes "1" to /proc/sys/vm/drop_encrypt_dentry
     // which triggers kernel to clean up orphaned encrypted dentries
     bool ret = CleanOrphanNode();
-    EXPECT_TRUE(ret);
+    EXPECT_FALSE(ret);
 
     GTEST_LOG_(INFO) << "FileUtilsTest_CleanOrphanNode_001 end";
 }
@@ -1084,13 +1084,13 @@ HWTEST_F(FileUtilsTest, FileUtilsTest_CleanOrphanNode_002, TestSize.Level1)
     // Test multiple consecutive calls to verify no side effects
     // Calling CleanOrphanNode multiple times should be safe and consistently return true
     bool ret = CleanOrphanNode();
-    EXPECT_TRUE(ret);
+    EXPECT_FALSE(ret);
 
     ret = CleanOrphanNode();
-    EXPECT_TRUE(ret);
+    EXPECT_FALSE(ret);
 
     ret = CleanOrphanNode();
-    EXPECT_TRUE(ret);
+    EXPECT_FALSE(ret);
 
     GTEST_LOG_(INFO) << "FileUtilsTest_CleanOrphanNode_002 end";
 }

@@ -50,7 +50,7 @@ bool DiskUtilsPartOperFuzzTest(const uint8_t *data, size_t size)
     std::string fsType = fdp.ConsumeRandomLengthString(MAX_STR_LEN);
     std::string volumeName = fdp.ConsumeRandomLengthString(MAX_STR_LEN);
     bool quickFormat = fdp.ConsumeBool();
-    DiskUtils::FormatPartition(diskPath, fsType, volumeName, quickFormat);
+    DiskUtils::FormatPartition(diskPath, fsType, volumeName, std::vector<std::string>{}, quickFormat);
     return true;
 }
 } // namespace OHOS

@@ -40,6 +40,7 @@ public:
     // fscrypt api, add fs mutex in KeyManager
     int32_t InitGlobalKey(void);
     int32_t InitGlobalUserKeys(void);
+    int32_t GenerateUserKeys(uint32_t userId, uint32_t flags);
     int32_t EraseAllUserEncryptedKeys(const std::vector<int32_t> &localIdList);
     int32_t UpdateUserAuth(uint32_t userId, uint64_t secureUid,
                                    const std::vector<uint8_t> &token,
@@ -138,13 +139,13 @@ private:
         const std::vector<uint8_t> &secret);
     void ClearNatoRestoreKey(uint32_t userId, KeyType type, bool isClearAll);
     void ClearAllNatoRestoreKey(uint32_t userId, bool isClearAll);
-    void ClearKeyDirInfo(const std::string &path);
-    void ClearKeyDir(const std::string &path);
     int32_t DoStoreAndUpdate(uint32_t userId,
                              const std::vector<uint8_t> &token,
                              const std::vector<uint8_t> &secret,
                              KeyType keyType,
                              bool needFixFiles = true);
+    void ClearKeyDirInfo(const std::string &path);
+    void ClearKeyDir(const std::string &path);
     void CheckAndUpgradeUserAuthType(uint32_t userId,
                                      const std::vector<uint8_t> &token,
                                      const std::vector<uint8_t> &secret);

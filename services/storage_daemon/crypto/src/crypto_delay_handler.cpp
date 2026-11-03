@@ -105,4 +105,4 @@ int64_t DelayHandler::GetTickCount()
     ).count();
 }
 } // StorageDaemon
-} // namespace OHOS
+} // OHOS

@@ -19,6 +19,7 @@
 
 #include "storage_daemon_client.h"
 #include "istorage_daemon.h"
+#include "storage_service_constants.h"
 #include "storage_service_errno.h"
 #include "storage_service_log.h"
 #include "userdata_dir_info.h"
@@ -205,7 +206,11 @@ HWTEST_F(StorageDaemonClientTest, Storage_Service_StorageDaemonClientTest_Active
     ASSERT_TRUE(storageDaemonClient_ != nullptr);
 
     int32_t userid = StorageTest::USER_ID4;
-    int32_t ret = storageDaemonClient_->ActiveUserKey(userid, {}, {});
+    int32_t flags = IStorageDaemonEnum::CRYPTO_FLAG_EL2;
+    int32_t ret = storageDaemonClient_->GenerateUserKeys(userid, flags);
+    EXPECT_TRUE(ret == E_OK);
+
+    ret = storageDaemonClient_->ActiveUserKey(userid, {}, {});
     EXPECT_TRUE(ret == E_OK);
 
     ret = storageDaemonClient_->InactiveUserKey(userid);
@@ -255,7 +260,11 @@ HWTEST_F(StorageDaemonClientTest, Storage_Service_StorageDaemonClientTest_Update
     ASSERT_TRUE(storageDaemonClient_ != nullptr);
 
     int32_t userid = StorageTest::USER_ID1;
-    int32_t ret = storageDaemonClient_->UpdateUserAuth(userid, 0, {}, {}, {});
+    int32_t flags = IStorageDaemonEnum::CRYPTO_FLAG_EL2;
+    int32_t ret = storageDaemonClient_->GenerateUserKeys(userid, flags);
+    EXPECT_TRUE(ret == E_OK);
+
+    ret = storageDaemonClient_->UpdateUserAuth(userid, 0, {}, {}, {});
     EXPECT_TRUE(ret == E_OK) << "UpdateUserAuth error";
 
     ret = storageDaemonClient_->UpdateKeyContext(userid);

@@ -48,8 +48,16 @@ declare_args() {
   enable_disk_manager =
       defined(global_parts_info) &&
       defined(global_parts_info.filemanagement_disk_manager)
+
   enable_tee_client = !is_emulator
   enable_huks_hdi = !is_emulator
+
+  config_policy_ext_disable = true
+  if (defined(global_parts_info) &&
+  defined(
+  global_parts_info.customization_config_policy_ext)) {
+    config_policy_ext_disable = false
+  }
 }
 
 storage_manager_path =

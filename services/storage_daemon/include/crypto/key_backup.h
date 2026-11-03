@@ -45,6 +45,7 @@ public:
                               KeyBlob &decryptedKey);
     int32_t GetBackupDir(std::string &origDir, std::string &backupDir);
     void ListAndCheckDir(std::string &origDir);
+    int32_t GetAttr(const std::string &path, struct FileAttr &attr);
 
 private:
     KeyBackup() {};
@@ -60,7 +61,6 @@ private:
     int32_t CheckAndCopyOneFile(const std::string &from, const std::string &to);
     bool GetRealPath(const std::string &path, std::string &realPath);
     int32_t CompareFile(const std::string &fileA, const std::string fileB);
-    int32_t GetAttr(const std::string &path, struct FileAttr &attr);
     int32_t SetAttr(const std::string &path, struct FileAttr &attr);
     int32_t HandleCopyDir(const std::string &from, const std::string &to);
     void CheckAndFixFiles(const std::string &from, const std::string &to);

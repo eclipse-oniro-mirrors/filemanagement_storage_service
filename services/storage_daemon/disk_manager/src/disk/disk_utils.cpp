@@ -156,7 +156,7 @@ static bool ParseKeyValuePair(const std::string &key, const std::string &value, 
 int32_t ParseBurnOptions(const std::string &burnOptions, BurnOptions &parsedOptions)
 {
     LOGI("[L3:DiskUtils] ParseBurnOptions: >>> ENTER <<<");
-    
+
     if (burnOptions.empty()) {
         LOGE("[L3:DiskUtils] ParseBurnOptions: burnOptions is empty");
         return E_PARAMS_INVALID;
@@ -572,8 +572,11 @@ struct FormatPartitionThreadResult {
 };
 } // namespace
 
-int32_t DiskUtils::FormatPartition(const std::string &devPath, const std::string &fsType,
-                                   const std::string &volumeName, bool quickFormat)
+int32_t DiskUtils::FormatPartition(const std::string &devPath,
+                                   const std::string &fsType,
+                                   const std::string &volumeName,
+                                   const std::vector<std::string> &cmd,
+                                   bool quickFormat)
 {
     if (!IsValidBlockDevicePath(devPath)) {
         LOGE("DiskUtils::FormatPartitionInfo invalid devPath");
@@ -590,10 +593,10 @@ int32_t DiskUtils::FormatPartition(const std::string &devPath, const std::string
         VolumeOpDiagAttachContext(diagCtx);
         FormatPartitionThreadResult result;
         LOGI("[L3:DiskUtils] exec format partition");
-        std::vector<std::string> cmd = DiskUtils::GetFormatCMD(fsType, devPath, volumeName);
-        if (!cmd.empty()) {
+        std::vector<std::string> formatCmd = DiskUtils::GetFormatCMD(fsType, devPath, volumeName);
+        if (!formatCmd.empty()) {
             std::vector<std::string> output;
-            result.ret = ForkExec(cmd, &output);
+            result.ret = ForkExec(formatCmd, &output);
             for (auto str : output) {
                 LOGI("format partition output: %{public}s", str.c_str());
             }
@@ -613,8 +616,18 @@ int32_t DiskUtils::FormatPartition(const std::string &devPath, const std::string
     VolumeOpDiagMergeToolEntries(formatResult.toolEntries);
     int32_t ret = formatResult.ret;
     if (ret != E_OK) {
-        LOGE("[L3:DiskUtils] FormatPartitionInfo: <<< EXIT FAILED <<< format partition failed, err=%{public}d", ret);
+        LOGE("[L3:DiskUtils] FormatPartitionInfo: <<< EXIT FAILED <<< format partition failed, err=%{public}d.", ret);
         return E_FORMAT_PARTITION_ERROR;
+    }
+    std::vector<std::string> output;
+    std::vector<std::string> cmdArgs = cmd;
+    ret = ForkExec(cmdArgs, &output);
+    for (const auto str : output) {
+        LOGI("[L3:DiskUtils] FormatPartition FixTypeIdentifier output: %{public}s", str.c_str());
+    }
+    if (ret != E_OK) {
+        LOGI("[L3:DiskUtils] FormatPartition: <<< EXIT FAILED <<< FixTypeIdentifier failed, ret=%{public}d.", ret);
+        return ret;
     }
     LOGI("[L3:DiskUtils] FormatPartitionInfo: <<< EXIT SUCCESS <<<");
     return E_OK;
@@ -1089,7 +1102,7 @@ std::string GetOpticalDriveNode(const std::string &devPath)
     std::string majorMinor = volName.substr(dashPos + 1);
     std::replace(majorMinor.begin(), majorMinor.end(), '-', ':');
     LOGI("GetOpticalDriveNode: devPath=%{public}s, majorMinor=%{public}s", devPath.c_str(), majorMinor.c_str());
- 
+
     std::string result;
     DIR *dir = opendir("/sys/block");
     if (dir == nullptr) {
@@ -1231,7 +1244,7 @@ static int32_t GetDvdPlusRwTotalCapacity(int fd, int64_t &dvdTotalCapacity)
         LOGE("GetDvdPlusRwTotalCapacity SendScsiCmd failed, ret val is %{public}d", ret);
         return E_ERR;
     }
- 
+
     blkCnt = (static_cast<unsigned int>(dataBuf[LAST_LBA_BYTE_0]) << BYTE_SHIFT_24) |
              (static_cast<unsigned int>(dataBuf[LAST_LBA_BYTE_1]) << BYTE_SHIFT_16) |
              (static_cast<unsigned int>(dataBuf[LAST_LBA_BYTE_2]) << BYTE_SHIFT_8) |
@@ -1278,12 +1291,12 @@ void DiskUtils::AdjustBlankDiscCapacity(const std::string& devPath, const std::s
     if (!IsCDBlank(devPath)) {
         return;
     }
-    
+
     usedSize = 0;
     if (discType.find("DVD") != 0 && discType.find("BD") != 0) {
         return;
     }
-    
+
     std::vector<std::string> cmd = {"dvd+rw-mediainfo", devPath};
     std::vector<std::string> output;
     int32_t ret = ForkExec(cmd, &output);
@@ -1291,7 +1304,7 @@ void DiskUtils::AdjustBlankDiscCapacity(const std::string& devPath, const std::s
         LOGE("AdjustBlankDiscCapacity: ForkExec failed, ret=%{public}d", ret);
         return;
     }
-    
+
     std::regex pattern(R"(\bunformatted:\s+\d+\*2048=(\d+))");
     for (const auto& line : output) {
         std::smatch match;

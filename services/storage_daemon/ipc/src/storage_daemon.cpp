@@ -276,6 +276,7 @@ int32_t StorageDaemon::RestoreUserKey(int32_t userId, uint32_t flags)
 int32_t StorageDaemon::PrepareUserDirs(int32_t userId, uint32_t flags)
 {
     LOGI("[L1:StorageDaemon] PrepareUserDirs: >>> ENTER <<< userId=%{public}d, flags=%{public}u", userId, flags);
+    (void)SetPriority();
     // CRYPTO_FLAG_EL3 create el3,  CRYPTO_FLAG_EL4.create el4
     flags = flags | IStorageDaemonEnum::CRYPTO_FLAG_EL3 | IStorageDaemonEnum::CRYPTO_FLAG_EL4 |
             IStorageDaemonEnum::CRYPTO_FLAG_EL5;
@@ -507,6 +508,30 @@ int32_t StorageDaemon::InitGlobalUserKeys(void)
     thread.detach();
     return result;
 }
+
+int32_t StorageDaemon::GenerateUserKeys(uint32_t userId, uint32_t flags)
+{
+#ifdef USER_CRYPTO_MANAGER
+    int32_t ret = KeyManager::GetInstance().GenerateUserKeys(userId, flags);
+    if (ret != E_OK) {
+        LOGE("GenerateUserKeys failed, please check");
+        RadarParameter parameterRes = {
+            .orgPkg = DEFAULT_ORGPKGNAME,
+            .userId = userId,
+            .funcName = "GenerateUserKeys",
+            .bizScene = BizScene::USER_KEY_ENCRYPTION,
+            .bizStage = BizStage::BIZ_STAGE_GENERATE_USER_KEYS,
+            .keyElxLevel = "EL1",
+            .errorCode = ret
+        };
+        StorageRadar::GetInstance().RecordFunctionResult(parameterRes);
+    }
+    return ret;
+#else
+    return E_OK;
+#endif
+}
+
 void StorageDaemon::SetDeleteFlag4KeyFiles()
 {
     std::string el0DeviceKeyPath = "/data/service/el0/storage_daemon/sd";

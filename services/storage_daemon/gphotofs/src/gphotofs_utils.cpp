@@ -346,7 +346,7 @@ bool IsFilePathValid(const std::string &filePath)
     }
     char resolvedPath[PATH_MAX];
     if (!realpath(filePath.c_str(), resolvedPath)) {
-        LOGW("IsFilePathValid: FilePath is abnormal");
+        LOGW("IsFilePathValid: FilePath is abnormal, errno=%{public}d", errno);
         return IsPathTraversalSafe(filePath);
     }
     if (std::string(resolvedPath) != filePath) {

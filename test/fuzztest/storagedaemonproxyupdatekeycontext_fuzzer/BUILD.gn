@@ -42,8 +42,8 @@ ohos_fuzztest("StorageDaemonProxyUpdateKeyContextFuzzTest") {
     "${storage_daemon_path}/user/src/system_mount_manager.cpp",
     "${storage_daemon_path}/user/src/user_path_resolver.cpp",
     "${storage_daemon_path}/user/src/user_manager.cpp",
-    "${storage_daemon_path}/utils/storage_xcollie.cpp",
     "storagedaemonproxyupdatekeycontext_fuzzer.cpp",
+    "${storage_daemon_path}/utils/storage_xcollie.cpp",
   ]
 
   configs = [
@@ -64,6 +64,7 @@ ohos_fuzztest("StorageDaemonProxyUpdateKeyContextFuzzTest") {
     "cJSON:cjson",
     "config_policy:configpolicy_util",
     "c_utils:utils",
+    "crypto_framework:crypto_framework_lib",
     "eventhandler:libeventhandler",
     "hicollie:libhicollie",
     "hilog:libhilog",

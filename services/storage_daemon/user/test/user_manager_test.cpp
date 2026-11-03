@@ -25,11 +25,8 @@
 #include "crypto/key_manager.h"
 #include "user/system_mount_manager.h"
 
-using namespace std;
 namespace OHOS {
 namespace StorageDaemon {
-
-using namespace testing;
 using namespace testing::ext;
 
 class UserManagerTest : public testing::Test {

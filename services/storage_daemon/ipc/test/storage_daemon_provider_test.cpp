@@ -641,6 +641,22 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_InitGlobalUserKeys
 }
 
 /**
+ * @tc.name: StorageDaemonProviderTest_GenerateUserKeys_001
+ * @tc.desc: Verify the GenerateUserKeys function.
+ * @tc.type: FUNC
+ * @tc.require: AR000H09L6
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_GenerateUserKeys_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_GenerateUserKeys_001 start";
+    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
+    uint32_t flags = 0x01;
+    int32_t ret = storageDaemonProviderTest_->GenerateUserKeys(StorageTest::USER_ID1, flags);
+    EXPECT_EQ(ret, E_OK);
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_GenerateUserKeys_001 end";
+}
+
+/**
  * @tc.name: StorageDaemonProviderTest_EraseAllUserEncryptedKeys_001
  * @tc.desc: Verify the EraseAllUserEncryptedKeys function.
  * @tc.type: FUNC
@@ -3145,9 +3161,9 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_MountFileMgrFuse_0
     int32_t userId = 100;
     int32_t fuseFd = 0;
     int32_t result = storageDaemonProviderTest_->MountFileMgrFuse(userId, newPath, fuseFd);
-    EXPECT_NE(result, E_OK);
+    EXPECT_EQ(result, E_OK);
     result = storageDaemonProviderTest_->MountFileMgrFuse(userId, newPath, fuseFd);
-    EXPECT_NE(result, E_OK);
+    EXPECT_EQ(result, E_OK);
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_MountFileMgrFuse_004 end";
 }
 
@@ -3164,9 +3180,9 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_UMountFileMgrFuse_
     std::string newPath = "/mnt/data/100/userExternal/testMountFileMgrFuse";
     int32_t userId = 100;
     int32_t result = storageDaemonProviderTest_->UMountFileMgrFuse(userId, newPath);
-    EXPECT_NE(result, E_OK);
+    EXPECT_EQ(result, E_OK);
     result = storageDaemonProviderTest_->UMountFileMgrFuse(userId, newPath);
-    EXPECT_NE(result, E_OK);
+    EXPECT_EQ(result, E_OK);
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_UMountFileMgrFuse_004 end";
 }
 

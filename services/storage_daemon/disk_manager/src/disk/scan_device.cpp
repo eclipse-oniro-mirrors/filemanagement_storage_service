@@ -26,6 +26,7 @@
 #include <fstream>
 #include <cerrno>
 #include <cinttypes>
+#include <climits>
 #include <linux/fs.h>
 #include <linux/hdreg.h>
 #include <regex>
@@ -282,10 +283,10 @@ std::vector<BlockInfo> ScanDevice::GetExternalDisks(const std::string &devName, 
             extraInfoJson["DRIVE_TYPE"] = driveType;
             extraInfoJson["DISC_TYPE"] = discType;
             extraInfoJson["ODD_DRIVER_TYPE"] = oddDriveType;
-            
+
             std::string maxWriteSpeed;
             nlohmann::json speedInfo = GetSpeedInfo(devPath, discType, maxWriteSpeed);
-            
+
             extraInfoJson["SPEED_INFO"] = speedInfo;
             extraInfoJson["MAX_WRITE_SPEED"] = maxWriteSpeed + "X";
             info.ODD_INFO = extraInfoJson;
@@ -374,10 +375,10 @@ bool ScanDevice::IsValidSpeedString(const std::string &speedStr)
     if (speedStr.empty()) {
         return false;
     }
-    
+
     bool hasDot = false;
     bool hasDigit = false;
-    
+
     for (char c : speedStr) {
         if (c == '.') {
             if (hasDot) {
@@ -390,7 +391,7 @@ bool ScanDevice::IsValidSpeedString(const std::string &speedStr)
             return false;
         }
     }
-    
+
     return hasDigit;
 }
 
@@ -537,10 +538,10 @@ int ScanDevice::GetBlockInfo(const std::string &deviceName, const bool isNvmeDev
             extraInfoJson["DRIVE_TYPE"] = driveType;
             extraInfoJson["DISC_TYPE"] = discType;
             extraInfoJson["ODD_DRIVER_TYPE"] = oddDriveType;
-            
+
             std::string maxWriteSpeed;
             nlohmann::json speedInfo = GetSpeedInfo(devPath, discType, maxWriteSpeed);
-            
+
             extraInfoJson["SPEED_INFO"] = speedInfo;
             extraInfoJson["MAX_WRITE_SPEED"] = maxWriteSpeed + "X";
             blockInfo.ODD_INFO = extraInfoJson;
@@ -737,6 +738,10 @@ int32_t ScanDevice::GetRotational(const std::string &deviceName)
         LOGI("GetRotational content success: %{public}s", content.c_str());
         unsigned long long result = 0;
         if (ParseStringToUlongLong(content, result)) {
+            if (result > static_cast<unsigned long long>(INT32_MAX)) {
+                LOGE("GetRotational: value overflow %{public}llu", result);
+                return -1;
+            }
             return static_cast<int32_t>(result);
         }
         LOGE("GetRotational: failed to parse value from %{public}s", content.c_str());

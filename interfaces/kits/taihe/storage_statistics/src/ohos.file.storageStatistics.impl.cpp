@@ -199,8 +199,8 @@ int64_t GetTotalSizeOfVolumeSync(::taihe::string_view volumeUuid)
     }
     uint32_t flag = static_cast<uint32_t>(statFlag);
     auto bundleStats = std::make_shared<OHOS::StorageManager::BundleStats>();
-    auto& instance = OHOS::StorageManager::StorageManagerConnect::GetInstance();
-    auto errNum = instance.GetBundleStats(nameString, *bundleStats, index, flag);
+    auto errNum = OHOS::StorageManager::StorageManagerConnect::GetInstance().
+        GetBundleStats(nameString, *bundleStats, index, flag);
     if (errNum != OHOS::E_OK) {
         OHOS::StorageTaiheError::SetStorageTaiheError(errNum);
         return { DEFAULTSIZE, DEFAULTSIZE, DEFAULTSIZE };

@@ -555,7 +555,7 @@ HWTEST_F(ExtDiskUtilsTest, CreatePartition_WithVfatType, TestSize.Level1)
     int64_t startSector = 2048;
     int64_t endSector = 204800;
     std::string typeCode = "vfat";
-    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_OK));
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillRepeatedly(Return(E_OK));
     int32_t ret = DiskUtils::CreatePartition(devPath, partitionNum, startSector, endSector, typeCode);
     EXPECT_EQ(ret, E_OK);
 }
@@ -646,10 +646,10 @@ HWTEST_F(ExtDiskUtilsTest, ExecAsyncDamagePartition_Success, TestSize.Level1)
     std::string devPath = "/dev/block/uttestdisk";
     int32_t partitionNum = 1;
     EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
-        .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
-            output->push_back("Damage partition 1");
-            return E_OK;
-        }));
+    .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
+        output->push_back("Damage partition 1");
+        return E_OK;
+    }));
     int32_t ret = DiskUtils::ExecAsyncDamagePartition(devPath, partitionNum);
     EXPECT_EQ(ret, E_OK);
 }
@@ -667,7 +667,7 @@ HWTEST_F(ExtDiskUtilsTest, ExecAsyncDamagePartition_WithDifferentPartitionNum, T
 {
     std::string devPath = "/dev/block/uttestdisk";
     int32_t partitionNum = 3;
-    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_OK));
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillRepeatedly(Return(E_OK));
     int32_t ret = DiskUtils::ExecAsyncDamagePartition(devPath, partitionNum);
     EXPECT_EQ(ret, E_OK);
 }
@@ -678,7 +678,7 @@ HWTEST_F(ExtDiskUtilsTest, FormatPartition_EmptyPath, TestSize.Level1)
     std::string fsType = "ext4";
     std::string volumeName = "test_volume";
     bool quickFormat = true;
-    int32_t ret = DiskUtils::FormatPartition(devPath, fsType, volumeName, quickFormat);
+    int32_t ret = DiskUtils::FormatPartition(devPath, fsType, volumeName, std::vector<std::string>{}, quickFormat);
     EXPECT_EQ(ret, E_PARAMS_INVALID);
 }
 
@@ -688,7 +688,7 @@ HWTEST_F(ExtDiskUtilsTest, FormatPartition_PathTraversal, TestSize.Level1)
     std::string fsType = "ext4";
     std::string volumeName = "test_volume";
     bool quickFormat = true;
-    int32_t ret = DiskUtils::FormatPartition(devPath, fsType, volumeName, quickFormat);
+    int32_t ret = DiskUtils::FormatPartition(devPath, fsType, volumeName, std::vector<std::string>{}, quickFormat);
     EXPECT_EQ(ret, E_PARAMS_INVALID);
 }
 
@@ -698,7 +698,7 @@ HWTEST_F(ExtDiskUtilsTest, FormatPartition_InvalidPrefix, TestSize.Level1)
     std::string fsType = "ext4";
     std::string volumeName = "test_volume";
     bool quickFormat = true;
-    int32_t ret = DiskUtils::FormatPartition(devPath, fsType, volumeName, quickFormat);
+    int32_t ret = DiskUtils::FormatPartition(devPath, fsType, volumeName, std::vector<std::string>{}, quickFormat);
     EXPECT_EQ(ret, E_PARAMS_INVALID);
 }
 
@@ -708,7 +708,7 @@ HWTEST_F(ExtDiskUtilsTest, FormatPartition_UnsupportedFsType, TestSize.Level1)
     std::string fsType = "unsupported_fs";
     std::string volumeName = "test_volume";
     bool quickFormat = true;
-    int32_t ret = DiskUtils::FormatPartition(devPath, fsType, volumeName, quickFormat);
+    int32_t ret = DiskUtils::FormatPartition(devPath, fsType, volumeName, std::vector<std::string>{}, quickFormat);
     EXPECT_EQ(ret, E_FORMAT_PARTITION_NOT_SUPPORT);
 }
 
@@ -719,7 +719,7 @@ HWTEST_F(ExtDiskUtilsTest, FormatPartition_ForkExecFailed, TestSize.Level1)
     std::string volumeName = "test_volume";
     bool quickFormat = true;
     EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_ERR));
-    int32_t ret = DiskUtils::FormatPartition(devPath, fsType, volumeName, quickFormat);
+    int32_t ret = DiskUtils::FormatPartition(devPath, fsType, volumeName, std::vector<std::string>{}, quickFormat);
     EXPECT_EQ(ret, E_FORMAT_PARTITION_ERROR);
 }
 
@@ -730,11 +730,13 @@ HWTEST_F(ExtDiskUtilsTest, FormatPartition_SuccessWithExt4, TestSize.Level1)
     std::string volumeName = "test_volume";
     bool quickFormat = true;
     EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
-        .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
-            output->push_back("Formatting with ext4");
+        .WillRepeatedly(Invoke([](std::vector<std::string> &cmd, std::vector<std::string> *output, int *) {
+            if (!cmd.empty() && cmd[0].find("mkfs") != std::string::npos) {
+                output->push_back("Formatting with ext4");
+            }
             return E_OK;
         }));
-    int32_t ret = DiskUtils::FormatPartition(devPath, fsType, volumeName, quickFormat);
+    int32_t ret = DiskUtils::FormatPartition(devPath, fsType, volumeName, std::vector<std::string>{}, quickFormat);
     EXPECT_EQ(ret, E_OK);
 }
 
@@ -745,11 +747,13 @@ HWTEST_F(ExtDiskUtilsTest, FormatPartition_SuccessWithVfat, TestSize.Level1)
     std::string volumeName = "test_vfat";
     bool quickFormat = true;
     EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
-        .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
-            output->push_back("Formatting with vfat");
+        .WillRepeatedly(Invoke([](std::vector<std::string> &cmd, std::vector<std::string> *output, int *) {
+            if (!cmd.empty() && cmd[0].find("mkfs") != std::string::npos) {
+                output->push_back("Formatting with vfat");
+            }
             return E_OK;
         }));
-    int32_t ret = DiskUtils::FormatPartition(devPath, fsType, volumeName, quickFormat);
+    int32_t ret = DiskUtils::FormatPartition(devPath, fsType, volumeName, std::vector<std::string>{}, quickFormat);
     EXPECT_EQ(ret, E_OK);
 }
 
@@ -760,11 +764,13 @@ HWTEST_F(ExtDiskUtilsTest, FormatPartition_SuccessWithExfat, TestSize.Level1)
     std::string volumeName = "test_exfat";
     bool quickFormat = true;
     EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
-        .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
-            output->push_back("Formatting with exfat");
+        .WillRepeatedly(Invoke([](std::vector<std::string> &cmd, std::vector<std::string> *output, int *) {
+            if (!cmd.empty() && cmd[0].find("mkfs") != std::string::npos) {
+                output->push_back("Formatting with exfat");
+            }
             return E_OK;
         }));
-    int32_t ret = DiskUtils::FormatPartition(devPath, fsType, volumeName, quickFormat);
+    int32_t ret = DiskUtils::FormatPartition(devPath, fsType, volumeName, std::vector<std::string>{}, quickFormat);
     EXPECT_EQ(ret, E_OK);
 }
 
@@ -774,8 +780,8 @@ HWTEST_F(ExtDiskUtilsTest, FormatPartition_SuccessWithoutVolumeName, TestSize.Le
     std::string fsType = "ext4";
     std::string volumeName = "";
     bool quickFormat = true;
-    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_OK));
-    int32_t ret = DiskUtils::FormatPartition(devPath, fsType, volumeName, quickFormat);
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillRepeatedly(Return(E_OK));
+    int32_t ret = DiskUtils::FormatPartition(devPath, fsType, volumeName, std::vector<std::string>{}, quickFormat);
     EXPECT_EQ(ret, E_OK);
 }
 
@@ -785,8 +791,8 @@ HWTEST_F(ExtDiskUtilsTest, FormatPartition_QuickFormatFalse, TestSize.Level1)
     std::string fsType = "ext4";
     std::string volumeName = "test_volume";
     bool quickFormat = false;
-    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_OK));
-    int32_t ret = DiskUtils::FormatPartition(devPath, fsType, volumeName, quickFormat);
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillRepeatedly(Return(E_OK));
+    int32_t ret = DiskUtils::FormatPartition(devPath, fsType, volumeName, std::vector<std::string>{}, quickFormat);
     EXPECT_EQ(ret, E_OK);
 }
 
@@ -1087,7 +1093,7 @@ HWTEST_F(ExtDiskUtilsTest, CleanTempDirectory_001, TestSize.Level1)
  */
 HWTEST_F(ExtDiskUtilsTest, CleanTempDirectory_002, TestSize.Level1)
 {
-    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_OK));
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillRepeatedly(Return(E_OK));
     int32_t ret = DiskUtils::CleanTempDirectory();
     EXPECT_EQ(ret, E_OK);
 }
