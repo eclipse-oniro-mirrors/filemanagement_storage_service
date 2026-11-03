@@ -89,9 +89,7 @@ private:
     double ConvertBytesToMB(int64_t bytes, int32_t decimalPlaces);
     int32_t AddBlksRecurse(const std::string &path, int64_t &blks, uid_t uid);
     int32_t AddBlks(const std::string &path, int64_t &blks, uid_t uid);
-    void GetMetaData(std::ostringstream &extraData);
     bool StringToInt64(const std::string& str, int64_t& out_value);
-    void GetCurrentTime(std::ostringstream &extraData);
     void AssembleSysAppVec(int32_t dqUid, const KernelNextDqBlk &dq,
         std::map<int32_t, int64_t> &userAppSizeMap, std::vector<UidSaInfo> &sysAppVec);
     int64_t GetSaOrOtherTotal(const std::vector<UidSaInfo> &vec);

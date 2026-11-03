@@ -21,7 +21,6 @@
 #include "utils/string_utils.h"
 
 #include <cerrno>
-#include <sys/mount.h>
 #include <map>
 #include <sstream>
 #include <vector>
@@ -465,96 +464,6 @@ int32_t IsoOperator::ExtractIsoFiles(const std::string& isoPath,
             return err;
         }
     }
-    return E_OK;
-}
-
-int32_t IsoOperator::GenerateChecksums(const std::string& dirPath,
-                                       const std::string& checksumFilePath)
-{
-    LOGI("GenerateChecksums: generating MD5 for %{public}s", dirPath.c_str());
-    std::vector<std::string> cmd = {"find", dirPath, "-type", "f", "-exec",
-                                    "md5sum", "{}", ";"};
-    std::vector<std::string> output;
-    int32_t err = ForkExec(cmd, &output);
-    if (err != E_OK) {
-        LOGE("GenerateChecksums: find/md5sum failed for %{public}s",
-             dirPath.c_str());
-        return E_ERR;
-    }
-
-    std::string checksumContent;
-    for (const auto& s : output) {
-        checksumContent += s + "\n";
-    }
-
-    std::string errMsg;
-    if (!WriteFileSync(checksumFilePath.c_str(),
-                       reinterpret_cast<const uint8_t*>(checksumContent.c_str()),
-                       checksumContent.size(), errMsg)) {
-        LOGE("GenerateChecksums: write checksum failed: %{public}s",
-             errMsg.c_str());
-        return E_ERR;
-    }
-
-    return E_OK;
-}
-
-std::map<std::string, std::string> IsoOperator::ParseChecksumFile(
-    const std::string& checksumContent, const std::string& basePath)
-{
-    std::map<std::string, std::string> checksumMap;
-    std::vector<std::string> lines = DiskUtils::SplitString(checksumContent, '\n');
-
-    for (const auto& line : lines) {
-        if (line.empty()) {
-            continue;
-        }
-        size_t pos = line.find("  ");
-        if (pos != std::string::npos) {
-            std::string md5 = line.substr(0, pos);
-            std::string filePath = line.substr(pos + 2);
-            std::string relativePath = DiskUtils::GetRelativePath(filePath, basePath);
-            checksumMap[relativePath] = md5;
-        }
-    }
-
-    return checksumMap;
-}
-
-void IsoOperator::LogChecksumMap(const std::string& mapName,
-                                 const std::map<std::string, std::string>& map)
-{
-    LOGI("LogChecksumMap: %{public}s contents:", mapName.c_str());
-    for (const auto& pair : map) {
-        LOGI("LogChecksumMap:   [%{public}s] = [%{public}s]",
-             GetAnonyString(pair.first).c_str(), GetAnonyString(pair.second).c_str());
-    }
-}
-
-int32_t IsoOperator::CompareChecksums(
-    const std::map<std::string, std::string>& sourceMap,
-    const std::map<std::string, std::string>& discMap)
-{
-    LOGI("CompareChecksums: comparing, sourceFiles=%{public}zu, discFiles=%{public}zu",
-         sourceMap.size(), discMap.size());
-
-    for (const auto& pair : sourceMap) {
-        const std::string& filename = pair.first;
-        const std::string& sourceMd5 = pair.second;
-        auto it = discMap.find(filename);
-        if (it == discMap.end()) {
-            LOGE("CompareChecksums: file not found on disc: %{public}s",
-                 filename.c_str());
-            return E_VERIFY_BURN_DATA_FAILED;
-        }
-        if (sourceMd5 != it->second) {
-            LOGE("CompareChecksums: MD5 mismatch for file: %{public}s",
-                 filename.c_str());
-            return E_VERIFY_BURN_DATA_FAILED;
-        }
-    }
-
-    LOGI("CompareChecksums: checksum comparison passed");
     return E_OK;
 }
 

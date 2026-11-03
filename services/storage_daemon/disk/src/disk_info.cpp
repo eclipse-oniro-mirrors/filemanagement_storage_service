@@ -16,7 +16,6 @@
 #include <sys/sysmacros.h>
 
 #include "disk/disk_info.h"
-#include "storage_service_log.h"
 #include "utils/string_utils.h"
 
 namespace OHOS {
@@ -28,33 +27,13 @@ DiskInfo::DiskInfo(std::string &diskName, std::string &sysPath, std::string &dev
     diskName_ = diskName;
     sysPath_ = sysPath;
     devPath_ = StringPrintf("/dev/block/%s", diskId_.c_str());
-    device_ = device;
     diskType_ = static_cast<DiskType>(diskType);
 }
 
-dev_t DiskInfo::GetDevice() const
-{
-    return device_;
-}
 
 std::string DiskInfo::GetDiskId() const
 {
     return diskId_;
-}
-
-std::string DiskInfo::GetDevPath() const
-{
-    return devPath_;
-}
-
-std::string DiskInfo::GetSysPath() const
-{
-    return sysPath_;
-}
-
-int32_t DiskInfo::GetDiskType() const
-{
-    return diskType_;
 }
 
 std::string DiskInfo::GetDiskName() const

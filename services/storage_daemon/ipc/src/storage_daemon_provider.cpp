@@ -19,19 +19,14 @@
 #include <climits>
 #include <csignal>
 #include <dlfcn.h>
-#include <fcntl.h>
 #include <regex>
 #include <sstream>
-#include <sys/mount.h>
-#include <sys/resource.h>
-#include <sys/syscall.h>
 #include <thread>
 #include <unistd.h>
 
 #ifdef USER_CRYPTO_MANAGER
 #include "crypto/app_clone_key_manager.h"
 #include "crypto/iam_client.h"
-#include "crypto/key_crypto_utils.h"
 #include "crypto/key_manager.h"
 #endif
 #ifdef EXTERNAL_STORAGE_MANAGER
@@ -41,14 +36,10 @@
 #include "disk/disk_manager.h"
 #include "disk_manager/volume/volume_utils.h"
 #endif
-#include "file_ex.h"
-#include "file_sharing/file_sharing.h"
 #include "hi_audit.h"
 #include "ipc_skeleton.h"
-#include "securec.h"
 #include "storage_service_errno.h"
 #include "storage_service_log.h"
-#include "string_ex.h"
 #include "system_ability_definition.h"
 #include "user/mount_manager.h"
 #include "user/system_mount_manager.h"
@@ -56,7 +47,6 @@
 #include "utils/storage_radar.h"
 #include "utils/storage_xcollie.h"
 #include "utils/string_utils.h"
-#include "utils/disk_utils.h"
 #include "utils/file_utils.h"
 #ifdef DISK_MANAGER
 #include <sys/sysmacros.h>
@@ -2688,12 +2678,11 @@ int32_t StorageDaemonProvider::FormatVolume(const std::string &devPath,
 }
 
 int32_t StorageDaemonProvider::Check(const std::string &devPath,
-                                     const std::string &fsType,
-                                     bool autoFix)
+                                     const std::string &fsType)
 {
 #ifdef DISK_MANAGER
-    LOGI("[L1:StorageDaemonProvider] Check: >>> ENTER <<< devPath=%{public}s, fsType=%{public}s, autoFix=%{public}d",
-        devPath.c_str(), fsType.c_str(), autoFix);
+    LOGI("[L1:StorageDaemonProvider] Check: >>> ENTER <<< devPath=%{public}s, fsType=%{public}s",
+        devPath.c_str(), fsType.c_str());
     auto uid = IPCSkeleton::GetCallingUid();
     if (uid != DISK_MANAGER_UID) {
         LOGE("[L1:StorageDaemonProvider] Check: <<< EXIT FAILED <<< uid=%{public}d is invalid", uid);
@@ -2718,16 +2707,6 @@ int32_t StorageDaemonProvider::Check(const std::string &devPath,
     }
 
     ret = op->Check(verifiedPath);
-    if (ret == E_VOL_NEED_FIX && autoFix) {
-        LOGI("[L1:StorageDaemonProvider] Check: need fix, auto repairing devPath=%{public}s", devPath.c_str());
-        ret = op->Repair(verifiedPath);
-        if (ret != E_OK) {
-            LOGE("[L1:StorageDaemonProvider] Check: auto repair failed, ret=%{public}d", ret);
-            return ReturnWithOpDiag(ret);
-        }
-        LOGI("[L1:StorageDaemonProvider] Check: auto repair success");
-        return ReturnWithOpDiag(E_OK);
-    }
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemonProvider] Check: <<< EXIT FAILED <<< ret=%{public}d", ret);
         return ReturnWithOpDiag(ret);

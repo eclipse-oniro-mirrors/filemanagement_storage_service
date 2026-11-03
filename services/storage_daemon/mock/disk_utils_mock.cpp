@@ -91,14 +91,6 @@ std::string GetOpticalDriveType(const std::string &diskPath)
     return IDiskUtilMoc::diskUtilMoc->GetOpticalDriveType(diskPath);
 }
 
-int GetOpticalDriveMaxWriteSpeed(const std::string &diskPath, int32_t &maxWriteSpeed)
-{
-    if (IDiskUtilMoc::diskUtilMoc == nullptr) {
-        return 0;
-    }
-    return IDiskUtilMoc::diskUtilMoc->GetOpticalDriveMaxWriteSpeed(diskPath, maxWriteSpeed);
-}
-
 std::string GetScsiBusNum(const std::string &sysPath)
 {
     if (IDiskUtilMoc::diskUtilMoc == nullptr) {

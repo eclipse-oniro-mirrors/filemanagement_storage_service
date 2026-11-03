@@ -54,8 +54,6 @@ constexpr int64_t FOUR_K = 4096;
 constexpr int64_t BLOCK_BYTE = 512;
 const string MEDIA_QUERYOPRN_QUERYVOLUME = "query_media_volume";
 const string MULTI_USER_URI_FLAG = "user=";
-constexpr int DECIMAL_PLACE = 2;
-constexpr double TO_MB = 1000.0 * 1000.0;
 const int64_t MAX_INT64 = std::numeric_limits<int64_t>::max();
 #ifdef STORAGE_SERVICE_GRAPHIC
 const int MEDIA_TYPE_IMAGE = 1;
@@ -257,13 +255,6 @@ int32_t StorageStatusManager::GetMediaAndFileStorageStats(int32_t userId, Storag
         return err;
     }
     return err;
-}
-
-std::string StorageStatusManager::ConvertBytesToMB(int64_t bytes)
-{
-    std::ostringstream oss;
-    oss << std::fixed << std::setprecision(DECIMAL_PLACE) << static_cast<double>(bytes) / TO_MB << "MB";
-    return oss.str();
 }
 
 int32_t StorageStatusManager::GetBundleNameAndUid(int32_t userId, std::map<int32_t, std::string> &bundleNameAndUid)
@@ -519,28 +510,6 @@ std::string StorageStatusManager::GetCallingBundleName()
         return hapInfo.bundleName;
     }
     return "";
-}
-
-int32_t StorageStatusManager::GetBundleName(uint32_t userId, const std::string &businessName, std::string &dbBundleName)
-{
-    LOGI("GetBundleName, userId: %{public}u, business: %{public}s", userId, businessName.c_str());
-
-    // 清空输出参数
-    dbBundleName.clear();
-
-    // 直接调用 FileCacheAdapter
-    auto bundleStats = FileCacheAdapter::GetInstance().GetBundleExtStats(businessName, userId);
-    if (bundleStats == nullptr) {
-        LOGI("BundleExtStats not found for business: %{public}s, userId: %{public}u", businessName.c_str(), userId);
-        return E_NON_EXIST; // 返回记录不存在的错误码
-    }
-
-    // 获取 bundleName 字段
-    dbBundleName = bundleStats->bundleName;
-
-    LOGI("GetBundleName success, business: %{public}s, bundleName: %{public}s", businessName.c_str(),
-         dbBundleName.c_str());
-    return E_OK;
 }
 
 static uint64_t GetCurrentTimeSeconds()

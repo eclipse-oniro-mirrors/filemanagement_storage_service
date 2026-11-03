@@ -15,7 +15,6 @@
 
 #include <map>
 #include <string>
-#include <sys/types.h>
 #include "storage_service_constant.h"
 namespace OHOS {
 namespace StorageService {

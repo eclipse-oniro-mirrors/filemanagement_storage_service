@@ -19,7 +19,6 @@
 #include <cstdlib>
 
 #include "utils/storage_radar.h"
-#include <nlohmann/json.hpp>
 #include <singleton.h>
 #include <regex>
 #ifdef STORAGE_STATISTICS_MANAGER
@@ -31,7 +30,6 @@
 
 #ifdef USER_CRYPTO_MANAGER
 #include "account_subscriber/account_subscriber.h"
-#include "appspawn.h"
 #include "utils/storage_radar.h"
 #endif
 #include "scan/storage_manager_scan.h"

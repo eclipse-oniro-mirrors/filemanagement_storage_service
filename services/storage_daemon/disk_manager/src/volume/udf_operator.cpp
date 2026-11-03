@@ -21,7 +21,6 @@
 #include "utils/string_utils.h"
 
 #include <cerrno>
-#include <sys/mount.h>
 #include <map>
 #include <sstream>
 #include <thread>

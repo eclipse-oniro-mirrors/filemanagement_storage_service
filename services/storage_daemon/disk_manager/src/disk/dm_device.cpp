@@ -15,11 +15,9 @@
 
 #include <securec.h>
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <linux/fs.h>
-#include <sys/sysmacros.h>
 
 #include "disk_manager/disk/dm_device.h"
 #include "storage_service_log.h"

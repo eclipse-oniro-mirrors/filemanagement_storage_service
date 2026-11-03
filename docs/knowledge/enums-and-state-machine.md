@@ -10,21 +10,20 @@
 | UNMOUNTED → MOUNTED | 绕过文件系统检查 | UNMOUNTED → CHECKING → MOUNTED |
 | CHECKING → REMOVED | 检查中不可直接移除 | CHECKING → MOUNTED 或 DAMAGED |
 | DAMAGED → MOUNTED | 损坏卷不能直接挂载 | DAMAGED → TryToFix → DAMAGED_MOUNTED |
-| ENCRYPTING → UNMOUNTED | 加密中途不可中断 | 必须完成加密流程 |
+| BAD_REMOVAL → MOUNTED | 未正常弹出不可直接挂载 | BAD_REMOVAL → REMOVED → UNMOUNTED → CHECKING → MOUNTED |
 
 ## KeyType 常见陷阱
 
 | 陷阱 | 说明 |
 |------|------|
-| EL2 当 EL1 用 | EL2 是锁屏移除等级，不可当作设备级密钥 |
+| EL2 当 EL1 用 | EL2 不随锁屏移除（锁屏移除的是 EL4/EL5），不可当作设备级密钥 |
 | 跨等级激活 | EL2 未激活时不可激活 EL3/EL4，链式依赖 |
 | flags 与 KeyType 混淆 | `CRYPTO_FLAG_EL2 = 2` 是位掩码，`EL2_KEY = 2` 是枚举值，语义不同 |
 
 ## DiskType 注意事项
 
-- `DiskType` 是 `DiskInfo` 类的内嵌枚举，引用时用 `DiskInfo::SD_CARD`，不是独立 `SD_CARD`。
-- `DiskState` 也是 `DiskInfo` 内嵌枚举，引用时用 `DiskInfo::MOUNTED`。
-- `VolumeState` 是命名空间作用域的 `enum`（不是 `enum class`），直接使用 `UNMOUNTED` 等。
+- `DiskType` 是 `DiskInfo` 类的内嵌 `enum`（非 `enum class`），引用时用 `DiskInfo::SD_CARD`，不是独立 `SD_CARD`。当前取值：`SD_CARD=1`、`USB_FLASH=2`、`CD_DVD_BD=3`、`DATA_DISK_SSD=4`、`DATA_DISK_HDD=5`、`UNKNOWN_DISK_TYPE=255`（无 `MTP_PTP`）。
+- 卷状态使用命名空间作用域的 `VolumeState::MOUNTED` 等，不是 `DiskInfo::MOUNTED`（`DiskInfo` 只内嵌 `DiskType`，无 `DiskState` 枚举）。当前 `VolumeState` 取值：`UNMOUNTED`、`CHECKING`、`MOUNTED`、`EJECTING`、`REMOVED`、`BAD_REMOVAL`、`DAMAGED`、`FUSE_REMOVED`、`DAMAGED_MOUNTED`（无 `ENCRYPTING`）。
 
 ## 加密标志位
 
@@ -38,5 +37,5 @@
 
 ## 测试指引
 
-- 状态转换：`VolumeManagerTest`，必须覆盖所有非法跳转拒绝
+- 状态转换：`VolumeState` 跳转实现在 disk_manager SA（跨组件），本仓库通过 `storage_manager_provider_test`、`storagemanagerstub_fuzzer` 覆盖对外接口；非法跳转拒绝必须覆盖
 - 枚举引用：对应模块单元测试

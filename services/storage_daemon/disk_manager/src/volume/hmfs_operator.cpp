@@ -16,8 +16,6 @@
 #include "disk_manager/volume/hmfs_operator.h"
 #include "storage_service_log.h"
 #include "storage_service_errno.h"
-#include "utils/disk_utils.h"
-#include "utils/string_utils.h"
 #include "utils/file_utils.h"
 
 #include <cerrno>
@@ -131,16 +129,15 @@ int32_t HmfsOperator::Check(const std::string& devPath)
         return E_PARAMS_INVALID;
     }
 
-    std::vector<std::string> cmd = {
+    std::vector<std::string> cmdP7 = {
         "fsck.f2fs",
-        "--dry-run",
-        "-p1",
+        "-p7",
         devPath
     };
 
-    int32_t execRet = ForkExecWithExit(cmd);
+    int32_t execRet = ForkExecWithExit(cmdP7);
     if (execRet != E_OK) {
-        LOGE("HmfsOperator::Check need fix, execRet=%{public}d", execRet);
+        LOGE("HmfsOperator::Check dirty flag abnormal, execRet=%{public}d", execRet);
         return E_VOL_NEED_FIX;
     }
 
@@ -168,7 +165,7 @@ int32_t HmfsOperator::Repair(const std::string& devPath)
     LOGI("HmfsOperator::Repair forkExecRes=%{public}d, exitStatus=%{public}d",
          forkExecRes, exitStatus);
 
-    if (exitStatus != 1 || forkExecRes != E_OK) {
+    if (forkExecRes != E_OK) {
         LOGE("HmfsOperator::Repair failed, exitStatus=%{public}d, res=%{public}d",
              exitStatus, forkExecRes);
         return E_VOL_FIX_FAILED;

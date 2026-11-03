@@ -16,7 +16,7 @@ hilog -P storage_daemon             # 按进程过滤
 
 ```sh
 hidumper -s 5003 -a "-h"            # Manager SA 注册
-hidumper -s 5004 -a "-h"            # Daemon SA 注册
+hidumper -s 5004 -a "-h"            # Daemon SA 注册（自注册，STORAGE_MANAGER_DAEMON_ID=5004，无 sa_profile）
 ps -ef | grep storage               # 进程状态
 ```
 
@@ -48,7 +48,7 @@ ps -ef | grep storage               # 进程状态
 
 ### 用户目录异常
 
-1. 确认 userId 在 [100, 10738]
+1. 确认 userId 在 [0, 10738]（含 ZERO_USER=0）
 2. `ls -la /data/user/<userId>` 检查目录权限
 3. `ls -Z /data/user/<userId>` 检查 SELinux context
 
@@ -57,6 +57,12 @@ ps -ef | grep storage               # 进程状态
 1. `hilog -t StorageManager | grep "GetBundleStats"` 检查统计日志
 2. `repquota -a` 检查配额设置
 3. 确认 BundleManager 连接可用
+
+## HiSysEvent 与 Radar
+
+- HiSysEvent：`domain: FILEMANAGEMENT`，故障事件 `FILE_STORAGE_MANAGER_FAULT`（CRITICAL），行为事件 `FILE_STORAGE_BEHAVIOR_EVENTS`，统计 `FILE_STORAGE_MANAGER_STATISTIC`。查询：`hisysevent -l` 并过滤 `FILEMANAGEMENT`。关键参数：`FUNC`、`ERROR_CODE`、`USER_ID`、`BIZ_SCENE`。
+- StorageRadar 快照：`cat /data/service/el1/public/storage_daemon/radar/StorageStatisticFile.json`（`StorageRadar::Report*` 同时驱动此文件与 HiSysEvent）。
+- DFX 上报：`StorageDfxReporter`（`services/storage_manager/dfx_report/`）运行 `hap_sa_stats_task`/`storage_scan_task` 线程，发 HAP/SA 存储状态与目录扫描 radar；相关日志含 `StorageDfxReporter`/`StartReportDirStatus`/`Scan thread`。
 
 ## 常用诊断命令
 

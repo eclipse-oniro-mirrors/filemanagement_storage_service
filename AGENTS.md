@@ -28,12 +28,12 @@ prebuilts/build-tools/linux-x86/bin/ninja -C out/rk3568 StorageDaemonProviderTes
 
 | 类型 | 规则 | 注意 |
 |------|------|------|
-| 类名 | 大驼峰 | `KeyManager`、`VolumeInfo` |
+| 类名 | 大驼峰 | `KeyManager`、`MountManager` |
 | 函数名 | 大驼峰 | `GenerateUserKeys`、`ActiveUserKey` |
 | 变量名 | 小驼峰 | `userId`、`volumeId` |
 | 成员变量 | 下划线结尾或小驼峰 | 源码中两种并存，修改时保持同文件一致 |
 | 常量 | `extern const` | `MAX_USER_ID` 类型是 `int` 不是 `int32_t`；`EL1` 类型是 `std::string` 不是 `const char*` |
-| 枚举 | 大驼峰类型 + 大写值 | `VolumeState` 是 `enum` 不是 `enum class`；`DiskInfo::Table` 是 `enum class` |
+| 枚举 | 大驼峰类型 + 大写值 | `VolumeState`、`DiskInfo::DiskType`、`KeyType` 是 `enum`（非 `enum class`）；`BizStage`、`KeyEncryptType` 是 `enum class`（引用需带作用域） |
 
 ### 错误码选用
 
@@ -60,9 +60,11 @@ prebuilts/build-tools/linux-x86/bin/ninja -C out/rk3568 StorageDaemonProviderTes
 | 0 | 成功（`E_OK`） | — |
 | 13600001-13600025 | 通用错误 | `E_PERMISSION_DENIED`、`E_NON_EXIST`、`E_PARAMS_INVALID` |
 | 13600201-13600245 | 密钥管理 | `E_USERID_RANGE`、`E_ELX_KEY_STORE_ERROR`、`E_ELX_KEY_ACTIVE_ERROR` |
-| 13600350-13600353 | 密钥完整性 | `E_DIR_INTEGRITY_ERR`、`E_KEY_SIZE_ERROR` |
-| 13601201 | BundleManager | `E_BUNDLEMGR_ERROR` |
-| 13601701-13601719 | 卷状态 | `E_VOL_STATE`、`E_TIMEOUT_MOUNT` |
+| 13600350-13600417 | 密钥完整性/密钥操作 | `E_DIR_INTEGRITY_ERR`、`E_KEY_SIZE_ERROR`、`E_INSTALL_KEYDESC_KEYRING_ERR` |
+| 13600701-13600765 | 用户管理/挂载 | `E_USER_MOUNT_ERR`、`E_MOUNT_HMDFS`、`E_UMOUNT_SHARE_FILE` |
+| 13601201-13601233 | 空间统计（含 BundleManager） | `E_BUNDLEMGR_ERROR`、`E_STATVFS`、`E_GET_INODE_ERROR` |
+| 13601701-13601750 | 外卡管理（卷状态/挂载/分区） | `E_VOL_STATE`、`E_TIMEOUT_MOUNT`、`E_UDF_MOUNT` |
+| 13602201-13602205 | 文件分享/配额内核 | `E_CREATE_SHARE_FILE_FAILED`、`E_QUOTA_CTL_KERNEL_ERR` |
 
 ### 日志必打节点
 
@@ -104,10 +106,11 @@ prebuilts/build-tools/linux-x86/bin/ninja -C out/rk3568 StorageDaemonProviderTes
 
 ## 项目约束
 
-- 用户时序不可跳步：`PrepareAddUser → StartUser → CompleteAddUser`，缺步会导致 EL2-EL4 密钥未激活。
+- 用户时序不可跳步：`PrepareAddUser`（生成 EL1-EL5 密钥+建目录）→ `CompleteAddUser`（清 need_restore）→ `ActiveUserKey`（解锁时激活 EL2-EL5）→ `PrepareStartUser`（触发 Daemon `StartUser`：建 EL2-EL5 服务目录+挂载，须在密钥激活后）。缺步会导致 EL2-EL5 服务目录/挂载未建立或密钥未激活。
 - 卷状态不可跳转：`MOUNTED → EJECTING → REMOVED`，必须经过 EJECTING，不可直接置 REMOVED。
-- EL2 密钥锁屏移除、解锁安装：锁屏时不可访问 EL2 加密数据，必须在解锁后才操作。
+- EL4/EL5 密钥锁屏移除、解锁安装：`LockUserScreen` 锁 EL5（立即）+ EL4（延迟 10s），锁屏时不可访问 EL4/EL5 加密数据；EL2 不随锁屏移除，必须在解锁后才操作 EL4/EL5。
 - 用户隔离：不可用 userId=100 的密钥操作 userId=105 的目录，密钥和目录必须匹配。
 - IPC 死锁预防：不要在持有 Manager 锁时调用 Daemon IPC，先释放锁再发起 IPC。
 - 高危删除约束：对路径执行不可逆删除（递归删除、`RmDirRecurse`/`ForceRemoveDirectory`、`unlink`、`rmdir` 等）前，必须确认目标真实后端即预期对象——挂载类间接层（设备挂载/绑定挂载/重复或多层挂载等）会使挂载点目录的真实后端≠表面，对残留挂载层的挂载点递归删会穿透到源数据导致数据丢失。删挂载点目录前必须逐层彻底卸载、确认无残留挂载层，否则禁止执行、需人工确认。
 - ELX 密钥删除约束：删除 EL1~EL5 任一等级密钥是不可逆操作——`ClearKey` 会擦除密钥材料并递归删除密钥目录与备份目录（`ForceRemoveDirectory`），密钥一旦删除则对应等级加密数据永久无法解密；且低等级（如 EL1）删除会令 EL2~EL5 链式依赖断裂、高等级数据一并无法激活。删除前必须确认已无回滚/恢复需要：存在 `need_restore` 标志或半成品/待恢复态时禁止销毁密钥材料（须先恢复或重建），并在用户/设备销毁流程确认完成后再执行，否则禁止删除、需人工确认。
+- EL5 解密窗口期禁令：`PrepareAddUser`/`CompleteAddUser` 完成后到 EL5 完全解密（`ActiveUserKey4Single` 中 EL5 经 `ActiveUserKeyAndPrepare(EL5_KEY)` 激活 + `NotifyUeceActivation` 回调完成）前，除删除用户外禁止 `InactiveKey(USER_DESTROY)`/`ClearKey`/`DoDeleteUserCeEceSeceKeys` 销毁用户密钥，否则 EL5 密钥被驱逐后 UECE 无法解密。`ActiveUserKeyAndPrepare` 的 `-ENOENT` 分支以 `if (type != EL5_KEY)` 守卫跳过销毁，该守卫必须保持（详见 `docs/knowledge/crypto-key-management.md`）。

@@ -20,19 +20,16 @@
 
 #ifdef EXTERNAL_STORAGE_MANAGER
 #include "disk/disk_config.h"
-#include "disk/disk_info.h"
 #include "disk/disk_manager.h"
 #include "netlink/netlink_manager.h"
 #endif
 #include "ipc/storage_daemon_provider.h"
-#include "ipc/storage_daemon.h"
 #include "ipc_skeleton.h"
 #include "iservice_registry.h"
 #include "storage_service_constant.h"
 #include "storage_service_errno.h"
 #include "storage_service_log.h"
 #include "system_ability_definition.h"
-#include "user/user_manager.h"
 #include "utils/string_utils.h"
 #ifdef DFS_SERVICE
 #include "cloud_daemon_manager.h"

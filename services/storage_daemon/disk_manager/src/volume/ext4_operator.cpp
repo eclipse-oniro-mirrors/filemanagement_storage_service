@@ -16,12 +16,9 @@
 #include "disk_manager/volume/ext4_operator.h"
 #include "parameters.h"
 #include "storage_service_log.h"
-#include "utils/disk_utils.h"
-#include "utils/string_utils.h"
 #include "utils/file_utils.h"
 
 #include <sys/mount.h>
-#include <unistd.h>
 
 namespace OHOS {
 namespace StorageDaemon {

@@ -15,7 +15,6 @@
 
 #include "user/user_manager.h"
 
-#include <fcntl.h>
 #include <sys/stat.h>
 
 #ifdef USER_CRYPTO_MANAGER
@@ -26,7 +25,6 @@
 #include "storage_service_errno.h"
 #include "storage_service_log.h"
 #include "utils/hi_audit.h"
-#include "user/mount_constant.h"
 #include "utils/storage_radar.h"
 #include "utils/string_utils.h"
 #include "ipc/storage_manager_client.h"

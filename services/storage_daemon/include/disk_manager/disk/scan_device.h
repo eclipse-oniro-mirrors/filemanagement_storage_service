@@ -61,8 +61,6 @@ private:
     bool GetExternalDiskSize(const std::string &path, uint64_t *size);
     uint64_t GetDiskSizeByIoctl(const std::string &deviceName);
     std::string ReadFileContent(const std::string &path);
-    std::string GetDevnum(const std::string &deviceName);
-    std::string GetBusnum(const std::string &deviceName);
     std::string GetDevNode(const std::string &deviceName);
     std::string GetFwVersion(const std::string &deviceName);
     std::string GetRealPath(const std::string &deviceName);

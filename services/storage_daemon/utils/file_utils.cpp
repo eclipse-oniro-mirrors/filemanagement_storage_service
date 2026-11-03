@@ -28,7 +28,6 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include "file_ex.h"
-#include "parameters.h"
 #include "securec.h"
 #include "storage_service_errno.h"
 #include "storage_service_log.h"
@@ -53,9 +52,6 @@ constexpr int SET_SCHED_LOAD_TRANS_TYPE = 10001;
 #endif
 constexpr int BUF_LEN = 20480;
 constexpr int PIPE_FD_LEN = 2;
-constexpr int UUID_LENGTH = 36;
-constexpr int UUID_PREFIX_LENGTH = 4;
-constexpr int UUID_PREFIX_SUFFIX_LENGTH = 8;
 constexpr uint8_t KILL_RETRY_TIME = 5;
 constexpr uint32_t KILL_RETRY_INTERVAL_MS = 100 * 1000;
 constexpr int32_t MAX_STATISTICS_FILES_NUMBER = 5120000;
@@ -91,31 +87,6 @@ struct RgmPathConfig {
     std::string businessPath = "";
     std::string rootfsPath = "";
 };
-
-std::string MaskSensitiveInfo(const std::string &input)
-{
-    if (input.length() < UUID_LENGTH) {
-        return input;
-    }
-    static const std::regex uuidStr("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");
-    std::string output;
-    std::sregex_iterator it(input.begin(), input.end(), uuidStr);
-    std::sregex_iterator end;
-    size_t lastPos = 0;
-
-    for (; it != end; ++it) {
-        const std::smatch& match = *it;
-        output += input.substr(lastPos, match.position() - lastPos);
-        std::string fullUuid = match.str(0);
-        output += fullUuid.substr(0, UUID_PREFIX_LENGTH) +
-                  std::string(fullUuid.length() - UUID_PREFIX_SUFFIX_LENGTH, '*') +
-                  fullUuid.substr(fullUuid.length() - UUID_PREFIX_LENGTH);
-        
-        lastPos = match.position() + match.length();
-    }
-    output += input.substr(lastPos);
-    return output;
-}
 
 const static std::map<std::string, RgmPathConfig> rgmConfigs = {
     {

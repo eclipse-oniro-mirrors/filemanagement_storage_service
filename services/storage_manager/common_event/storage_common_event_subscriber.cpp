@@ -16,9 +16,7 @@
 #include "common_event/storage_common_event_subscriber.h"
 
 #include "iservice_registry.h"
-#include "int_wrapper.h"
 #include "storage_service_log.h"
-#include "system_ability_definition.h"
 #include "storage_service_constant.h"
 #include "storage_service_errno.h"
 #include "storage/storage_status_manager.h"

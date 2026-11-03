@@ -347,7 +347,7 @@ HWTEST_F(ExtOperatorTest, HmfsOperator_Repair_Success, TestSize.Level1)
 HWTEST_F(ExtOperatorTest, HmfsOperator_Repair_WrongExitStatus, TestSize.Level1)
 {
     HmfsOperator op;
-    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(MakeForkExecWithExit(0, E_OK));
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(MakeForkExecWithExit(1, E_ERR));
     EXPECT_EQ(op.Repair("/dev/block/mock_dev"), E_VOL_FIX_FAILED);
 }
 
@@ -392,7 +392,7 @@ HWTEST_F(ExtOperatorTest, HmfsOperator_AutoFix_CheckNeedFixThenRepairFailed, Tes
     HmfsOperator op;
     EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
         .WillOnce(Return(E_ERR))
-        .WillOnce(MakeForkExecWithExit(0, E_OK));
+        .WillOnce(MakeForkExecWithExit(1, E_ERR));
     int32_t checkRet = op.Check("/dev/block/mock_dev");
     EXPECT_EQ(checkRet, E_VOL_NEED_FIX);
     int32_t repairRet = op.Repair("/dev/block/mock_dev");
@@ -437,6 +437,54 @@ HWTEST_F(ExtOperatorTest, HmfsOperator_SetLabel_Failed, TestSize.Level1)
     HmfsOperator op;
     EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_ERR));
     EXPECT_EQ(op.SetLabel("/dev/block/mock_dev", "MyLabel"), E_ERR);
+}
+
+/**
+ * @tc.name: HmfsOperator_Check_p7_DirtyFlagNormal
+ * @tc.desc: -p7 dirty flag check passes, Check returns E_OK.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtOperatorTest, HmfsOperator_Check_p7_DirtyFlagNormal, TestSize.Level1)
+{
+    HmfsOperator op;
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_OK));
+    EXPECT_EQ(op.Check("/dev/block/mock_dev"), E_OK);
+}
+
+/**
+ * @tc.name: HmfsOperator_Check_p7_DirtyFlagAbnormal
+ * @tc.desc: -p7 dirty flag check fails, Check returns E_VOL_NEED_FIX.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtOperatorTest, HmfsOperator_Check_p7_DirtyFlagAbnormal, TestSize.Level1)
+{
+    HmfsOperator op;
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_ERR));
+    EXPECT_EQ(op.Check("/dev/block/mock_dev"), E_VOL_NEED_FIX);
+}
+
+/**
+ * @tc.name: HmfsOperator_Repair_SuccessCondition
+ * @tc.desc: Repair returns E_OK when forkExecRes is E_OK (fsck exit code 0).
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtOperatorTest, HmfsOperator_Repair_SuccessCondition, TestSize.Level1)
+{
+    HmfsOperator op;
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(MakeForkExecWithExit(0, E_OK));
+    EXPECT_EQ(op.Repair("/dev/block/mock_dev"), E_OK);
+}
+
+/**
+ * @tc.name: HmfsOperator_Repair_FailedCondition
+ * @tc.desc: Repair returns E_VOL_FIX_FAILED when forkExecRes is not E_OK.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtOperatorTest, HmfsOperator_Repair_FailedCondition, TestSize.Level1)
+{
+    HmfsOperator op;
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(MakeForkExecWithExit(1, E_ERR));
+    EXPECT_EQ(op.Repair("/dev/block/mock_dev"), E_VOL_FIX_FAILED);
 }
 
 /**
