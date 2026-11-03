@@ -330,14 +330,16 @@ void MtpFsDevice::Disconnect()
 uint64_t MtpFsDevice::StorageTotalSize()
 {
     std::unique_lock<std::mutex> lock(deviceMutex_);
-    if (device_ != nullptr) {
-        int ret = LIBMTP_Get_Storage(device_, 0);
-        if (ret < 0) {
-            LOGE("Failed to refresh storage");
-            StorageRadar::ReportMtpResult("StorageTotalSize::LIBMTP_Get_Storage", GetMainMtpErrorCode(), "NA");
-            DumpLibMtpErrorStack();
-            return 0;
-        }
+    if (device_ == nullptr) {
+        LOGE("Device is null");
+        return 0;
+    }
+    int ret = LIBMTP_Get_Storage(device_, 0);
+    if (ret < 0) {
+        LOGE("Failed to refresh storage");
+        StorageRadar::ReportMtpResult("StorageTotalSize::LIBMTP_Get_Storage", GetMainMtpErrorCode(), "NA");
+        DumpLibMtpErrorStack();
+        return 0;
     }
     if (device_->storage == nullptr) {
         LOGW("No storage available after refresh");
@@ -360,6 +362,13 @@ uint64_t MtpFsDevice::StorageFreeSize()
     std::unique_lock<std::mutex> lock(deviceMutex_);
     if (device_ == nullptr) {
         LOGE("Device is null");
+        return 0;
+    }
+    int ret = LIBMTP_Get_Storage(device_, 0);
+    if (ret < 0) {
+        LOGE("Failed to refresh storage");
+        StorageRadar::ReportMtpResult("StorageFreeSize::LIBMTP_Get_Storage", GetMainMtpErrorCode(), "NA");
+        DumpLibMtpErrorStack();
         return 0;
     }
     if (device_->storage == nullptr) {
