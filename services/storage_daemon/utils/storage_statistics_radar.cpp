@@ -19,6 +19,7 @@
 #include "unique_fd.h"
 #include "storage_service_log.h"
 #include "storage_statistics_radar.h"
+#include "string_utils.h"
 
 #include "cJSON.h"
 
