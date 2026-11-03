@@ -15,7 +15,6 @@
 
 #include "user/system_mount_manager.h"
 
-#include <sys/stat.h>
 
 #include "storage_service_errno.h"
 #include "storage_service_log.h"

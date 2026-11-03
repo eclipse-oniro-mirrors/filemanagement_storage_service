@@ -65,7 +65,6 @@ ohos_static_library("libfscryptutils") {
   if (storage_service_external_storage_qos_trans) {
     sources += [
       "src/fscrypt_enable.cpp",
-      "src/fscrypt_enable.h",
     ]
   }
 
@@ -119,7 +118,6 @@ ohos_static_library("libfscryptutils_static") {
   if (storage_service_external_storage_qos_trans) {
     sources += [
       "src/fscrypt_enable.cpp",
-      "src/fscrypt_enable.h",
     ]
   }
 

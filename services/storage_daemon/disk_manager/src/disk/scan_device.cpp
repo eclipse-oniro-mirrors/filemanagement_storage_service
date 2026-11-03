@@ -928,56 +928,6 @@ std::string ScanDevice::ReadFileContent(const std::string &path)
     return result;
 }
 
-std::string ScanDevice::GetDevnum(const std::string &deviceName)
-{
-    std::string modelPath = sysBlockPath + SPLIT_STRING + deviceName;
-    LOGI("GetDevnum modelPath: %{public}s", modelPath.c_str());
-    char linkTarget[PATH_MAX] = {0};
-    ssize_t len = readlink(modelPath.c_str(), linkTarget, sizeof(linkTarget) - 1);
-    std::string linkTargetStr;
-    if (len > 0) {
-        linkTargetStr.assign(linkTarget, len);
-        if (linkTargetStr.size() >= PARENT_DIR_PREFIX_LEN &&
-            linkTargetStr.substr(0, PARENT_DIR_PREFIX_LEN) == PARENT_DIR_PREFIX) {
-            linkTargetStr = "/sys" + linkTargetStr.substr(PARENT_DIR_SKIP_LEN);
-            LOGI("GetDevnum linkTargetStr: %{public}s", linkTargetStr.c_str());
-            std::string content = ReadFileInParentDirs(linkTargetStr, "devnum");
-            LOGI("GetDevnum success: %{public}s", content.c_str());
-            return content;
-        }
-    } else if (len == -1) {
-        LOGE("readlink failed for: %s", modelPath.c_str());
-        linkTargetStr.clear();
-    }
-    LOGE("GetDevnum: read node of model failed");
-    return "Unknown";
-}
- 
-std::string ScanDevice::GetBusnum(const std::string &deviceName)
-{
-    std::string modelPath = sysBlockPath + SPLIT_STRING + deviceName;
-    LOGI("GetBusnum modelPath: %{public}s", modelPath.c_str());
-    char linkTarget[PATH_MAX] = {0};
-    ssize_t len = readlink(modelPath.c_str(), linkTarget, sizeof(linkTarget) - 1);
-    std::string linkTargetStr;
-    if (len > 0) {
-        linkTargetStr.assign(linkTarget, len);
-        if (linkTargetStr.size() >= PARENT_DIR_PREFIX_LEN &&
-            linkTargetStr.substr(0, PARENT_DIR_PREFIX_LEN) == PARENT_DIR_PREFIX) {
-            linkTargetStr = "/sys" + linkTargetStr.substr(PARENT_DIR_SKIP_LEN);
-            LOGI("GetDevnum linkTargetStr: %{public}s", linkTargetStr.c_str());
-            std::string content = ReadFileInParentDirs(linkTargetStr, "busnum");
-            LOGI("GetDevnum success: %{public}s", content.c_str());
-            return content;
-        }
-    } else if (len == -1) {
-        LOGE("readlink failed for: %s", modelPath.c_str());
-        linkTargetStr.clear();
-    }
-    LOGE("GetBusnum: read node of model failed");
-    return "Unknown";
-}
- 
 std::string ScanDevice::GetDevNode(const std::string &deviceName)
 {
     struct stat st;

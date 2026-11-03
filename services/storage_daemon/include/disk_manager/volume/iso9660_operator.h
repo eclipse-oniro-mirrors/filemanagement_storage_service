@@ -57,19 +57,6 @@ private:
                             bool isDiskEmpty,
                             const std::string &incBurnAddr);
 
-    int32_t GenerateChecksums(const std::string& dirPath,
-                              const std::string& checksumFilePath);
-
-    std::map<std::string, std::string> ParseChecksumFile(
-        const std::string& checksumContent, const std::string& basePath);
-
-    void LogChecksumMap(const std::string& mapName,
-                        const std::map<std::string, std::string>& map);
-
-    int32_t CompareChecksums(
-        const std::map<std::string, std::string>& sourceMap,
-        const std::map<std::string, std::string>& discMap);
-
     int32_t ExecuteIsoInfoList(const std::string& isoPath,
                                std::vector<std::string>& mergedLines);
     int32_t ProcessMergedLine(const std::string& isoPath,

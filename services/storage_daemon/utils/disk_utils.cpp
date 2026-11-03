@@ -18,8 +18,6 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
-#include <fcntl.h>
-#include <getopt.h>
 #include <iomanip>
 #include <linux/cdrom.h>
 #include <regex>
@@ -27,7 +25,6 @@
 #include <cinttypes>
 #include <scsi/sg.h>
 #include <sys/ioctl.h>
-#include <sys/stat.h>
 #include <sys/sysmacros.h>
 #include <unistd.h>
 
@@ -70,10 +67,6 @@ constexpr int32_t MAX_CDB_LEN = 16;
 constexpr int32_t READ_DISC_INFO_CDB_LEN = 10;
 constexpr int32_t GET_CONFIG_CDB_LEN = 10;
 constexpr int32_t GET_CONFIG_OPCODE = 0x46;
-constexpr int32_t MODE_SENSE_CDB_LEN = 10;
-constexpr int32_t MODE_SENSE_OPCODE = 0x5A;
-constexpr uint8_t CAPABILITIES_PAGE_CODE = 0x2A;
-constexpr uint32_t CD_SPEED_KBPS = 176;
 constexpr const char *MMC_MAX_VOLUMES_PATH = "/sys/module/mmcblk/parameters/perdev_minors";
 constexpr uint8_t GET_CAPACITY_CMD_BUF_LEN = 16;
 constexpr uint8_t GET_CAPACITY_DATA_BUF_LEN = 48;
@@ -507,57 +500,6 @@ std::string GetOpticalDriveType(const std::string &diskPath)
     return "";
 }
 
-int GetOpticalDriveMaxWriteSpeed(const std::string &diskPath, int32_t &maxWriteSpeed)
-{
-    LOGI("[L8:DiskUtils] GetOpticalDriveMaxWriteSpeed: >>> ENTER <<< diskPath=%{public}s", diskPath.c_str());
-    uint8_t cdb[MODE_SENSE_CDB_LEN] = { MODE_SENSE_OPCODE,
-        0x00, CAPABILITIES_PAGE_CODE, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00 };
-    
-    std::string cdbStr;
-    for (size_t i = 0; i < sizeof(cdb); i++) {
-        cdbStr += (i > 0 ? "," : "") + std::to_string(cdb[i]);
-    }
-    LOGI("[L8:DiskUtils] GetOpticalDriveMaxWriteSpeed: cdb=%{public}s", cdbStr.c_str());
-
-    uint8_t buf[128] = {0};
-    int ret = SendScsiCmdByPath(diskPath, cdb, sizeof(cdb), buf, sizeof(buf));
-    if (ret != E_OK) {
-        LOGE("[L8:DiskUtils] GetOpticalDriveMaxWriteSpeed: <<< EXIT FAILED <<< ModeSense failed, ret=%{public}d", ret);
-        return ret;
-    }
-
-    std::string respStr;
-    for (int i = 0; i < SENSE_BUFF_LEN; i++) {
-        respStr += (i > 0 ? "," : "") + std::to_string(buf[i]);
-    }
-    LOGI("[L8:DiskUtils] GetOpticalDriveMaxWriteSpeed: ModeSense response=%{public}s",
-         respStr.c_str());
-
-    uint16_t maxWriteSpeedKBps = (buf[26] << 8) | buf[27];
-    LOGI("[L8:DiskUtils] GetOpticalDriveMaxWriteSpeed: MaxWriteSpeedKBps=%{public}u",
-        maxWriteSpeedKBps);
-    if (maxWriteSpeedKBps > 0) {
-        std::string driveType = GetOpticalDriveType(diskPath);
-        LOGI("[L8:DiskUtils] GetOpticalDriveMaxWriteSpeed: driveType=%{public}s",
-             driveType.c_str());
-        constexpr uint32_t DVD_SPEED_KBPS = 1385;
-        constexpr uint32_t BD_SPEED_KBPS = 4500;
-        uint32_t speedBase = CD_SPEED_KBPS;
-        if (driveType.find("BD") != std::string::npos || driveType.find("bd") != std::string::npos) {
-            speedBase = BD_SPEED_KBPS;
-        } else if (driveType.find("DVD") != std::string::npos || driveType.find("dvd") != std::string::npos) {
-            speedBase = DVD_SPEED_KBPS;
-        }
-        maxWriteSpeed = static_cast<int32_t>(maxWriteSpeedKBps / speedBase);
-        LOGI("[L8:DiskUtils] GetOpticalDriveMaxWriteSpeed: <<< EXIT SUCCESS <<< maxWriteSpeed=%{public}d",
-             maxWriteSpeed);
-        return E_OK;
-    }
-
-    LOGE("[L8:DiskUtils] GetOpticalDriveMaxWriteSpeed: <<< EXIT NO MATCH <<< No speed data found");
-    return E_ERR;
-}
-
 int GetCdTotalCapacity(int fd, int64_t &cdTotalCapacity)
 {
     unsigned char cmd_buf[GET_CAPACITY_CMD_BUF_LEN] = {0};
@@ -789,58 +731,6 @@ int GetDvdTotalCapacity(int fd, int64_t &dvdTotalCapacity)
     }
     
     LOGI("dvd dvdTotalCapacity: %{public}" PRIu64, dvdTotalCapacity);
-    return E_OK;
-}
- 
-int GetDvdUsedCapacity(int fd, int64_t &dvdUsedCapcity)
-{
-    unsigned char cmd_buf[GET_CAPACITY_CMD_BUF_LEN] = {0};
-    int cmd_len = GET_DVD_USED_CAPACITY_CMD_LEN;
-    unsigned char data_buf[GET_CAPACITY_DATA_BUF_LEN] = {0};
-    unsigned int data_len = GET_DVD_USED_CAPACITY_DATA_LEN;
-    int ret = 0;
-    unsigned int blk_cnt = 0;
-    unsigned int blk_size = 0;
-    /*
-     * 使用 SCSI READ CAPACITY 指令 (0x25) 获取光盘介质的逻辑容量。
-     * 字段详解:
-     * cmd_buf[0]: 操作码 0x25 (GPCMD_READ_CDVD_CAPACITY)。
-     *             用于请求光盘的最后逻辑块地址 (Last LBA) 和块大小 (Block Length)。
-     * cmd_buf[7-8]: 分配长度 (Allocation Length)。
-     *               告知驱动器返回数据的最大长度（通常为 8 字节）。
-     *               高 8 位填入 cmd_buf[7]，低 8 位填入 cmd_buf[8]。
-     * 注意：此指令返回的 LBA 需加 1 才是总扇区数。
-     */
-    cmd_buf[0] = GPCMD_READ_CDVD_CAPACITY;
-    cmd_buf[7] = (data_len >> 8) & 0xff;
-    cmd_buf[8] = data_len & 0xff;
-    ScsiCmdInfo cmdInfo = { cmd_buf, cmd_len, data_buf, data_len };
-    ret = SendScsiCmd(fd, cmdInfo);
-    if (ret != 0) {
-        LOGE("get dvd total capacity failed, ret val is %{public}d", ret);
-        return E_ERR;
-    }
- 
-    blk_cnt = ((unsigned int)data_buf[0] << 24) |
-              ((unsigned int)data_buf[1] << 16) |
-              ((unsigned int)data_buf[2] << 8) |
-              data_buf[3];
-    blk_size = ((unsigned int)data_buf[4] << 24) |
-               ((unsigned int)data_buf[5] << 16) |
-               ((unsigned int)data_buf[6] << 8) |
-               data_buf[7];
-    int64_t blkCnt64 = static_cast<int64_t>(blk_cnt);
-    if (blkCnt64 > INT64_MAX - 1) {
-        LOGE("blk_cnt overflow");
-        return E_ERR;
-    }
-    int64_t blkSize64 = static_cast<int64_t>(blk_size);
-    if (blkSize64 != 0 && blkCnt64 + 1 > INT64_MAX / blkSize64) {
-        LOGE("capacity overflow");
-        return E_ERR;
-    }
-    dvdUsedCapcity = (blkCnt64 + 1) * blkSize64;
-    LOGI("dvd used_capacity: %{public}u * %{public}u = %{public}" PRIu64, blk_cnt + 1, blk_size, dvdUsedCapcity);
     return E_OK;
 }
  

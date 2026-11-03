@@ -16,11 +16,8 @@
 #ifndef OHOS_STORAGE_MANAGER_STORAGE_STATUS_MANAGER_H
 #define OHOS_STORAGE_MANAGER_STORAGE_STATUS_MANAGER_H
 
-#include <iostream>
 #include <map>
-#include <sstream>
 #include <singleton.h>
-#include <thread>
 
 #include "bundle_stats.h"
 #include "ext_bundle_stats.h"
@@ -53,7 +50,6 @@ public:
 private:
     StorageStatusManager();
     ~StorageStatusManager();
-    std::string ConvertBytesToMB(int64_t bytes);
     std::string GetCallingPkgName();
     int32_t GetAppSize(int32_t userId, int64_t &size);
     const std::vector<std::string> dataDir = {"app", "local", "distributed", "database", "cache"};
@@ -61,7 +57,6 @@ private:
     enum BUNDLE_STATS {APP = 0, LOCAL, DISTRIBUTED, DATABASE, CACHE};
     enum BUNDLE_STATS_RESULT {APPSIZE = 0, CACHESIZE, DATASIZE};
     int32_t GetMediaAndFileStorageStats(int32_t userId, StorageStats &storageStats, bool isSchedule = false);
-    int32_t GetBundleName(uint32_t userId, const std::string &businessName, std::string &dbBundleName);
     int32_t InsertOrUpdateExtBundleStats(uint32_t userId, const ExtBundleStats &stats, std::string callingBundleName);
     std::mutex extBundleMtx_;
 };

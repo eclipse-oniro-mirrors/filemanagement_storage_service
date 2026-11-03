@@ -129,8 +129,6 @@ ohos_executable("storage_daemon") {
     "user/src/user_manager.cpp",
     "user/src/user_path_resolver.cpp",
     "user/src/system_mount_manager.cpp",
-    "utils/disk_utils.cpp",
-    "utils/mount_argument_utils.cpp",
     "utils/storage_xcollie.cpp",
   ]
 
@@ -222,14 +220,10 @@ ohos_executable("storage_daemon") {
 
   external_deps = [
     "ability_base:base",
-    "ability_base:configuration",
-    "ability_base:want",
-    "ability_base:zuri",
     "bounds_checking_function:libsec_shared",
     "cJSON:cjson",
     "config_policy:configpolicy_util",
     "c_utils:utils",
-    "eventhandler:libeventhandler",
     "hicollie:libhicollie",
     "hilog:libhilog",
     "hisysevent:libhisysevent",

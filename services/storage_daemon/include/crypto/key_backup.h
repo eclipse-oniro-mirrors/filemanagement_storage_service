@@ -78,8 +78,6 @@ private:
     int32_t CopyMixFilesToTempDir(uint32_t diffNum, uint32_t num, const std::string &tempDir,
         const std::vector<struct FileNode> &fileList);
     bool IsRegFile(const std::string &filePath);
-    int32_t DoResotreKeyMix(std::shared_ptr<BaseKey> &baseKey, const UserAuth &auth, const std::string &keyDir,
-        const std::string &backupDir);
 
 private:
     constexpr static mode_t DEFAULT_DIR_PERM = 0700;

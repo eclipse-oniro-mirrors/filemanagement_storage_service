@@ -20,7 +20,6 @@
 #include "utils/memory_reclaim_manager.h"
 #include "utils/storage_radar.h"
 #include "utils/set_flag_utils.h"
-#include "utils/storage_xcollie.h"
 #include "utils/string_utils.h"
 #include "utils/file_utils.h"
 #include <dlfcn.h>
@@ -46,13 +45,11 @@
 #include "hi_audit.h"
 #include "quota/quota_manager.h"
 #include "storage_service_errno.h"
-#include "system_ability_definition.h"
 #include "user/user_manager.h"
 #ifdef DFS_SERVICE
 #include "cloud_daemon_manager.h"
 #endif
 #ifdef USER_CRYPTO_MIGRATE_KEY
-#include "string_ex.h"
 #include <filesystem>
 #endif
 #ifdef USE_LIBRESTORECON

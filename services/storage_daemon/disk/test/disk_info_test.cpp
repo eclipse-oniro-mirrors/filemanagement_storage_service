@@ -47,19 +47,5 @@ HWTEST_F(DiskInfoTest, Storage_Service_DiskInfoTest_GetDiskId_001, TestSize.Leve
     GTEST_LOG_(INFO) << "Storage_Service_DiskInfoTest_GetDiskId_001 end";
 }
 
-HWTEST_F(DiskInfoTest, Storage_Service_DiskInfoTest_GetDiskType_001, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "Storage_Service_DiskInfoTest_GetDiskType_001 start";
-
-    std::string sysPath = "/devices/platform/test";
-    std::string devPath = "/dev/block/test";
-    dev_t device = makedev(8, 0);
-    std::string diskName = "sda";
-    auto diskInfo = std::make_shared<DiskInfo>(diskName, sysPath, devPath, device, DiskInfo::DiskType::USB_FLASH);
-    ASSERT_TRUE(diskInfo != nullptr);
-    EXPECT_EQ(diskInfo->GetDiskType(), DiskInfo::DiskType::USB_FLASH);
-
-    GTEST_LOG_(INFO) << "Storage_Service_DiskInfoTest_GetDiskType_001 end";
-}
 }
 }

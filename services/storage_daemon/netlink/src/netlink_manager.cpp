@@ -16,7 +16,6 @@
 #include "netlink/netlink_manager.h"
 
 #include <cerrno>
-#include <fcntl.h>
 #include <iostream>
 #include <sys/socket.h>
 #include <linux/netlink.h>
