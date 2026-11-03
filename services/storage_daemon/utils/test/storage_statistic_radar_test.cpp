@@ -19,6 +19,7 @@
 #include <sys/mount.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <vector>
 
 #include "gtest/gtest.h"
 #include "storage_service_errno.h"
@@ -218,12 +219,54 @@ HWTEST_F(StorageStatisticRadarTest, StorageStatisticRadarTest_ParseJsonInfo_001,
     std::string countInfo = "1,2,3,4,5,6,7,8,9,10,11,12";
     EXPECT_TRUE(radar.ParseJsonInfo(1, countInfo, statistics));
     EXPECT_FALSE(statistics.empty());
+    auto it = statistics.find(1);
+    ASSERT_NE(it, statistics.end());
+    EXPECT_EQ(it->second.keyLoadSuccCount, 1);
+    EXPECT_EQ(it->second.keyLoadFailCount, 2);
+    EXPECT_EQ(it->second.keyUnloadSuccCount, 3);
+    EXPECT_EQ(it->second.keyUnloadFailCount, 4);
+    EXPECT_EQ(it->second.userAddSuccCount, 5);
+    EXPECT_EQ(it->second.userAddFailCount, 6);
+    EXPECT_EQ(it->second.userRemoveSuccCount, 7);
+    EXPECT_EQ(it->second.userRemoveFailCount, 8);
+    EXPECT_EQ(it->second.userStartSuccCount, 9);
+    EXPECT_EQ(it->second.userStartFailCount, 10);
+    EXPECT_EQ(it->second.userStopSuccCount, 11);
+    EXPECT_EQ(it->second.userStopFailCount, 12);
 
     std::map<uint32_t, RadarStatisticInfo> statistics2;
     std::string countInfo11 = "1,2,3,4,5,6,7,8,9,10,11";
     EXPECT_FALSE(radar.ParseJsonInfo(1, countInfo11, statistics2));
     EXPECT_TRUE(statistics2.empty());
     GTEST_LOG_(INFO) << "StorageStatisticRadarTest_ParseJsonInfo_001 end";
+}
+
+/**
+ * @tc.name: StorageStatisticRadarTest_ParseJsonInfo_002
+ * @tc.desc: Verify the ParseJsonInfo function with invalid count values.
+ * @tc.type: FUNC
+ * @tc.require: AR000GK4HB
+ */
+HWTEST_F(StorageStatisticRadarTest, StorageStatisticRadarTest_ParseJsonInfo_002, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageStatisticRadarTest_ParseJsonInfo_002 start";
+    StorageStatisticRadar radar;
+
+    const uint32_t userId = 1;
+    const std::vector<std::string> invalidCountInfos = {
+        "1,2,abc,4,5,6,7,8,9,10,11,12",
+        "1,2,3x,4,5,6,7,8,9,10,11,12",
+        "1,,3,4,5,6,7,8,9,10,11,12",
+        "1,2,3,4,5,6,7,8,9,10,11,",
+        ",2,3,4,5,6,7,8,9,10,11,12",
+        "1,2,3,4,5,6,7,8,9,10,11,1.5",
+    };
+    for (const auto &countInfo : invalidCountInfos) {
+        std::map<uint32_t, RadarStatisticInfo> statistics;
+        EXPECT_FALSE(radar.ParseJsonInfo(userId, countInfo, statistics)) << "countInfo=" << countInfo;
+        EXPECT_TRUE(statistics.empty()) << "countInfo=" << countInfo;
+    }
+    GTEST_LOG_(INFO) << "StorageStatisticRadarTest_ParseJsonInfo_002 end";
 }
 } // STORAGE_DAEMON
 } // OHOS
