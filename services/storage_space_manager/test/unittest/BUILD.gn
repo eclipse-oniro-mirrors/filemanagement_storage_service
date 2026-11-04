@@ -177,6 +177,7 @@ ohos_unittest("storage_space_manager_provider_unittest") {
     "ipc:ipc_core",
     "json:nlohmann_json_static",
     "safwk:system_ability_fwk",
+    "samgr:samgr_proxy",
   ]
 
   if (defined(global_parts_info) && defined(global_parts_info.resourceschedule_device_usage_statistics)) {

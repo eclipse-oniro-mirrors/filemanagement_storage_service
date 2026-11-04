@@ -57,6 +57,7 @@ ohos_fuzztest("StorageManagerProviderGetExtBundleStatsFuzzTest") {
     "hisysevent:libhisysevent",
     "os_account:os_account_innerkits",
     "safwk:system_ability_fwk",
+    "samgr:samgr_proxy",
     "ability_runtime:abilitykit_native",
     "ability_runtime:dataobs_manager",
     "eventhandler:libeventhandler",
