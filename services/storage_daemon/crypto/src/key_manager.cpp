@@ -79,8 +79,8 @@ constexpr int32_t WAIT_THREAD_TIMEOUT_MS = 500;
 #endif
 
 #ifdef RECOVER_KEY_TEE_ENVIRONMENT
-const std::string FILE_BASED_ENCRYPT_SRC_PATH = "/mnt/data_old/service/el1/public/sec_storage_data/fbe3";
-const std::string FILE_BASED_ENCRYPT_DST_PATH = "/data/service/el1/public/sec_storage_data/fbe3";
+constexpr const char *FILE_BASED_ENCRYPT_SRC_PATH = "/mnt/data_old/service/el1/public/sec_storage_data/fbe3";
+constexpr const char *FILE_BASED_ENCRYPT_DST_PATH = "/data/service/el1/public/sec_storage_data/fbe3";
 constexpr int32_t DEFAULT_REPAIR_USERID = 10736;
 #endif
 

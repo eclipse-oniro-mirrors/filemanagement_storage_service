@@ -41,7 +41,6 @@ using namespace OHOS::StorageService;
 constexpr int32_t PATH_MAX_FOR_LINK = 4096;
 constexpr int32_t DEFAULT_USERID = 100;
 constexpr int32_t ERROR_FILE_NOT_FOUND = 22;
-const std::string CONSTRAINT = "constraint.distributed.transmission.outgoing";
 MountManager &MountManager::GetInstance()
 {
     static MountManager instance_;

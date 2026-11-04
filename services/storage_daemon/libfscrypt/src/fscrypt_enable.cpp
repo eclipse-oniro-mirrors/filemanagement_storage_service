@@ -17,13 +17,14 @@
 #include "fscrypt_log.h"
 #include <fstream>
 #include <string>
+#include <string_view>
 
 constexpr const char *CRYPTED_DISABLE = "false";
 constexpr const char *CRYPTED_NOT_ENABLE = "0";
 constexpr const char *CRYPTED_FORCE_DISABLE = "2";
 
-const std::string PARAM_FILE = "/proc/cmdline";
-const std::string PARAM_NAME = "ohos.boot.fileEncryption=";
+constexpr const char *PARAM_FILE = "/proc/cmdline";
+constexpr std::string_view PARAM_NAME = "ohos.boot.fileEncryption=";
 const size_t PARAM_SIZE = PARAM_NAME.size();
 constexpr char SPLIT_CHAR = ' ';
 
@@ -34,7 +35,7 @@ bool IsFsCryptEnableByOemInfo()
     std::ifstream file(PARAM_FILE);
     if (!file.is_open()) {
         LOGE("[L9:FscryptEnable] IsFsCryptEnableByOemInfo: <<< EXIT FAILED <<< Open %{public}s failed",
-            PARAM_FILE.c_str());
+            PARAM_FILE);
         return true;
     }
     std::string cmdline;
