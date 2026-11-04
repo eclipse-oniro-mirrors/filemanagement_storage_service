@@ -38,7 +38,7 @@ namespace StorageSpaceManager {
 using namespace OHOS::StorageSpaceManager;
 
 namespace {
-const std::string UNLOAD_TASK_ID = "unload_ssm_svr";
+constexpr const char *UNLOAD_TASK_ID = "unload_ssm_svr";
 constexpr int32_t DELAY_UNLOAD_TIME = 180000; // 180s
 constexpr int32_t SA_READY_INTO_IDLE = 0;
 constexpr int32_t SA_REFUSE_INTO_IDLE = -1;

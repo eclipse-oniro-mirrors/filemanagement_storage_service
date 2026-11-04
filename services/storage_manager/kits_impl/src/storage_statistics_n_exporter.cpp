@@ -27,7 +27,7 @@ using namespace OHOS::FileManagement::LibN;
 
 namespace OHOS {
 namespace StorageManager {
-const std::string EMPTY_STRING = "";
+constexpr const char *EMPTY_STRING = "";
 const std::string FEATURE_STR = "StorageStatistics.";
 constexpr int32_t INVALID_INDEX = -1;
 constexpr int32_t INVALID_STATFLAG = -1;
