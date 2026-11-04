@@ -1303,5 +1303,232 @@ HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetDiscUsedCapacity_IoctlFail, TestSize.Le
     EXPECT_EQ(ret, E_ERR);
     GTEST_LOG_(INFO) << "DiskUtilsTest_GetDiscUsedCapacity_IoctlFail end";
 }
+
+/**
+ * @tc.name: DiskUtilsTest_GetUdfRev_001
+ * @tc.desc: Verify GetUdfRev with empty diskPath returns empty string.
+ * @tc.type: FUNC
+ */
+HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetUdfRev_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetUdfRev_001 start";
+    std::string result = GetUdfRev("");
+    EXPECT_TRUE(result.empty());
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetUdfRev_001 end";
+}
+
+/**
+ * @tc.name: DiskUtilsTest_GetUdfRev_002
+ * @tc.desc: Verify GetUdfRev with dash-prefixed diskPath (argument injection guard) returns empty.
+ * @tc.type: FUNC
+ */
+HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetUdfRev_002, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetUdfRev_002 start";
+    std::string result = GetUdfRev("-evil");
+    EXPECT_TRUE(result.empty());
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetUdfRev_002 end";
+}
+
+/**
+ * @tc.name: DiskUtilsTest_GetUdfRev_003
+ * @tc.desc: Verify GetUdfRev when ForkExec fails returns empty string.
+ * @tc.type: FUNC
+ */
+HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetUdfRev_003, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetUdfRev_003 start";
+    std::string diskPath = "/dev/block/sr0";
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _)).WillOnce(Return(E_ERR));
+    std::string result = GetUdfRev(diskPath);
+    EXPECT_TRUE(result.empty());
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetUdfRev_003 end";
+}
+
+/**
+ * @tc.name: DiskUtilsTest_GetUdfRev_004
+ * @tc.desc: Verify GetUdfRev when ForkExec succeeds and output contains udfrev= line returns the value.
+ * @tc.type: FUNC
+ */
+HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetUdfRev_004, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetUdfRev_004 start";
+    std::string diskPath = "/dev/block/sr0";
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
+        .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
+            if (output) {
+                output->push_back("filename=/dev/block/sr0");
+                output->push_back("label=11 03 2026");
+                output->push_back("udfrev=2.01");
+                output->push_back("udfwriterev=2.01");
+            }
+            return E_OK;
+        }));
+    std::string result = GetUdfRev(diskPath);
+    EXPECT_EQ(result, "udf2.01");
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetUdfRev_004 end";
+}
+
+/**
+ * @tc.name: DiskUtilsTest_GetUdfRev_005
+ * @tc.desc: Verify GetUdfRev when ForkExec succeeds but udfrev not present in output returns empty.
+ * @tc.type: FUNC
+ */
+HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetUdfRev_005, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetUdfRev_005 start";
+    std::string diskPath = "/dev/block/sr0";
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
+        .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
+            if (output) {
+                output->push_back("filename=/dev/block/sr0");
+                output->push_back("label=11 03 2026");
+            }
+            return E_OK;
+        }));
+    std::string result = GetUdfRev(diskPath);
+    EXPECT_TRUE(result.empty());
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetUdfRev_005 end";
+}
+
+/**
+ * @tc.name: DiskUtilsTest_GetUdfRev_006
+ * @tc.desc: Verify GetUdfRev when ForkExec succeeds with empty output returns empty string.
+ * @tc.type: FUNC
+ */
+HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetUdfRev_006, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetUdfRev_006 start";
+    std::string diskPath = "/dev/block/sr0";
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
+        .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
+            if (output) {
+                output->clear();
+            }
+            return E_OK;
+        }));
+    std::string result = GetUdfRev(diskPath);
+    EXPECT_TRUE(result.empty());
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetUdfRev_006 end";
+}
+
+/**
+ * @tc.name: DiskUtilsTest_GetUdfRev_007
+ * @tc.desc: Verify GetUdfRev truncates udfrev value at first newline/CR (ForkExec output may carry embedded \n).
+ * @tc.type: FUNC
+ */
+HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetUdfRev_007, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetUdfRev_007 start";
+    std::string diskPath = "/dev/block/sr0";
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
+        .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
+            if (output) {
+                output->push_back("udfrev=2.50\r\nudfwriterev=2.50\nintegrity=closed\n");
+            }
+            return E_OK;
+        }));
+    std::string result = GetUdfRev(diskPath);
+    EXPECT_EQ(result, "udf2.50");
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetUdfRev_007 end";
+}
+
+/**
+ * @tc.name: DiskUtilsTest_GetUdfRev_008
+ * @tc.desc: Verify GetUdfRev returns the first udfrev= line when output has multiple matches.
+ * @tc.type: FUNC
+ */
+HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetUdfRev_008, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetUdfRev_008 start";
+    std::string diskPath = "/dev/block/sr0";
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
+        .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
+            if (output) {
+                output->push_back("udfrev=1.02");
+                output->push_back("udfrev=2.01");
+            }
+            return E_OK;
+        }));
+    std::string result = GetUdfRev(diskPath);
+    EXPECT_EQ(result, "udf1.02");
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetUdfRev_008 end";
+}
+
+/**
+ * @tc.name: DiskUtilsTest_GetUdfRev_009
+ * @tc.desc: Verify GetUdfRev skips lines that only contain 'udfrev' substring but not the 'udfrev=' prefix.
+ * @tc.type: FUNC
+ */
+HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetUdfRev_009, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetUdfRev_009 start";
+    std::string diskPath = "/dev/block/sr0";
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
+        .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
+            if (output) {
+                output->push_back("udfrevinfo=not_a_match");
+                output->push_back("udfrev=2.01");
+            }
+            return E_OK;
+        }));
+    std::string result = GetUdfRev(diskPath);
+    EXPECT_EQ(result, "udf2.01");
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetUdfRev_009 end";
+}
+
+/**
+ * @tc.name: DiskUtilsTest_GetUdfRev_010
+ * @tc.desc: Verify GetUdfRev handles udfrev= line with leading content (substring match) correctly.
+ * @tc.type: FUNC
+ */
+HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetUdfRev_010, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetUdfRev_010 start";
+    std::string diskPath = "/dev/block/sr0";
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
+        .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
+            if (output) {
+                output->push_back("prefix udfrev=3.00");
+            }
+            return E_OK;
+        }));
+    std::string result = GetUdfRev(diskPath);
+    EXPECT_EQ(result, "udf3.00");
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetUdfRev_010 end";
+}
+
+/**
+ * @tc.name: DiskUtilsTest_GetUdfRev_011
+ * @tc.desc: Verify GetUdfRev handles a single chunk containing the full udfinfo output
+ *           (udfrev= followed by many lines) and returns only the version token.
+ *           This reproduces the real ForkExec behavior where the whole pipe output
+ *           arrives in one element instead of being split per line.
+ * @tc.type: FUNC
+ */
+HWTEST_F(DiskUtilsTest, DiskUtilsTest_GetUdfRev_011, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetUdfRev_011 start";
+    std::string diskPath = "/dev/block/sr0";
+    EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
+        .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
+            if (output) {
+                output->push_back(
+                    "filename=/dev/block/sr0\n"
+                    "label=11 03 2026\n"
+                    "uuid=090e105a20554446\n"
+                    "udfrev=2.01\n"
+                    "udfwriterev=2.01\n"
+                    "integrity=closed\n"
+                    "accesstype=overwritable\n"
+                    "start=16, blocks=3, type=VRS\n"
+                    "start=2576, blocks=2292256, type=PSPACE\n");
+            }
+            return E_OK;
+        }));
+    std::string result = GetUdfRev(diskPath);
+    EXPECT_EQ(result, "udf2.01");
+    GTEST_LOG_(INFO) << "DiskUtilsTest_GetUdfRev_011 end";
+}
 } // STORAGE_DAEMON
 } // OHOS
