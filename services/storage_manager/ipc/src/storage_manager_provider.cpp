@@ -778,13 +778,13 @@ int32_t StorageManagerProvider::InactiveUserKey(uint32_t userId)
 int32_t StorageManagerProvider::LockUserScreen(uint32_t userId)
 {
     std::string bundleName;
-    int32_t uid = IPCSkeleton::GetCallingUid();
+    int32_t appUid = IPCSkeleton::GetCallingAppUid();
     auto bundleMgr = BundleMgrConnector::GetInstance().GetBundleMgrProxy();
     if (bundleMgr == nullptr) {
         LOGE("Connect bundle manager sa proxy failed.");
         return E_SERVICE_IS_NULLPTR;
     }
-    if (!bundleMgr->GetBundleNameForUid(uid, bundleName)) {
+    if (!bundleMgr->GetBundleNameForUid(appUid, bundleName)) {
         LOGE("Invoke bundleMgr interface to get bundle name failed.");
         StorageService::StorageRadar::ReportUserManager(
             "StorageManagerStub::HandleLockUserScreen", E_BUNDLEMGR_ERROR, userId, "pkgName=" + SCENEBOARD_BUNDLE_NAME);
@@ -792,7 +792,7 @@ int32_t StorageManagerProvider::LockUserScreen(uint32_t userId)
     }
 
     if (bundleName != SCENEBOARD_BUNDLE_NAME && bundleName != SYSTEMUI_BUNDLE_NAME) {
-        LOGE("permissionCheck error, caller is %{public}s(%{public}d), should be %{public}s", bundleName.c_str(), uid,
+        LOGE("permissionCheck error, caller is %{public}s(%{public}d), should be %{public}s", bundleName.c_str(), appUid,
              SCENEBOARD_BUNDLE_NAME.c_str());
         return E_PERMISSION_DENIED;
     }
@@ -1229,19 +1229,19 @@ int32_t StorageManagerProvider::MountMediaFuse(int32_t userId, int32_t &devFd)
 
     // Only for medialibrary to mount fuse.
     std::string bundleName;
-    int32_t uid = IPCSkeleton::GetCallingUid();
+    int32_t appUid = IPCSkeleton::GetCallingAppUid();
     auto bundleMgr = BundleMgrConnector::GetInstance().GetBundleMgrProxy();
     if (bundleMgr == nullptr) {
         LOGE("Connect bundle manager sa proxy failed.");
         return E_SERVICE_IS_NULLPTR;
     }
-    if (!bundleMgr->GetBundleNameForUid(uid, bundleName)) {
+    if (!bundleMgr->GetBundleNameForUid(appUid, bundleName)) {
         LOGE("Invoke bundleMgr interface to get bundle name failed.");
         return E_BUNDLEMGR_ERROR;
     }
     if (bundleName != MEDIALIBRARY_BUNDLE_NAME) {
-        LOGE("permissionCheck error, caller is %{public}s(%{public}d), should be %{public}s", bundleName.c_str(), uid,
-             MEDIALIBRARY_BUNDLE_NAME.c_str());
+        LOGE("permissionCheck error, caller is %{public}s(%{public}d), should be %{public}s", bundleName.c_str(),
+             appUid, MEDIALIBRARY_BUNDLE_NAME.c_str());
         return E_PERMISSION_DENIED;
     }
     devFd = -1;
@@ -1266,19 +1266,19 @@ int32_t StorageManagerProvider::UMountMediaFuse(int32_t userId)
 
     // Only for medialibrary to mount fuse.
     std::string bundleName;
-    int32_t uid = IPCSkeleton::GetCallingUid();
+    int32_t appUid = IPCSkeleton::GetCallingAppUid();
     auto bundleMgr = BundleMgrConnector::GetInstance().GetBundleMgrProxy();
     if (bundleMgr == nullptr) {
         LOGE("Connect bundle manager sa proxy failed.");
         return E_SERVICE_IS_NULLPTR;
     }
-    if (!bundleMgr->GetBundleNameForUid(uid, bundleName)) {
+    if (!bundleMgr->GetBundleNameForUid(appUid, bundleName)) {
         LOGE("Invoke bundleMgr interface to get bundle name failed.");
         return E_BUNDLEMGR_ERROR;
     }
     if (bundleName != MEDIALIBRARY_BUNDLE_NAME) {
-        LOGE("permissionCheck error, caller is %{public}s(%{public}d), should be %{public}s", bundleName.c_str(), uid,
-             MEDIALIBRARY_BUNDLE_NAME.c_str());
+        LOGE("permissionCheck error, caller is %{public}s(%{public}d), should be %{public}s", bundleName.c_str(),
+             appUid, MEDIALIBRARY_BUNDLE_NAME.c_str());
         return E_PERMISSION_DENIED;
     }
     auto& sdCommunication = StorageDaemonCommunication::GetInstance();
@@ -1929,19 +1929,19 @@ int32_t StorageManagerProvider::IsOsAccountExists(unsigned int userId, bool &isO
 
 bool StorageManagerProvider::IsCalledByFileMgr()
 {
-    int32_t uid = IPCSkeleton::GetCallingUid();
+    int32_t appUid = IPCSkeleton::GetCallingAppUid();
     auto bundleMgr = BundleMgrConnector::GetInstance().GetBundleMgrProxy();
     if (bundleMgr == nullptr) {
         LOGE("Connect bundle manager sa proxy failed.");
         return false;
     }
     std::string bundleName;
-    if (!bundleMgr->GetBundleNameForUid(uid, bundleName)) {
+    if (!bundleMgr->GetBundleNameForUid(appUid, bundleName)) {
         LOGE("Invoke bundleMgr interface to get bundle name failed.");
         return false;
     }
     if (bundleName != FILEMGR_BUNDLE_NAME) {
-        LOGE("permissionCheck error, caller is %{public}s(%{public}d)", bundleName.c_str(), uid);
+        LOGE("permissionCheck error, caller is %{public}s(%{public}d)", bundleName.c_str(), appUid);
         return false;
     }
     return true;

@@ -80,6 +80,11 @@ pid_t IPCSkeleton::GetCallingUid()
     return g_testCallingUid;
 }
 
+pid_t IPCSkeleton::GetCallingAppUid()
+{
+    return IPCSkeleton::GetCallingUid();
+}
+
 uint32_t IPCSkeleton::GetCallingTokenID()
 {
     uint32_t callingTokenID = 100;

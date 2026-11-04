@@ -67,6 +67,11 @@ pid_t GetCallingUid()
 {
     return g_uid;
 }
+
+pid_t IPCSkeleton::GetCallingAppUid()
+{
+    return IPCSkeleton::GetCallingUid();
+}
 namespace StorageManager {
 using namespace testing;
 using namespace testing::ext;

@@ -104,6 +104,11 @@ pid_t IPCSkeleton::GetCallingUid()
 {
     return g_callingUid;
 }
+
+pid_t IPCSkeleton::GetCallingAppUid()
+{
+    return IPCSkeleton::GetCallingUid();
+}
 }
 
 namespace OHOS::StorageManager {

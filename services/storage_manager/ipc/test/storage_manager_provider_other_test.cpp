@@ -97,6 +97,11 @@ pid_t OHOS::IPCSkeleton::GetCallingUid()
     return g_testCallingUid;
 }
 
+pid_t OHOS::IPCSkeleton::GetCallingAppUid()
+{
+    return OHOS::IPCSkeleton::GetCallingUid();
+}
+
 uint32_t OHOS::IPCSkeleton::GetCallingTokenID()
 {
     uint32_t callingTokenID = 100;

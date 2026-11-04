@@ -56,6 +56,12 @@ pid_t IPCSkeleton::GetCallingUid()
     return callingUid;
 }
 
+pid_t IPCSkeleton::GetCallingAppUid()
+{
+    pid_t callingAppUid = 5523;
+    return callingAppUid;
+}
+
 uint32_t IPCSkeleton::GetCallingTokenID()
 {
     uint32_t callingTokenID = 100;

@@ -86,9 +86,9 @@ bool IsPathStartWithFileMgr(int32_t userId, const std::string &path)
 
 int GetCurrentUserId()
 {
-    int uid = -1;
-    uid = IPCSkeleton::GetCallingUid();
-    int userId = uid / 200000;
+    int appUid = -1;
+    appUid = IPCSkeleton::GetCallingAppUid();
+    int userId = appUid / 200000;
     return userId;
 }
 
