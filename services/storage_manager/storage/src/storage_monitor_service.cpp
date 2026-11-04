@@ -57,23 +57,11 @@ constexpr const char *DEFAULT_PARAMS = "notify_l:500M/notify_m:2G/notify_h:10%/c
 constexpr const char *STORAGE_ALERT_INODE_CLEANUP_PARAMETER = "const.storage_service.inode_alert_policy";
 constexpr const char *INODE_DEFAULT_PARAMS =
     "notify_l:25000/notify_m:100000/notify_h:10%/clean_l:37500/clean_m:5%/clean_h:12%";
-const std::string PUBLISH_SYSTEM_COMMON_EVENT = "ohos.permission.PUBLISH_SYSTEM_COMMON_EVENT";
-const std::string SMART_ACTION = "hicare.event.SMART_NOTIFICATION";
-const std::string TIMESTAMP_DAY = "persist.storage_manager.timestamp.day";
-const std::string TIMESTAMP_WEEK = "persist.storage_manager.timestamp.week";
-const std::string FAULT_ID_ONE = "845010021";
-const std::string FAULT_ID_TWO = "845010022";
-const std::string FAULT_ID_THREE = "845010023";
-const std::string FAULT_SUGGEST_THREE = "545010023";
-const std::string FAULT_ID_INODE_HIGH = "845010008";
-const std::string FAULT_ID_INODE_MEDIUM = "845010009";
-const std::string FAULT_ID_INODE_LOW = "845010010";
-const std::string FAULT_INODE_SUGGEST_HIGH = "545010008";
-const std::string FAULT_INODE_SUGGEST_MEDIUM = "545010009";
-const std::string FAULT_INODE_SUGGEST_LOW = "545010010";
-const std::string CLEAN_TYPE = "type";
-const std::string CLEAN_FREE = "free";
-const std::string CLEAN_TOTAL = "total";
+constexpr const char *PUBLISH_SYSTEM_COMMON_EVENT = "ohos.permission.PUBLISH_SYSTEM_COMMON_EVENT";
+constexpr const char *SMART_ACTION = "hicare.event.SMART_NOTIFICATION";
+constexpr const char *CLEAN_TYPE = "type";
+constexpr const char *CLEAN_FREE = "free";
+constexpr const char *CLEAN_TOTAL = "total";
 
 StorageMonitorService::StorageMonitorService() {}
 

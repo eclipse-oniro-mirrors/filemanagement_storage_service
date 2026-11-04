@@ -63,11 +63,11 @@ extern const char *ANCO_DIR;
 extern const char *ANCO_MEDIA_PATH;
 extern const char *MNT_DATA_VOL_DIR;
 extern const char *SERVICE_DIR_PATH;
-extern const std::string EL1;
-extern const std::string EL2;
-extern const std::string EL3;
-extern const std::string EL4;
-extern const std::string EL5;
+extern const char *EL1;
+extern const char *EL2;
+extern const char *EL3;
+extern const char *EL4;
+extern const char *EL5;
 
 enum KeyType {
     EL0_KEY = 0,

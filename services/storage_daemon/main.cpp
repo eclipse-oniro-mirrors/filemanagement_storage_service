@@ -48,7 +48,7 @@ using CloudListener = StorageDaemon::StorageDaemonProvider::SystemAbilityStatusC
 
 #ifdef EXTERNAL_STORAGE_MANAGER
 const int CONFIG_PARAM_NUM = 6;
-static const std::string CONFIG_PTAH = "/system/etc/storage_daemon/disk_config";
+static constexpr const char *CONFIG_PTAH = "/system/etc/storage_daemon/disk_config";
 
 static bool ParasConfig(StorageDaemon::DiskManager &dm)
 {

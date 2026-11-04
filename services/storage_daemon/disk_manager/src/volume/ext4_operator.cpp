@@ -25,8 +25,10 @@
 
 namespace OHOS {
 namespace StorageDaemon {
-const std::string KEY_CUST = "const.cust.custPath";
-const std::string CUST_TOBBASIC = "tobbasic";
+#ifdef PC_EXT4_ENABLE
+constexpr const char *KEY_CUST = "const.cust.custPath";
+constexpr const char *CUST_TOBBASIC = "tobbasic";
+#endif
 
 int32_t Ext4Operator::DoMount(const std::string& devPath,
                               const std::string& mountPath,

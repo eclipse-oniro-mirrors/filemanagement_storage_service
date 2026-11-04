@@ -54,7 +54,7 @@ constexpr uint64_t BLOCK_COUNT = 512;
 constexpr int32_t ROOT_UID = 0;
 constexpr int32_t SYSTEM_UID = 1000;
 constexpr int32_t FOUNDATION_UID = 5523;
-const std::string SA_NAME_USERID = "userId";
+constexpr const char *SA_NAME_USERID = "userId";
 static std::vector<int32_t> SYS_UIDS = {0, 1000, 5523};
 
 void StorageDfxReporter::StartReportHapAndSaStorageStatus()

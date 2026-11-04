@@ -72,13 +72,15 @@ constexpr pid_t UDMF_UID = 3012;
 constexpr pid_t CLIPBOARD_UID = 3816;
 constexpr bool ENCRYPTED = true;
 constexpr uint32_t MOUNT_MAX_WAIT_TIME = 2;
-const std::string MEDIALIBRARY_BUNDLE_NAME = "com.ohos.medialibrary.medialibrarydata";
-const std::string SCENEBOARD_BUNDLE_NAME = "com.ohos.sceneboard";
-const std::string SYSTEMUI_BUNDLE_NAME = "com.ohos.systemui";
-const std::string FILEMGR_BUNDLE_NAME = "com.ohos.filemanager";
-const std::string PERMISSION_STORAGE_MANAGER_CRYPT = "ohos.permission.STORAGE_MANAGER_CRYPT";
-const std::string PERMISSION_STORAGE_MANAGER = "ohos.permission.STORAGE_MANAGER";
-const std::string PROCESS_NAME_FOUNDATION = "foundation";
+#ifdef STORAGE_SERVICE_MEDIA_FUSE
+constexpr const char *MEDIALIBRARY_BUNDLE_NAME = "com.ohos.medialibrary.medialibrarydata";
+#endif
+constexpr const char *SCENEBOARD_BUNDLE_NAME = "com.ohos.sceneboard";
+constexpr const char *SYSTEMUI_BUNDLE_NAME = "com.ohos.systemui";
+constexpr const char *FILEMGR_BUNDLE_NAME = "com.ohos.filemanager";
+constexpr const char *PERMISSION_STORAGE_MANAGER_CRYPT = "ohos.permission.STORAGE_MANAGER_CRYPT";
+constexpr const char *PERMISSION_STORAGE_MANAGER = "ohos.permission.STORAGE_MANAGER";
+constexpr const char *PROCESS_NAME_FOUNDATION = "foundation";
 
 
 bool CheckClientPermission(const std::string &permissionStr)
@@ -789,13 +791,14 @@ int32_t StorageManagerProvider::LockUserScreen(uint32_t userId)
     if (!bundleMgr->GetBundleNameForUid(uid, bundleName)) {
         LOGE("Invoke bundleMgr interface to get bundle name failed.");
         StorageService::StorageRadar::ReportUserManager(
-            "StorageManagerStub::HandleLockUserScreen", E_BUNDLEMGR_ERROR, userId, "pkgName=" + SCENEBOARD_BUNDLE_NAME);
+            "StorageManagerStub::HandleLockUserScreen", E_BUNDLEMGR_ERROR, userId,
+            std::string("pkgName=") + SCENEBOARD_BUNDLE_NAME);
         return E_BUNDLEMGR_ERROR;
     }
 
     if (bundleName != SCENEBOARD_BUNDLE_NAME && bundleName != SYSTEMUI_BUNDLE_NAME) {
         LOGE("permissionCheck error, caller is %{public}s(%{public}d), should be %{public}s", bundleName.c_str(), uid,
-             SCENEBOARD_BUNDLE_NAME.c_str());
+             SCENEBOARD_BUNDLE_NAME);
         return E_PERMISSION_DENIED;
     }
     if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER_CRYPT)) {
@@ -1243,7 +1246,7 @@ int32_t StorageManagerProvider::MountMediaFuse(int32_t userId, int32_t &devFd)
     }
     if (bundleName != MEDIALIBRARY_BUNDLE_NAME) {
         LOGE("permissionCheck error, caller is %{public}s(%{public}d), should be %{public}s", bundleName.c_str(), uid,
-             MEDIALIBRARY_BUNDLE_NAME.c_str());
+             MEDIALIBRARY_BUNDLE_NAME);
         return E_PERMISSION_DENIED;
     }
     devFd = -1;
@@ -1280,7 +1283,7 @@ int32_t StorageManagerProvider::UMountMediaFuse(int32_t userId)
     }
     if (bundleName != MEDIALIBRARY_BUNDLE_NAME) {
         LOGE("permissionCheck error, caller is %{public}s(%{public}d), should be %{public}s", bundleName.c_str(), uid,
-             MEDIALIBRARY_BUNDLE_NAME.c_str());
+             MEDIALIBRARY_BUNDLE_NAME);
         return E_PERMISSION_DENIED;
     }
     auto& sdCommunication = StorageDaemonCommunication::GetInstance();

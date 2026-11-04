@@ -24,6 +24,7 @@
 #include <fstream>
 #include <filesystem>
 #include <regex>
+#include <string_view>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -62,13 +63,13 @@ constexpr int32_t MAX_STATISTICS_FILES_NUMBER = 5120000;
 constexpr const char *MOUNT_POINT_INFO = "/proc/mounts";
 #define RGM_MANAGER_PATH_DEF  "/data/service/el1/public/rgm_manager/data"
 #define RGM_STATE_PRE_DEF "virt_service.rgm_state."
-const std::string CONTAINER_HMOS = "rgm_hmos";
-const std::string CONTAINER_LINUX = "rgm_linux";
-const std::string VM_LINUX = "rgm_openEuler";
-const std::string EL_RGM_MANAGER_PATH = "/data/service/el1/public/vm_manager";
-const std::string RGM_MANAGER_PATH = RGM_MANAGER_PATH_DEF;
-const std::string DROP_ENCRYPT_DENTRY_PATH = "/proc/sys/vm/drop_encrypt_dentry";
-const std::string DROP_ENCRYPT_DENTRY_VALUE = "1";
+constexpr const char *CONTAINER_HMOS = "rgm_hmos";
+constexpr const char *CONTAINER_LINUX = "rgm_linux";
+constexpr const char *VM_LINUX = "rgm_openEuler";
+constexpr std::string_view EL_RGM_MANAGER_PATH = "/data/service/el1/public/vm_manager";
+constexpr std::string_view RGM_MANAGER_PATH = RGM_MANAGER_PATH_DEF;
+constexpr const char *DROP_ENCRYPT_DENTRY_PATH = "/proc/sys/vm/drop_encrypt_dentry";
+constexpr const char *DROP_ENCRYPT_DENTRY_VALUE = "1";
 constexpr uint32_t OVER_LOOP_FIRST_ALERT_THRESHOLD = 1000;
 constexpr uint32_t OVER_LOOP_SECOND_ALERT_THRESHOLD = 2000;
 constexpr uint32_t OVER_LOOP_COUNT_GROW_CAP = 3000;
