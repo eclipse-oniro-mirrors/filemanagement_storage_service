@@ -181,6 +181,8 @@ public:
     virtual int32_t CreateDmLinear(const std::string &sourceDevPath,
                                    uint64_t startSector, uint64_t sectorCount,
                                    uint64_t &dmDev) override;
+    virtual int32_t GetBurnFileList(const std::string &srcDir, int32_t offset, int32_t pageSize,
+                                   std::vector<std::string> &fileList, bool &hasMore) override;
 private:
     static inline BrokerDelegator<StorageDaemonProxy> delegator_;
     int32_t SendRequest(uint32_t code, MessageParcel &data, MessageParcel &reply, MessageOption &option);
