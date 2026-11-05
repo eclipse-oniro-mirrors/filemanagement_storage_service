@@ -14,7 +14,6 @@
  */
 
 #include "mtp/usb_event_subscriber.h"
-#include <libmtp.h>
 #include <unistd.h>
 #include "mtp/mtp_device_monitor.h"
 #include "storage_service_errno.h"
@@ -27,10 +26,22 @@ constexpr const char *DEV_ADDRESS_KEY = "devAddress";
 constexpr const char *DEV_VENDOR_ID_KEY = "vendorId";
 constexpr const char *DEV_PRODUCT_ID_KEY = "productId";
 constexpr const char *DEV_CLASS_KEY = "clazz";
+constexpr int USB_CLASS_PER_INTERFACE = 0x00;
+constexpr int USB_CLASS_COMM = 0x02;
 constexpr int USB_CLASS_IMAGE = 6;
-constexpr int USB_CLASS_VENDOR_SPEC = 255;
 constexpr int USB_CLASS_PRINTER = 0x07;
+constexpr int USB_CLASS_MISCELLANEOUS = 0xEF;
+constexpr int USB_CLASS_VENDOR_SPEC = 255;
 std::atomic<bool> UsbEventSubscriber::isPtp_ = true;
+
+bool UsbEventSubscriber::IsPossibleMtpDeviceClass(uint8_t deviceClass)
+{
+    // Whitelist mirrors libmtp libusb1-glue.c: per-interface, COMM, PTP (Still Image),
+    // miscellaneous, vendor-specific. Filters out clearly non-MTP devices before dlopen.
+    return deviceClass == USB_CLASS_PER_INTERFACE || deviceClass == USB_CLASS_COMM ||
+           deviceClass == USB_CLASS_IMAGE || deviceClass == USB_CLASS_MISCELLANEOUS ||
+           deviceClass == USB_CLASS_VENDOR_SPEC;
+}
 
 UsbEventSubscriber::UsbEventSubscriber(const EventFwk::CommonEventSubscribeInfo &info)
     : EventFwk::CommonEventSubscriber(info)
@@ -291,6 +302,12 @@ bool UsbEventSubscriber::ShouldHandleMtpDevice(const std::string &usbInfo, Devic
     if (!ParseMtpDeviceIds(usbJson, deviceClass, vendorId, productId)) {
         LOGE("[L2:UsbEventSubscriber] ShouldHandleMtpDevice: ParseMtpDeviceIds failed, set deviceType to UNKNOWN");
         cJSON_Delete(usbJson);
+        return false;
+    }
+
+    if (!shouldHandle && !IsPossibleMtpDeviceClass(deviceClass)) {
+        cJSON_Delete(usbJson);
+        LOGI("[L2:UsbEventSubscriber] ShouldHandleMtpDevice: <<< EXIT SUCCESS <<< device class not in MTP whitelist");
         return false;
     }
 
