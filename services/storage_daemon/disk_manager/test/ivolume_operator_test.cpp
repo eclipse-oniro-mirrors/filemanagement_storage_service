@@ -16,8 +16,10 @@
 #include <chrono>
 #include <climits>
 #include <fcntl.h>
+#include <fstream>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <sstream>
 #include <sys/mount.h>
 #include <sys/stat.h>
 #include <thread>
@@ -31,6 +33,28 @@ namespace OHOS {
 namespace StorageDaemon {
 using namespace testing;
 using namespace testing::ext;
+
+namespace {
+// Reads /proc/mounts to observe the real kernel mount state in test assertions.
+bool IsPathReallyMounted(const std::string &path)
+{
+    std::ifstream inputStream("/proc/mounts", std::ios::in);
+    if (!inputStream.is_open()) {
+        return false;
+    }
+    std::string line;
+    while (std::getline(inputStream, line)) {
+        std::stringstream ss(line);
+        std::string dev;
+        std::string mnt;
+        ss >> dev >> mnt;
+        if (mnt == path) {
+            return true;
+        }
+    }
+    return false;
+}
+} // namespace
 
 class TestOperator : public IVolumeOperator {
 public:
@@ -283,6 +307,29 @@ HWTEST_F(ExtIVolumeOperatorTest, EnsureMountPath_DirAlreadyExists, TestSize.Leve
 
     int32_t ret = dummy.EnsureMountPath(path);
     EXPECT_EQ(ret, E_OK);
+    struct stat st;
+    EXPECT_EQ(stat(path.c_str(), &st), 0);
+    EXPECT_TRUE(S_ISDIR(st.st_mode));
+    rmdir(path.c_str());
+}
+
+HWTEST_F(ExtIVolumeOperatorTest, EnsureMountPath_ResidualMount_DetachedBeforeRemove, TestSize.Level1)
+{
+    TestOperator dummy;
+    std::string path = testDir_ + "/residual_mount";
+    mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IXOTH);
+    int mret = mount("tmpfs", path.c_str(), "tmpfs", 0, "size=1M");
+    if (mret != 0) {
+        rmdir(path.c_str());
+        GTEST_SKIP() << "mount tmpfs failed, skipping residual mount test";
+    }
+
+    // Without the pre-remove umount2(MNT_DETACH), remove() hits EBUSY and this
+    // returns E_SYS_KERNEL_ERR, which is exactly the re-plug mount failure.
+    int32_t ret = dummy.EnsureMountPath(path);
+    EXPECT_EQ(ret, E_OK);
+    EXPECT_FALSE(IsPathReallyMounted(path)); // residual layer is detached, not stacked
+
     struct stat st;
     EXPECT_EQ(stat(path.c_str(), &st), 0);
     EXPECT_TRUE(S_ISDIR(st.st_mode));

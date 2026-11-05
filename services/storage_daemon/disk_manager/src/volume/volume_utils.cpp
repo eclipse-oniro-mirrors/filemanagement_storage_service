@@ -112,6 +112,8 @@ static int32_t EnsureFuseMountPath(const char* path)
 {
     struct stat statbuf;
     if (lstat(path, &statbuf) == 0) {
+        int detachRet = umount2(path, MNT_DETACH);
+        LOGW("MountFuseDevice pre-mount umount2 ret=%{public}d", detachRet);
         if (!S_ISDIR(statbuf.st_mode)) {
             if (remove(path) != 0) {
                 LOGE("MountFuseDevice remove failed, errno=%{public}d", errno);
