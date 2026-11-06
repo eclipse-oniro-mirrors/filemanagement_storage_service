@@ -40,6 +40,7 @@ public:
     static bool IsPtpMode();
     static bool ShouldHandleMtpDevice(const std::string &usbInfo, DeviceType &deviceType);
     static bool ParseMtpDeviceIds(const cJSON* usbJson, uint8_t &deviceClass, uint16_t &idVendor, uint16_t &idProduct);
+    static bool IsPossibleMtpDeviceClass(uint8_t deviceClass);
     static std::string ToLowerString(const char* str);
     static bool CheckMtpInterface(const cJSON* iface);
     static bool CheckAllInterfaces(const cJSON* configs);

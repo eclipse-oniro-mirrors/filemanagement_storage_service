@@ -25,12 +25,12 @@
 #include <libusb.h>
 #endif
 #include <iostream>
-#include <libmtp.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/xattr.h>
 #include <thread>
 #include <unistd.h>
+#include "mtp/mtp_lib_loader.h"
 #include "mtp/usb_event_subscriber.h"
 #include "parameter.h"
 #include "parameters.h"
@@ -123,7 +123,7 @@ DeviceType MtpDeviceMonitor::GetDeviceType(uint8_t deviceClass, uint16_t vendorI
     }
 #endif
 
-    if (LIBMTP_check_is_mtp_device(deviceClass, vendorId, productId)) {
+    if (MtpLibLoader::GetInstance().CheckIsMtpDevice(deviceClass, vendorId, productId)) {
         LOGI("[L2:MtpDeviceMonitor] GetDeviceType: device is MTP mobile, VID=%{public}04x, PID=%{public}04x", vendorId,
             productId);
         return DeviceType::MOBILE;
@@ -163,7 +163,7 @@ int32_t MtpDeviceMonitor::GetMtpDevices(std::vector<MtpDeviceInfo> &devInfos, ui
          busLocation, devNum);
     int rawDevSize = 0;
     LIBMTP_raw_device_t *rawDevices = nullptr;
-    LIBMTP_error_number_t err = LIBMTP_Detect_Raw_Devices(&rawDevices, &rawDevSize);
+    LIBMTP_error_number_t err = MtpLibLoader::GetInstance().DetectRawDevices(&rawDevices, &rawDevSize);
     if ((err == LIBMTP_ERROR_NO_DEVICE_ATTACHED) || (rawDevices == nullptr) || (rawDevSize <= 0)) {
         if (rawDevices != nullptr) {
             free(static_cast<void *>(rawDevices));
