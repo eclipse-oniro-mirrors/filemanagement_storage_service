@@ -21,6 +21,10 @@ idl_gen_interface("storage_daemon_interface") {
   sources_callback = [ "../storage_manager/IUeceActivationCallback.idl" ]
   log_tag = "StorageDaemon"
   log_domainid = "0xD004301"
+  target_type = "source_set"
+  configs = [ ":storage_daemon_config" ]
+  part_name = "storage_service"
+  subsystem_name = "filemanagement"
 }
 
 ohos_source_set("storage_daemon_ipc") {

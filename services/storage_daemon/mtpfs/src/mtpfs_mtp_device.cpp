@@ -51,7 +51,7 @@ std::condition_variable MtpFsDevice::eventCon_;
 std::mutex MtpFsDevice::eventMutex_;
 std::mutex MtpFsDevice::setMutex_;
 std::set<std::string> MtpFsDevice::removingFileSet_;
-static const std::string NO_ERROR_PATH = "/FileManagerExternalStorageReadOnlyFlag";
+static constexpr const char *NO_ERROR_PATH = "/FileManagerExternalStorageReadOnlyFlag";
 using namespace OHOS::StorageService;
 
 namespace {

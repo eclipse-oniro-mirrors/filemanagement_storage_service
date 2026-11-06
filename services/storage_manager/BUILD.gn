@@ -20,6 +20,7 @@ config("storage_manager_config") {
     "include",
     "${storage_interface_path}/innerkits/storage_manager/native",
     "${storage_daemon_path}/include",
+    "${storage_daemon_path}/include/utils",
     "${storage_service_common_path}/include",
     "${storage_manager_path}/include/common_event",
     "${storage_manager_path}/include/utils",
@@ -96,7 +97,7 @@ ohos_shared_library("storage_manager") {
 
   deps = [
     "${storage_daemon_path}:storage_common_utils",
-    "${storage_daemon_path}:storage_daemon_ipc",
+    "${storage_daemon_path}:storage_daemon_interface_source_set_proxy",
     "${storage_interface_path}/innerkits/storage_manager/native:storage_manager_sa_proxy",
   ]
 
@@ -189,7 +190,6 @@ group("storage_manager_unit_test") {
   testonly = true
   deps = [
     "account_subscriber/test:storage_account_subscriber_test",
-    "client/test:storage_manager_client_test",
     "innerkits_impl/test:storage_manager_innerkits_test",
     "ipc/test:storage_manager_ipc_test",
     "storage_daemon_communication/test:storage_manager_communication_test",

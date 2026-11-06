@@ -61,11 +61,11 @@ const char *ANCO_DIR = "/data/virt_service/rgm_hmos/anco_hmos_data/";
 const char *ANCO_MEDIA_PATH = "/data/virt_service/rgm_hmos/anco_hmos_data/media/0";
 const char *MNT_DATA_VOL_DIR = "/mnt/data/vol";
 const char *SERVICE_DIR_PATH = "/data/service/";
-const std::string EL1 = "el1";
-const std::string EL2 = "el2";
-const std::string EL3 = "el3";
-const std::string EL4 = "el4";
-const std::string EL5 = "el5";
+const char *EL1 = "el1";
+const char *EL2 = "el2";
+const char *EL3 = "el3";
+const char *EL4 = "el4";
+const char *EL5 = "el5";
 
 const std::map<std::string, KeyType> EL_DIR_MAP = {
     {EL1, EL1_KEY},
