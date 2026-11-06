@@ -969,7 +969,7 @@ int32_t QuotaManager::AddBlksMultiUids(const std::string &path, std::vector<int6
         if (static_cast<uid_t>(uids[i]) == st.st_uid) {
             blks[i] += static_cast<int64_t>(st.st_blocks);
             uidMatched = true;
-            break; // Each file belongs to only one UID
+            break; // Each file belongs to only one AppUID
         }
     }
 

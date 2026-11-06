@@ -40,7 +40,7 @@
 namespace OHOS {
 
 int g_pStatus  = -1;
-int g_uid = 0;
+int g_appUid = 0;
 int32_t g_accessTokenType = 1;
 
 namespace Security::AccessToken {
@@ -63,14 +63,9 @@ int AccessTokenKit::VerifyAccessToken(AccessTokenID tokenID, const std::string &
 }
 } // namespace Security::AccessToken
 
-pid_t GetCallingUid()
-{
-    return g_uid;
-}
-
 pid_t IPCSkeleton::GetCallingAppUid()
 {
-    return IPCSkeleton::GetCallingUid();
+    return g_appUid;
 }
 namespace StorageManager {
 using namespace testing;
@@ -184,7 +179,7 @@ HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_MountDlpFuse_001
 
 /**
  * @tc.name: StorageManagerProviderTest_MountDlpFuse_002
- * @tc.desc: Verify the MountDlpFuse function with permission granted but uid not DLP_UID.
+ * @tc.desc: Verify the MountDlpFuse function with permission granted but appUid not DLP_UID.
  * @tc.type: FUNC
  * @tc.require:
  */
@@ -219,7 +214,7 @@ HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_UMountDlpFuse_00
 
 /**
  * @tc.name: StorageManagerProviderTest_UMountDlpFuse_002
- * @tc.desc: Verify the UMountDlpFuse function with permission granted but uid not DLP_UID.
+ * @tc.desc: Verify the UMountDlpFuse function with permission granted but appUid not DLP_UID.
  * @tc.type: FUNC
  * @tc.require:
  */
@@ -463,13 +458,13 @@ HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_NotifyUserChange
     GTEST_LOG_(INFO) << "StorageManagerProviderTest_NotifyUserChangedEvent_001 start";
     ASSERT_TRUE(storageManagerProviderTest_ != nullptr);
     g_pStatus = Security::AccessToken::PermissionState::PERMISSION_GRANTED;
-    g_uid = 0;
+    g_appUid = 0;
     std::uint32_t userId = 999;
     StorageService::UserChangedEventType enumType = static_cast<StorageService::UserChangedEventType>(4);
     auto ret = storageManagerProviderTest_->NotifyUserChangedEvent(userId, enumType);
     EXPECT_EQ(ret, E_PARAMS_INVALID);
 
-    g_uid = 3058; // AccountUid 3058
+    g_appUid = 3058; // AccountUid 3058
     ret = storageManagerProviderTest_->NotifyUserChangedEvent(userId, enumType);
     EXPECT_EQ(ret, E_PARAMS_INVALID);
 
@@ -493,7 +488,7 @@ HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_GetSystemDataSiz
 {
     GTEST_LOG_(INFO) << "StorageManagerProviderTest_GetSystemDataSize_002 start";
     ASSERT_TRUE(storageManagerProviderTest_ != nullptr);
-    g_uid = 0;
+    g_appUid = 0;
     int64_t systemDataSize = 100;
     auto ret = storageManagerProviderTest_->GetSystemDataSize(systemDataSize);
     EXPECT_EQ(ret, E_SERVICE_IS_NULLPTR);

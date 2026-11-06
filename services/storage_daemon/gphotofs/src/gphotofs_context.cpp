@@ -60,7 +60,7 @@ Context::Context() : directory_(""), root_(""), camera_(nullptr), context_(nullp
         return;
     }
 
-    uid_ = getuid();
+    uid_ = getappuid();
     gid_ = getgid();
 }
 

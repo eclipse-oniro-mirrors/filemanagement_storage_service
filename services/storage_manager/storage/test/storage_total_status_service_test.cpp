@@ -92,7 +92,7 @@ const std::vector<DirInfo> virtualDir_{{"/storage/media/%d", MODE_0711, OID_USER
         {"/mnt/hmdfs/%d/cloud", MODE_0711, OID_ROOT, OID_ROOT},
         {"/mnt/hmdfs/%d/account", MODE_0711, OID_ROOT, OID_ROOT},
         {"/mnt/hmdfs/%d/non_account", MODE_0711, OID_ROOT, OID_ROOT}};
-int32_t g_callingUid = 5523;
+int32_t g_callingAppUid = 5523;
 ErrCode g_getBundleInodeCountRet = ERR_OK;
 std::string g_bundleName = "com.test.app";
 ErrCode g_getNameIndexRet = ERR_OK;
@@ -100,14 +100,9 @@ int32_t g_appIndex = 0;
 } // namespace
 
 namespace OHOS {
-pid_t IPCSkeleton::GetCallingUid()
-{
-    return g_callingUid;
-}
-
 pid_t IPCSkeleton::GetCallingAppUid()
 {
-    return IPCSkeleton::GetCallingUid();
+    return g_callingAppUid;
 }
 }
 
@@ -447,7 +442,7 @@ HWTEST_F(StorageTotalStatusServiceTest, Storage_total_status_GetCurrentBundleIno
 /**
  * @tc.number: SUB_STORAGE_Storage_total_status_service_GetCurrentBundleInodes_0001
  * @tc.name: Storage_total_status_service_GetCurrentBundleInodes_0001
- * @tc.desc: Test function of GetCurrentBundleInodes when uid < 0.
+ * @tc.desc: Test function of GetCurrentBundleInodes when appUid < 0.
  * @tc.size: MEDIUM
  * @tc.type: FUNC
  * @tc.level Level 1
@@ -456,7 +451,7 @@ HWTEST_F(StorageTotalStatusServiceTest, Storage_total_status_GetCurrentBundleIno
 HWTEST_F(StorageTotalStatusServiceTest, Storage_total_status_GetCurrentBundleInodes_0001, testing::ext::TestSize.Level1)
 {
     GTEST_LOG_(INFO) << "StorageTotalStatusServiceTest-begin Storage_total_status_service_GetCurrentBundleInodes_0001";
-    g_callingUid = -1;
+    g_callingAppUid = -1;
 
     StorageTotalStatusService& service = StorageTotalStatusService::GetInstance();
     int64_t curInodes = 0;
@@ -465,7 +460,7 @@ HWTEST_F(StorageTotalStatusServiceTest, Storage_total_status_GetCurrentBundleIno
     EXPECT_EQ(result, E_GET_BUNDLE_INODES_ERROR);
     GTEST_LOG_(INFO) << "StorageTotalStatusServiceTest-end Storage_total_status_service_GetCurrentBundleInodes_0001";
 
-    g_callingUid = 5523;
+    g_callingAppUid = 5523;
 }
 
 /**
@@ -507,7 +502,7 @@ HWTEST_F(StorageTotalStatusServiceTest, Storage_total_status_GetCurrentBundleIno
 {
     GTEST_LOG_(INFO) << "StorageTotalStatusServiceTest-begin Storage_total_status_service_GetCurrentBundleInodes_0003";
     g_getBundleInodeCountRet = ERR_APPEXECFWK_PARCEL_ERROR;
-    g_callingUid = 5523;
+    g_callingAppUid = 5523;
 
     StorageTotalStatusService& service = StorageTotalStatusService::GetInstance();
     int64_t curInodes = 0;
@@ -516,7 +511,7 @@ HWTEST_F(StorageTotalStatusServiceTest, Storage_total_status_GetCurrentBundleIno
     EXPECT_TRUE(result == E_GET_BUNDLE_INODES_ERROR);
     GTEST_LOG_(INFO) << "StorageTotalStatusServiceTest-end Storage_total_status_service_GetCurrentBundleInodes_0003";
 
-    g_callingUid = 5523;
+    g_callingAppUid = 5523;
     g_getBundleInodeCountRet = ERR_OK;
 }
 

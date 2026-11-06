@@ -83,7 +83,7 @@ HWTEST_F(QuotaManagerTest, Storage_Service_QuotaManagerTest_SetBundleQuota_001, 
 
 /**
  * @tc.name: Storage_Service_QuotaManagerTest_SetBundleQuota_002
- * @tc.desc: Test whether SetBundleQuota is called normally.(uid < 0)
+ * @tc.desc: Test whether SetBundleQuota is called normally.(appUid < 0)
  * @tc.type: FUNC
  * @tc.require: AR000HSKSO
  */
@@ -463,7 +463,7 @@ HWTEST_F(QuotaManagerTest, Storage_Service_QuotaManagerTest_AddBlks_001, TestSiz
 
 /**
  * @tc.name: QuotaManagerTest_AssembleSaInfoVec_001
- * @tc.desc: Test AssembleSaInfoVec handles valid/invalid UIDs and empty bundle map.
+ * @tc.desc: Test AssembleSaInfoVec handles valid/invalid AppUIDs and empty bundle map.
  * @tc.type: FUNC
  * @tc.require: AR000XXXX
  */
@@ -487,7 +487,7 @@ HWTEST_F(QuotaManagerTest, QuotaManagerTest_AssembleSaInfoVec_001, TestSize.Leve
     UidSaInfo info3 = {3003, "original", 4096};
     vec1.emplace_back(info3);
     std::map<int32_t, std::string> bundleMap1;
-    bundleMap1[4004] = "NonExistingApp"; // 不包含 UID 3003
+    bundleMap1[4004] = "NonExistingApp"; // 不包含 AppUID 3003
     QuotaManager::GetInstance().AssembleSaInfoVec(vec1, bundleMap1);
     EXPECT_EQ(vec1[0].saName, "original"); // 未修改
 
@@ -871,7 +871,7 @@ HWTEST_F(QuotaManagerTest, QuotaManagerTest_StringToInt64_001, TestSize.Level1)
 
 /**
  * @tc.name: QuotaManagerTest_GetDqBlkSpacesByUids_001
- * @tc.desc: Test GetDqBlkSpacesByUids with empty uids vector.
+ * @tc.desc: Test GetDqBlkSpacesByUids with empty appUids vector.
  * @tc.type: FUNC
  * @tc.require: AR000XXXX
  */
@@ -888,7 +888,7 @@ HWTEST_F(QuotaManagerTest, QuotaManagerTest_GetDqBlkSpacesByUids_001, TestSize.L
 
 /**
  * @tc.name: QuotaManagerTest_GetDqBlkSpacesByUids_003
- * @tc.desc: Test GetDqBlkSpacesByUids with valid uids and non-emulator environment.
+ * @tc.desc: Test GetDqBlkSpacesByUids with valid appUids and non-emulator environment.
  * @tc.type: FUNC
  * @tc.require: AR000XXXX
  */
@@ -905,7 +905,7 @@ HWTEST_F(QuotaManagerTest, QuotaManagerTest_GetDqBlkSpacesByUids_003, TestSize.L
 
 /**
  * @tc.name: QuotaManagerTest_GetDqBlkSpacesByUids_004
- * @tc.desc: Test GetDqBlkSpacesByUids with invalid uids.
+ * @tc.desc: Test GetDqBlkSpacesByUids with invalid appUids.
  * @tc.type: FUNC
  * @tc.require: AR000XXXX
  */
@@ -939,7 +939,7 @@ HWTEST_F(QuotaManagerTest, QuotaManagerTest_GetDqBlkSpacesByUids_005, TestSize.L
 
 /**
  * @tc.name: Storage_Service_QuotaManagerTest_GetDqBlkSpacesByUids_006
- * @tc.desc: Test GetDqBlkSpacesByUids with mixed valid/invalid uids and stop flag toggled during processing.
+ * @tc.desc: Test GetDqBlkSpacesByUids with mixed valid/invalid appUids and stop flag toggled during processing.
  * @tc.type: FUNC
  * @tc.require: AR000XXXX
  */
@@ -1236,7 +1236,7 @@ HWTEST_F(QuotaManagerTest, QuotaManagerTest_ParseSystemDataConfigFile_002, TestS
 
 /**
  * @tc.name: QuotaManagerTest_GetSystemCacheSize_001
- * @tc.desc: Test GetSystemCacheSize with empty uid list
+ * @tc.desc: Test GetSystemCacheSize with empty appUid list
  * @tc.type: FUNC
  * @tc.require: AR20260114725643
  */
@@ -1254,7 +1254,7 @@ HWTEST_F(QuotaManagerTest, QuotaManagerTest_GetSystemCacheSize_001, TestSize.Lev
 
 /**
  * @tc.name: QuotaManagerTest_GetSystemCacheSize_002
- * @tc.desc: Test GetSystemCacheSize with system UIDs that should be skipped
+ * @tc.desc: Test GetSystemCacheSize with system AppUIDs that should be skipped
  * @tc.type: FUNC
  * @tc.require: AR20260114725643
  */
@@ -1264,7 +1264,7 @@ HWTEST_F(QuotaManagerTest, QuotaManagerTest_GetSystemCacheSize_002, TestSize.Lev
     std::vector<int32_t> uidList = {0, 1000}; // ROOT_UID, SYSTEM_UID
     int64_t cacheSize = 0; // Output parameter, initialized to 0
     int32_t result = QuotaManager::GetInstance().GetSystemCacheSize(uidList, cacheSize);
-    // These UIDs should be skipped, so cacheSize should remain 0
+    // These AppUIDs should be skipped, so cacheSize should remain 0
     EXPECT_TRUE(result == E_OK || result == E_NOT_SUPPORT);
     if (result == E_OK) {
         EXPECT_EQ(cacheSize, 0);
@@ -1274,14 +1274,14 @@ HWTEST_F(QuotaManagerTest, QuotaManagerTest_GetSystemCacheSize_002, TestSize.Lev
 
 /**
  * @tc.name: QuotaManagerTest_GetSystemCacheSize_003
- * @tc.desc: Test GetSystemCacheSize with regular UIDs
+ * @tc.desc: Test GetSystemCacheSize with regular AppUIDs
  * @tc.type: FUNC
  * @tc.require: AR20260114725643
  */
 HWTEST_F(QuotaManagerTest, QuotaManagerTest_GetSystemCacheSize_003, TestSize.Level1)
 {
     GTEST_LOG_(INFO) << "QuotaManagerTest_GetSystemCacheSize_003 start";
-    std::vector<int32_t> uidList = {1099, 1100}; // Non-system UIDs
+    std::vector<int32_t> uidList = {1099, 1100}; // Non-system AppUIDs
     int64_t cacheSize = 0;
     int32_t result = QuotaManager::GetInstance().GetSystemCacheSize(uidList, cacheSize);
     // Result depends on system quota support
@@ -1342,14 +1342,14 @@ HWTEST_F(QuotaManagerTest, QuotaManagerTest_AddBlksMultiUids_001, TestSize.Level
     // Use an existing file that should be present on most systems
     std::string path = "/etc/passwd";
     std::vector<int64_t> blks = {0, 0}; // Output parameter, initialized to 0
-    std::vector<int32_t> uids = {0, 1000}; // Root and system UIDs
+    std::vector<int32_t> uids = {0, 1000}; // Root and system AppUIDs
     std::vector<LargeFileInfo> largeFiles;
     std::map<std::string, int64_t> dirSizeMap;
     int32_t result = QuotaManager::GetInstance().AddBlksMultiUids(path, blks, uids, largeFiles, dirSizeMap);
     // /etc/passwd is usually owned by root
     EXPECT_TRUE(result == E_OK || result == E_STATISTIC_STAT_FAILED);
     if (result == E_OK) {
-        // At least one of the UIDs should have matching files
+        // At least one of the AppUIDs should have matching files
         bool hasNonZero = false;
         for (auto blk : blks) {
             if (blk > 0) {
@@ -1394,7 +1394,7 @@ HWTEST_F(QuotaManagerTest, QuotaManagerTest_AddBlksMultiUids_003, TestSize.Level
     // Test with /etc/passwd which usually exists and is owned by root
     std::string path = "/etc/passwd";
     std::vector<int64_t> blks = {0, 0}; // Output parameter, initialized to 0
-    std::vector<int32_t> uids = {0, 1000}; // Root and system UIDs
+    std::vector<int32_t> uids = {0, 1000}; // Root and system AppUIDs
     std::vector<LargeFileInfo> largeFiles;
     std::map<std::string, int64_t> dirSizeMap;
     int32_t result = QuotaManager::GetInstance().AddBlksMultiUids(path, blks, uids, largeFiles, dirSizeMap);
@@ -1409,7 +1409,7 @@ HWTEST_F(QuotaManagerTest, QuotaManagerTest_AddBlksMultiUids_003, TestSize.Level
 
 /**
  * @tc.name: QuotaManagerTest_GetDirListSpaceByPaths_001
- * @tc.desc: Test GetDirListSpaceByPaths with valid paths and UIDs
+ * @tc.desc: Test GetDirListSpaceByPaths with valid paths and AppUIDs
  * @tc.type: FUNC
  * @tc.require: AR20260114725643
  */
@@ -1449,7 +1449,7 @@ HWTEST_F(QuotaManagerTest, QuotaManagerTest_GetDirListSpaceByPaths_002, TestSize
 
 /**
  * @tc.name: QuotaManagerTest_GetDirListSpaceByPaths_003
- * @tc.desc: Test GetDirListSpaceByPaths with empty UIDs
+ * @tc.desc: Test GetDirListSpaceByPaths with empty AppUIDs
  * @tc.type: FUNC
  * @tc.require: AR20260114725643
  */
@@ -1462,7 +1462,7 @@ HWTEST_F(QuotaManagerTest, QuotaManagerTest_GetDirListSpaceByPaths_003, TestSize
     std::vector<LargeFileInfo> largeFiles;
     std::vector<LargeDirInfo> largeDirs;
     int32_t result = QuotaManager::GetInstance().GetDirListSpaceByPaths(paths, uids, resultDirs, largeFiles, largeDirs);
-    // Should fail with empty UIDs
+    // Should fail with empty AppUIDs
     EXPECT_EQ(result, E_PARAMS_INVALID);
     GTEST_LOG_(INFO) << "QuotaManagerTest_GetDirListSpaceByPaths_003 end";
 }
@@ -1493,7 +1493,7 @@ HWTEST_F(QuotaManagerTest, QuotaManagerTest_GetDirListSpaceByPaths_004, TestSize
 
 /**
  * @tc.name: QuotaManagerTest_GetDirListSpaceByPaths_005
- * @tc.desc: Test GetDirListSpaceByPaths with UIDs exceeding MAX_WHITE_UID_COUNT
+ * @tc.desc: Test GetDirListSpaceByPaths with AppUIDs exceeding MAX_WHITE_UID_COUNT
  * @tc.type: FUNC
  * @tc.require: AR20260114725643
  */
@@ -1502,7 +1502,7 @@ HWTEST_F(QuotaManagerTest, QuotaManagerTest_GetDirListSpaceByPaths_005, TestSize
     GTEST_LOG_(INFO) << "QuotaManagerTest_GetDirListSpaceByPaths_005 start";
     std::vector<std::string> paths = {"/etc"};
     std::vector<int32_t> uids;
-    // Create 4 UIDs (MAX_WHITE_UID_COUNT is 3)
+    // Create 4 AppUIDs (MAX_WHITE_UID_COUNT is 3)
     for (int i = 0; i < 4; i++) {
         uids.push_back(1000 + i);
     }
@@ -1510,7 +1510,7 @@ HWTEST_F(QuotaManagerTest, QuotaManagerTest_GetDirListSpaceByPaths_005, TestSize
     std::vector<LargeFileInfo> largeFiles;
     std::vector<LargeDirInfo> largeDirs;
     int32_t result = QuotaManager::GetInstance().GetDirListSpaceByPaths(paths, uids, resultDirs, largeFiles, largeDirs);
-    // Should fail when UIDs count exceeds MAX_WHITE_UID_COUNT
+    // Should fail when AppUIDs count exceeds MAX_WHITE_UID_COUNT
     EXPECT_EQ(result, E_PARAMS_INVALID);
     GTEST_LOG_(INFO) << "QuotaManagerTest_GetDirListSpaceByPaths_005 end";
 }
@@ -1542,7 +1542,7 @@ HWTEST_F(QuotaManagerTest, QuotaManagerTest_GetDirListSpaceByPaths_006, TestSize
 
 /**
  * @tc.name: QuotaManagerTest_GetDirListSpaceByPaths_007
- * @tc.desc: Test GetDirListSpaceByPaths with multiple paths and UIDs
+ * @tc.desc: Test GetDirListSpaceByPaths with multiple paths and AppUIDs
  * @tc.type: FUNC
  * @tc.require: AR20260114725643
  */
@@ -1555,10 +1555,10 @@ HWTEST_F(QuotaManagerTest, QuotaManagerTest_GetDirListSpaceByPaths_007, TestSize
     std::vector<LargeFileInfo> largeFiles;
     std::vector<LargeDirInfo> largeDirs;
     int32_t result = QuotaManager::GetInstance().GetDirListSpaceByPaths(paths, uids, resultDirs, largeFiles, largeDirs);
-    // Should process each path for each UID
+    // Should process each path for each AppUID
     EXPECT_TRUE(result == E_OK || result == E_ERR || result == E_STATISTIC_OPEN_DIR_FAILED);
     if (result == E_OK) {
-        // resultDirs should contain entries for each path-UID combination
+        // resultDirs should contain entries for each path-AppUID combination
         EXPECT_EQ(resultDirs.size(), uids.size());
     }
     GTEST_LOG_(INFO) << "QuotaManagerTest_GetDirListSpaceByPaths_007 end";

@@ -70,16 +70,11 @@ int AccessTokenKit::GetNativeTokenInfo(AccessTokenID tokenID, NativeTokenInfo& n
 }
 }
 
-pid_t g_testCallingUid = 9999;
+pid_t g_testCallingAppUid = 9999;
 namespace OHOS {
-pid_t IPCSkeleton::GetCallingUid()
-{
-    return g_testCallingUid;
-}
-
 pid_t IPCSkeleton::GetCallingAppUid()
 {
-    return IPCSkeleton::GetCallingUid();
+    return g_testCallingAppUid;
 }
 
 uint32_t IPCSkeleton::GetCallingTokenID()

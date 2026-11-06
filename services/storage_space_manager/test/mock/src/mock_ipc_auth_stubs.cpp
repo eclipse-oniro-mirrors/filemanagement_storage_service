@@ -67,9 +67,9 @@ uint64_t IPCSkeleton::GetCallingFullTokenID()
     return g_mockCallingFullTokenId;
 }
 
-int32_t IPCSkeleton::GetCallingUid()
+int32_t IPCSkeleton::GetCallingAppUid()
 {
-    return g_mockCallingUid;
+    return g_mockCallingAppUid;
 }
 
 } // namespace OHOS
@@ -77,7 +77,7 @@ int32_t IPCSkeleton::GetCallingUid()
 // Global mock control variables
 uint32_t g_mockCallingTokenId = 0;
 uint64_t g_mockCallingFullTokenId = 0;
-int32_t g_mockCallingUid = 0;
+int32_t g_mockCallingAppUid = 0;
 int32_t g_mockVerifyAccessTokenResult = 0;
 uint32_t g_mockTokenTypeFlag = 1;  // TOKEN_NATIVE
 bool g_mockIsSystemApp = true;

@@ -41,7 +41,7 @@ int32_t g_appIndex = 0;
 std::string g_bundleName = "com.test.app";
 int32_t g_getBundleStatsRet = E_OK;
 int32_t accessTokenType = -1;
-int32_t g_callingUid = 20000000; // Default to userId = 100 (100 * 200000 = 20000000)
+int32_t g_callingAppUid = 20000000; // Default to userId = 100 (100 * 200000 = 20000000)
 uint32_t g_callingTokenId = 0;
 int32_t g_getHapTokenInfoRet = E_OK;
 std::vector<int64_t> g_mockBundleStats = {100, 200, 300, 400, 500}; // app, local, distributed, database, cache
@@ -94,14 +94,9 @@ int32_t StorageStatusManager::GetBundleStats(const std::string &bundleName, int 
 }
 
 namespace OHOS {
-pid_t IPCSkeleton::GetCallingUid()
-{
-    return g_callingUid;
-}
-
 pid_t IPCSkeleton::GetCallingAppUid()
 {
-    return IPCSkeleton::GetCallingUid();
+    return g_callingAppUid;
 }
 
 uint32_t IPCSkeleton::GetCallingTokenID()
@@ -186,7 +181,7 @@ HWTEST_F(StorageStatusManagerTest, Storage_status_GetAppSize_0001, testing::ext:
 {
     GTEST_LOG_(INFO) << "StorageStatusManagerTest-begin Storage_status_GetAppSize_0001";
     std::shared_ptr<StorageStatusManager> service = DelayedSingleton<StorageStatusManager>::GetInstance();
-    g_callingUid = 100 * 200000;
+    g_callingAppUid = 100 * 200000;
     g_mockBundleStats = {10, 20, 0, 0, 0};
     g_mockZeroUserBundleStats = {10, 20, 30, 40, 50};
     g_getAllBundleStatsRet = true;
@@ -522,7 +517,7 @@ HWTEST_F(StorageStatusManagerTest, STORAGE_GetAppSize_CurrentUser_0001, testing:
     auto service = DelayedSingleton<StorageStatusManager>::GetInstance();
 
     // Set up mock data
-    g_callingUid = 100 * 200000;
+    g_callingAppUid = 100 * 200000;
     g_mockBundleStats = {100, 200, 300, 400, 500}; // app, local, distributed, database, cache
     g_mockZeroUserBundleStats = {10, 20, 30, 40, 50};
     g_getAllBundleStatsRet = true;
@@ -555,7 +550,7 @@ HWTEST_F(StorageStatusManagerTest, STORAGE_GetAppSize_NonCurrentUser_0001, testi
     auto service = DelayedSingleton<StorageStatusManager>::GetInstance();
 
     // Set up mock data
-    g_callingUid = 100 * 200000;
+    g_callingAppUid = 100 * 200000;
     g_mockBundleStats = {100, 200, 300, 400, 500}; // app, local, distributed, database, cache
     g_mockZeroUserBundleStats = {10, 20, 30, 40, 50};
     g_getAllBundleStatsRet = true;
@@ -587,7 +582,7 @@ HWTEST_F(StorageStatusManagerTest, STORAGE_GetAppSize_ZeroUserFail_0001, testing
     auto service = DelayedSingleton<StorageStatusManager>::GetInstance();
 
     // Set up mock data - zeroUser stats will fail
-    g_callingUid = 100 * 200000;
+    g_callingAppUid = 100 * 200000;
     g_mockBundleStats = {100, 200, 300, 400, 500};
     g_getAllBundleStatsRet = false; // Simulate failure
 
@@ -617,7 +612,7 @@ HWTEST_F(StorageStatusManagerTest, STORAGE_GetAppSize_CurrentUserOverflow_0001, 
     auto service = DelayedSingleton<StorageStatusManager>::GetInstance();
 
     // Set up mock data - values that will cause overflow
-    g_callingUid = 101 * 200000;
+    g_callingAppUid = 101 * 200000;
     g_mockBundleStats = {std::numeric_limits<int64_t>::max(), 1, 0, 0, 0};
     g_mockZeroUserBundleStats = {10, 20, 30, 40, 50};
     g_getAllBundleStatsRet = true;
@@ -649,7 +644,7 @@ HWTEST_F(StorageStatusManagerTest, STORAGE_GetAppSize_NegativeResult_0001, testi
     auto service = DelayedSingleton<StorageStatusManager>::GetInstance();
 
     // Set up mock data - zeroUser LOCAL > bundleStats LOCAL
-    g_callingUid = 100 * 200000;
+    g_callingAppUid = 100 * 200000;
     g_mockBundleStats = {100, 50, 300, 400, 500}; // LOCAL = 50
     g_mockZeroUserBundleStats = {10, 100, 30, 40, 50}; // zeroUser LOCAL = 100
     g_getAllBundleStatsRet = true;

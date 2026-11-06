@@ -21,7 +21,7 @@
 
 extern uint32_t g_mockCallingTokenId;
 extern uint64_t g_mockCallingFullTokenId;
-extern int32_t g_mockCallingUid;
+extern int32_t g_mockCallingAppUid;
 extern int32_t g_mockVerifyAccessTokenResult;
 extern uint32_t g_mockTokenTypeFlag;
 extern bool g_mockIsSystemApp;

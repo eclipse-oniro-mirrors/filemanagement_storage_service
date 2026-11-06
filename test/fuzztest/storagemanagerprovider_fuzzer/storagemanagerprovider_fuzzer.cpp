@@ -50,12 +50,6 @@ namespace OHOS {
 #ifdef CONFIG_IPC_SINGLE
 using namespace IPC_SINGLE;
 #endif
-pid_t IPCSkeleton::GetCallingUid()
-{
-    pid_t callingUid = 5523;
-    return callingUid;
-}
-
 pid_t IPCSkeleton::GetCallingAppUid()
 {
     pid_t callingAppUid = 5523;

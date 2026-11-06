@@ -67,22 +67,17 @@ int AccessTokenKit::GetNativeTokenInfo(AccessTokenID tokenID, NativeTokenInfo& n
 }
 }
 
-pid_t g_testCallingUid = 5523;
-pid_t g_testUpdateServiceUid = 6666;
+pid_t g_testCallingAppUid = 5523;
+pid_t g_testUpdateServiceAppUid = 6666;
 bool g_returnUpdateService = false;
 const uint32_t TOP_USER_ID = 10738;
 namespace OHOS {
-pid_t IPCSkeleton::GetCallingUid()
-{
-    if (g_returnUpdateService) {
-        return g_testUpdateServiceUid;
-    }
-    return g_testCallingUid;
-}
-
 pid_t IPCSkeleton::GetCallingAppUid()
 {
-    return IPCSkeleton::GetCallingUid();
+    if (g_returnUpdateService) {
+        return g_testUpdateServiceAppUid;
+    }
+    return g_testCallingAppUid;
 }
 
 uint32_t IPCSkeleton::GetCallingTokenID()
@@ -173,8 +168,8 @@ void StringVecToRawData(const std::vector<std::string> &stringVec, StorageFileRa
 
 class ScopedTestUid {
 public:
-    explicit ScopedTestUid(pid_t newUid) : oldUid(g_testCallingUid) { g_testCallingUid = newUid; }
-    ~ScopedTestUid() { g_testCallingUid = oldUid; }
+    explicit ScopedTestUid(pid_t newUid) : oldUid(g_testCallingAppUid) { g_testCallingAppUid = newUid; }
+    ~ScopedTestUid() { g_testCallingAppUid = oldUid; }
 private:
     pid_t oldUid;
 };
@@ -835,7 +830,7 @@ HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_SetExtBundleStat
 
 /**
  * @tc.name: StorageManagerProviderTest_MountCloudDiskFuse_001
- * @tc.desc: Verify MountCloudDiskFuse passes UID and permission checks with valid params.
+ * @tc.desc: Verify MountCloudDiskFuse passes AppUID and permission checks with valid params.
  * @tc.type: FUNC
  */
 HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_MountCloudDiskFuse_001, TestSize.Level1)
@@ -944,7 +939,7 @@ HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_MountCloudDiskFu
 
 /**
  * @tc.name: StorageManagerProviderTest_UMountCloudDiskFuse_001
- * @tc.desc: Verify UMountCloudDiskFuse passes UID and permission checks with valid params.
+ * @tc.desc: Verify UMountCloudDiskFuse passes AppUID and permission checks with valid params.
  * @tc.type: FUNC
  */
 HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_UMountCloudDiskFuse_001, TestSize.Level1)
@@ -1044,7 +1039,7 @@ HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_UMountCloudDiskF
 
 /**
  * @tc.name: StorageManagerProviderTest_MountUdmfClipFuse_001
- * @tc.desc: Verify MountUdmfClipFuse with valid UDMF uid and valid path prefix.
+ * @tc.desc: Verify MountUdmfClipFuse with valid UDMF appUid and valid path prefix.
  * @tc.type: FUNC
  * @tc.require: 20260807938859
  */
@@ -1255,7 +1250,7 @@ HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_UMountUdmfClipFu
 
 /**
  * @tc.name: StorageManagerProviderTest_UMountUdmfClipFuse_005
- * @tc.desc: Verify UMountUdmfClipFuse passes all checks with UDMF uid and valid path.
+ * @tc.desc: Verify UMountUdmfClipFuse passes all checks with UDMF appUid and valid path.
  * @tc.type: FUNC
  * @tc.require: 20260807938859
  */
