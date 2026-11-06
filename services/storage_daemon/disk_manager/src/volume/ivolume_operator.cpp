@@ -63,6 +63,8 @@ int32_t IVolumeOperator::EnsureMountPath(const std::string& mountPath)
     struct stat statbuf;
     if (lstat(mountPath.c_str(), &statbuf) == 0) {
         LOGI("IVolumeOperator::EnsureMountPath path exists, removing");
+        int detachRet = umount2(mountPath.c_str(), MNT_DETACH);
+        LOGW("IVolumeOperator::EnsureMountPath pre-remove umount2 ret=%{public}d", detachRet);
         if (remove(mountPath.c_str()) != 0) {
             LOGE("IVolumeOperator::EnsureMountPath remove failed, errno=%{public}d", errno);
             return E_SYS_KERNEL_ERR;
