@@ -448,6 +448,40 @@ std::string GetCDType(const std::string &diskPath)
     return "";
 }
 
+std::string GetUdfRev(const std::string &diskPath)
+{
+    LOGI("[L8:DiskUtils] GetUdfRev: >>> ENTER <<< diskPath=%{public}s", diskPath.c_str());
+    if (diskPath.empty() || diskPath[0] == '-') {
+        LOGE("[L8:DiskUtils] GetUdfRev: invalid diskPath");
+        return "";
+    }
+    std::vector<std::string> cmd = { "udfinfo", diskPath };
+    std::vector<std::string> output;
+    int32_t err = ForkExec(cmd, &output);
+    if (err != E_OK) {
+        LOGE("[L8:DiskUtils] GetUdfRev: ForkExec failed err=%{public}d", err);
+        return "";
+    }
+    constexpr const char *udfrevPrefix = "udfrev=";
+    const size_t prefixLen = std::string(udfrevPrefix).size();
+    for (const auto &line : output) {
+        auto pos = line.find(udfrevPrefix);
+        if (pos == std::string::npos) {
+            continue;
+        }
+        std::string rev = line.substr(pos + prefixLen);
+        auto nl = rev.find_first_of("\r\n");
+        if (nl != std::string::npos) {
+            rev.erase(nl);
+        }
+        std::string result = "udf" + rev;
+        LOGI("[L8:DiskUtils] GetUdfRev: <<< EXIT SUCCESS <<< udfrev=%{public}s", result.c_str());
+        return result;
+    }
+    LOGW("[L8:DiskUtils] GetUdfRev: udfrev not found in udfinfo output");
+    return "";
+}
+
 std::string GetOpticalDriveType(const std::string &diskPath)
 {
     LOGI("[L8:DiskUtils] GetOpticalDriveType: >>> ENTER <<< diskPath=%{public}s", diskPath.c_str());

@@ -42,6 +42,7 @@ std::string GetBlkidDataByCmd(std::vector<std::string> &cmd);
 std::string DiskType2Str(uint8_t diskType);
 std::string GetCDType(const std::string &diskPath);
 std::string GetOpticalDriveType(const std::string &diskPath);
+std::string GetUdfRev(const std::string &diskPath);
 int SendScsiCmd(int fd, const ScsiCmdInfo &cmdInfo);
 int SendScsiCmd(int fd, const ScsiCmdInfo &cmdInfo, uint8_t *senseBuf, int senseBufLen);
 int SendScsiCmdByPath(const std::string &diskPath, uint8_t *cdb, int cdbLen, uint8_t *buf, int len);

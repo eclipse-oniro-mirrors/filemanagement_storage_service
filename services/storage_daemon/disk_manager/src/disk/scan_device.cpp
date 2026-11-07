@@ -289,6 +289,7 @@ std::vector<BlockInfo> ScanDevice::GetExternalDisks(const std::string &devName, 
 
             extraInfoJson["SPEED_INFO"] = speedInfo;
             extraInfoJson["MAX_WRITE_SPEED"] = maxWriteSpeed + "X";
+            extraInfoJson["UDF_REV"] = GetUdfRev(devPath);
             info.ODD_INFO = extraInfoJson;
         }
     }
@@ -544,6 +545,7 @@ int ScanDevice::GetBlockInfo(const std::string &deviceName, const bool isNvmeDev
 
             extraInfoJson["SPEED_INFO"] = speedInfo;
             extraInfoJson["MAX_WRITE_SPEED"] = maxWriteSpeed + "X";
+            extraInfoJson["UDF_REV"] = GetUdfRev(devPath);
             blockInfo.ODD_INFO = extraInfoJson;
         }
     }
