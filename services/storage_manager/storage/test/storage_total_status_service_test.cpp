@@ -104,7 +104,7 @@ pid_t IPCSkeleton::GetCallingAppUid()
 {
     return g_callingAppUid;
 }
-}
+} // namespace OHOS
 
 namespace OHOS::StorageManager {
 ErrCode BundleManagerAdapterProxy::GetNameAndIndexForUid(int32_t uid, std::string &bundleName, int32_t &appIndex)

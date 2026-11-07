@@ -17,6 +17,7 @@
 #include <sys/syscall.h>
 #include <climits>
 #include <cstdlib>
+#include <string>
 
 #include "utils/storage_radar.h"
 #include <singleton.h>
@@ -796,7 +797,7 @@ int32_t StorageManagerProvider::LockUserScreen(uint32_t userId)
 
     if (bundleName != SCENEBOARD_BUNDLE_NAME && bundleName != SYSTEMUI_BUNDLE_NAME) {
         LOGE("permissionCheck error, caller is %{public}s(%{public}d), should be %{public}s", bundleName.c_str(),
-             appUid, SCENEBOARD_BUNDLE_NAME.c_str());
+             appUid, SCENEBOARD_BUNDLE_NAME);
         return E_PERMISSION_DENIED;
     }
     if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER_CRYPT)) {
