@@ -85,6 +85,7 @@ ohos_unittest("KeyManagerTest") {
     "json:nlohmann_json_static",
     "openssl:libcrypto_shared",
     "os_account:os_account_innerkits",
+    "samgr:samgr_proxy",
   ]
 
   if (enable_user_auth_framework) {
@@ -627,6 +628,7 @@ ohos_unittest("KeyManagerExtTest") {
     "json:nlohmann_json_static",
     "openssl:libcrypto_shared",
     "os_account:os_account_innerkits",
+    "samgr:samgr_proxy",
   ]
 
   if (enable_user_auth_framework) {
@@ -710,6 +712,7 @@ ohos_unittest("KeyManagerConcurrentTest") {
     "json:nlohmann_json_static",
     "openssl:libcrypto_shared",
     "os_account:os_account_innerkits",
+    "samgr:samgr_proxy",
   ]
 
   if (enable_user_auth_framework) {

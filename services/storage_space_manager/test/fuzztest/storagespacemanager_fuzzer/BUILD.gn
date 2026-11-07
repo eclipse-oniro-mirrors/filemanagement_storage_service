@@ -49,6 +49,7 @@ ohos_fuzztest("StorageSpaceManagerFuzzTest") {
   external_deps = [
     "c_utils:utils",
     "hilog:libhilog",
+    "samgr:samgr_proxy",
   ]
 
   subsystem_name = "filemanagement"
