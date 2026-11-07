@@ -678,7 +678,8 @@ int32_t StorageDaemonProvider::SetDirEncryptionPolicy(uint32_t userId, const std
     HiAudit::GetInstance().WriteStart("SetDirEncryptionPolicy", message);
     auto appUid = IPCSkeleton::GetCallingAppUid();
     if (appUid != STORAGE_MANAGER_UID) {
-        LOGE("[L1:StorageDaemonProvider] SetDirEncryptionPolicy: <<< EXIT FAILED <<< uid=%{public}d is invalid", appUid);
+        LOGE("[L1:StorageDaemonProvider] SetDirEncryptionPolicy: <<< EXIT FAILED <<< uid=%{public}d is invalid",
+             appUid);
         return E_PERMISSION_DENIED;
     }
     int32_t ret = CheckUserIdRange(userId);
@@ -1575,7 +1576,8 @@ int32_t StorageDaemonProvider::GetUserNeedActiveStatus(uint32_t userId, bool &ne
     HiAudit::GetInstance().WriteStart("GetUserNeedActiveStatus", message);
     auto appUid = IPCSkeleton::GetCallingAppUid();
     if (appUid != STORAGE_MANAGER_UID) {
-        LOGE("[L1:StorageDaemonProvider] GetUserNeedActiveStatus: <<< EXIT FAILED <<< uid=%{public}d is invalid", appUid);
+        LOGE("[L1:StorageDaemonProvider] GetUserNeedActiveStatus: <<< EXIT FAILED <<< uid=%{public}d is invalid",
+             appUid);
         return E_PERMISSION_DENIED;
     }
     int32_t err = CheckUserIdRange(userId);
@@ -2179,7 +2181,8 @@ int32_t StorageDaemonProvider::InactiveUserPublicDirKey(uint32_t userId)
     LOGI("[L1:StorageDaemonProvider] InactiveUserPublicDirKey: >>> ENTER <<< userId=%{public}u", userId);
     auto appUid = IPCSkeleton::GetCallingAppUid();
     if (appUid != STORAGE_MANAGER_UID) {
-        LOGE("[L1:StorageDaemonProvider] InactiveUserPublicDirKey: <<< EXIT FAILED <<< uid=%{public}d is invalid", appUid);
+        LOGE("[L1:StorageDaemonProvider] InactiveUserPublicDirKey: <<< EXIT FAILED <<< uid=%{public}d is invalid",
+             appUid);
         return E_PERMISSION_DENIED;
     }
     int32_t err = CheckUserIdRange(userId);
@@ -2232,7 +2235,8 @@ int32_t StorageDaemonProvider::QueryOccupiedSpaceForSa(std::vector<UidSaInfo> &v
     HiAudit::GetInstance().WriteStart("QueryOccupiedSpaceForSa", "type: " + std::to_string(type));
     auto appUid = IPCSkeleton::GetCallingAppUid();
     if (appUid != STORAGE_MANAGER_UID) {
-        LOGE("[L1:StorageDaemonProvider] QueryOccupiedSpaceForSa: <<< EXIT FAILED <<< uid=%{public}d is invalid", appUid);
+        LOGE("[L1:StorageDaemonProvider] QueryOccupiedSpaceForSa: <<< EXIT FAILED <<< uid=%{public}d is invalid",
+             appUid);
         return E_PERMISSION_DENIED;
     }
     QuotaManager::GetInstance().GetUidStorageStats(vec, totalSize, bundleNameAndUid, type);
@@ -2331,7 +2335,8 @@ int32_t StorageDaemonProvider::GetDirListSpaceByPaths(const std::vector<std::str
         "paths.size: " + std::to_string(paths.size()) + " uids.size: " + std::to_string(uids.size()));
     auto appUid = IPCSkeleton::GetCallingAppUid();
     if (appUid != STORAGE_MANAGER_UID) {
-        LOGE("[L1:StorageDaemonProvider] GetDirListSpaceByPaths: <<< EXIT FAILED <<< uid=%{public}d is invalid", appUid);
+        LOGE("[L1:StorageDaemonProvider] GetDirListSpaceByPaths: <<< EXIT FAILED <<< uid=%{public}d is invalid",
+             appUid);
         return E_PERMISSION_DENIED;
     }
     int32_t ret = QuotaManager::GetInstance().GetDirListSpaceByPaths(paths, uids, resultDirs, largeFiles, largeDirs);
@@ -2458,7 +2463,8 @@ int32_t StorageDaemonProvider::DestroyBlockDeviceNode(const std::string &devPath
     LOGI("[L1:StorageDaemonProvider] DestroyBlockDeviceNode: >>> ENTER <<< devPath=%{public}s", devPath.c_str());
     auto appUid = IPCSkeleton::GetCallingAppUid();
     if (appUid != DISK_MANAGER_UID) {
-        LOGE("[L1:StorageDaemonProvider] DestroyBlockDeviceNode: <<< EXIT FAILED <<< uid=%{public}d is invalid", appUid);
+        LOGE("[L1:StorageDaemonProvider] DestroyBlockDeviceNode: <<< EXIT FAILED <<< uid=%{public}d is invalid",
+             appUid);
         return E_PERMISSION_DENIED;
     }
     std::string verifiedPath;
