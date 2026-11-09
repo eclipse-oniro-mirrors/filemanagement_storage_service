@@ -116,6 +116,7 @@ group("storage_daemon_provider_fuzztest") {
     "storagedaemonprovidergetvolumeopprocess_fuzzer:fuzztest",
     "storagedaemonproviderverifyburndata_fuzzer:fuzztest",
     "storagedaemonproviderburn_fuzzer:fuzztest",
+    "storagedaemonprovidergetburnfilelist_fuzzer:fuzztest",
     "storagedaemonproviderqueryusbisinuse_fuzzer:fuzztest",
     "storagedaemonproviderexecutecommand_fuzzer:fuzztest",
     "storagedaemonprovidermountclouddiskfuse_fuzzer:fuzztest",

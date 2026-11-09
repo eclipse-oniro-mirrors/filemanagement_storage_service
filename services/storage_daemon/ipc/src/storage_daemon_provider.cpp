@@ -15,12 +15,16 @@
 
 #include "ipc/storage_daemon_provider.h"
 
+#include <algorithm>
 #include <cinttypes>
 #include <climits>
 #include <csignal>
+#include <cstring>
+#include <dirent.h>
 #include <dlfcn.h>
 #include <regex>
 #include <sstream>
+#include <sys/stat.h>
 #include <thread>
 #include <unistd.h>
 
@@ -116,6 +120,10 @@ constexpr int32_t VOL_OP_ERASE = 20;
 constexpr int32_t VOL_OP_EJECT = 21;
 constexpr int32_t VOL_OP_BURN = 22;
 constexpr int32_t VOL_OP_CREATE_ISO_IMAGE = 23;
+constexpr int MAX_LIST_DEPTH = 100;
+constexpr size_t MAX_BURN_FILE_LIST_TOTAL = 200000;
+constexpr size_t MAX_BURN_PAGE_BYTES = 512 * 1024;
+constexpr size_t UTF16_BYTES_PER_CHAR = 2;
 
 VolumeOpDiagContext MakeOpDiagContext(const char *funcName, int32_t bizStage, int32_t opType,
                                       const std::string &devPath, const std::string &fsType)
@@ -182,6 +190,51 @@ int32_t ReturnWithOpDiag(int32_t ret)
 {
     FinishOpDiag(ret);
     return ret;
+}
+
+void ListFilesRecursive(const std::string &dirPath, std::vector<std::string> &fileList, int depth)
+{
+    if (depth > MAX_LIST_DEPTH) {
+        LOGW("[StorageDaemonProvider] ListFilesRecursive: max depth exceeded, dir=%{public}s",
+             GetAnonyString(dirPath).c_str());
+        return;
+    }
+    if (fileList.size() >= MAX_BURN_FILE_LIST_TOTAL) {
+        return;
+    }
+    DIR *dir = opendir(dirPath.c_str());
+    if (dir == nullptr) {
+        LOGE("[StorageDaemonProvider] ListFilesRecursive: opendir failed, dir=%{public}s errno=%{public}d",
+             GetAnonyString(dirPath).c_str(), errno);
+        return;
+    }
+    struct dirent *entry = nullptr;
+    while ((entry = readdir(dir)) != nullptr) {
+        if (fileList.size() >= MAX_BURN_FILE_LIST_TOTAL) {
+            break;
+        }
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+            continue;
+        }
+        std::string fullPath = dirPath;
+        if (fullPath.back() != '/') {
+            fullPath += '/';
+        }
+        fullPath += entry->d_name;
+        if (entry->d_type == DT_DIR) {
+            ListFilesRecursive(fullPath, fileList, depth + 1);
+        } else if (entry->d_type == DT_UNKNOWN) {
+            struct stat st;
+            if (stat(fullPath.c_str(), &st) == 0 && S_ISDIR(st.st_mode)) {
+                ListFilesRecursive(fullPath, fileList, depth + 1);
+            } else {
+                fileList.push_back(fullPath);
+            }
+        } else {
+            fileList.push_back(fullPath);
+        }
+    }
+    closedir(dir);
 }
 } // namespace
 #endif
@@ -3443,6 +3496,52 @@ int32_t StorageDaemonProvider::CreateDmLinear(const std::string &sourceDevPath,
  
     LOGI("[L1:StorageDaemonProvider] CreateDmLinear: <<< EXIT SUCCESS <<< dmDev=(%{public}u,%{public}u)",
          major(static_cast<dev_t>(dmDev)), minor(static_cast<dev_t>(dmDev)));
+    return E_OK;
+#else
+    return E_NOT_SUPPORT;
+#endif
+}
+
+int32_t StorageDaemonProvider::GetBurnFileList(const std::string &dirPath, int32_t offset, int32_t limit,
+                                               std::vector<std::string> &fileList, bool &hasMore)
+{
+#ifdef DISK_MANAGER
+    LOGI("[L1:StorageDaemonProvider] GetBurnFileList: ENTER offset=%{public}d limit=%{public}d",
+         offset, limit);
+    fileList.clear();
+    hasMore = false;
+    auto uid = IPCSkeleton::GetCallingUid();
+    if (uid != DISK_MANAGER_UID) {
+        LOGE("[L1:StorageDaemonProvider] GetBurnFileList: uid=%{public}d is invalid", uid);
+        return E_PERMISSION_DENIED;
+    }
+    if (dirPath.empty() || IsFilePathInvalid(dirPath)) {
+        LOGE("[L1:StorageDaemonProvider] GetBurnFileList: dirPath is invalid");
+        return E_PARAMS_INVALID;
+    }
+    if (offset < 0 || limit <= 0) {
+        LOGE("[L1:StorageDaemonProvider] GetBurnFileList: offset=%{public}d limit=%{public}d invalid", offset, limit);
+        return E_PARAMS_INVALID;
+    }
+    std::vector<std::string> allFiles;
+    ListFilesRecursive(dirPath, allFiles, 0);
+    if (static_cast<size_t>(offset) >= allFiles.size()) {
+        LOGI("[L1:StorageDaemonProvider] GetBurnFileList: offset beyond total=%{public}zu", allFiles.size());
+        return E_OK;
+    }
+    // 按 parcel 字节预算截断：每条 String16 开销 = 4 bytes length 前缀 + path.length()*2 bytes UTF-16
+    size_t accumulated = 0;
+    size_t idx = static_cast<size_t>(offset);
+    while (idx < allFiles.size() && accumulated < MAX_BURN_PAGE_BYTES &&
+           static_cast<int32_t>(fileList.size()) < limit) {
+        accumulated += sizeof(int32_t) + allFiles[idx].size() * UTF16_BYTES_PER_CHAR;
+        fileList.push_back(std::move(allFiles[idx]));
+        idx++;
+    }
+    hasMore = (idx < allFiles.size());
+    LOGI("[L1:StorageDaemonProvider] GetBurnFileList: EXIT total=%{public}zu returned=%{public}zu "
+         "bytes=%{public}zu hasMore=%{public}d",
+         allFiles.size(), fileList.size(), accumulated, hasMore);
     return E_OK;
 #else
     return E_NOT_SUPPORT;

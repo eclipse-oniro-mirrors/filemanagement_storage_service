@@ -531,5 +531,16 @@ int32_t StorageDaemonProxy::CreateDmLinear(const std::string &sourceDevPath,
 {
     return E_OK;
 }
+
+int32_t StorageDaemonProxy::GetBurnFileList(const std::string &srcDir, int32_t offset, int32_t pageSize,
+                                            std::vector<std::string> &fileList, bool &hasMore)
+{
+    (void)srcDir;
+    (void)offset;
+    (void)pageSize;
+    (void)fileList;
+    (void)hasMore;
+    return E_OK;
+}
 } // StorageDaemon
 } // namespace OHOS
