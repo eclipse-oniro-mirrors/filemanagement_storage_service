@@ -19,6 +19,7 @@
 #include "unique_fd.h"
 #include "storage_service_log.h"
 #include "storage_statistics_radar.h"
+#include "string_utils.h"
 
 #include "cJSON.h"
 
@@ -208,7 +209,12 @@ bool StorageStatisticRadar::ParseJsonInfo(uint32_t userId, const std::string &co
     std::string count;
     std::vector<uint64_t> countVec;
     while (std::getline(iss, count, ',')) {
-        countVec.push_back(std::atoll(count.c_str()));
+        int64_t countVal;
+        if (!ConvertStringToInt(count, countVal) || countVal < 0) {
+            LOGE("ParseJsonInfo: invalid count value, count=%{public}s", count.c_str());
+            return false;
+        }
+        countVec.push_back(static_cast<uint64_t>(countVal));
     }
     if (countVec.size() != OP_COUNT) {
         LOGE("Statistic count num is invalid");

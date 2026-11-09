@@ -290,7 +290,7 @@ HWTEST_F(MountManagerTest, Storage_Daemon_MountManagerTest_PrepareAppdataDir_001
     EXPECT_EQ(ret, E_OK);
 
     std::vector<int32_t> userIds;
-    MountManager::GetInstance().GetAllUserId(userIds);
+    GetAllUserIds(userIds);
     if (!userIds.empty()) {
         EXPECT_CALL(*fileUtilMoc_, PrepareDir(_, _, _, _)).WillRepeatedly(Return(false));
     }

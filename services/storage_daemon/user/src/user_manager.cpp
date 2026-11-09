@@ -166,7 +166,7 @@ int32_t UserManager::PrepareAllUserEl1Dirs()
     LOGI("[L2:UserManager] PrepareAllUserEl1Dirs: >>> ENTER <<<");
     HiAudit::GetInstance().WriteStart("PrepareAllUserEl1Dirs");
     std::vector<int32_t> userIds {GLOBAL_USER_ID};
-    MountManager::GetInstance().GetAllUserId(userIds);
+    GetAllUserIds(userIds);
     int32_t ret = E_OK;
     for (const int32_t &item: userIds) {
         auto err = PrepareUserDirs(item, IStorageDaemonEnum::CRYPTO_FLAG_EL1);

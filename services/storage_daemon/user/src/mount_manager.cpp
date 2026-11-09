@@ -39,7 +39,6 @@ using namespace std;
 #define HMDFS_IOC_FORBID_OPEN _IO(HMDFS_IOC, 12)
 using namespace OHOS::StorageService;
 constexpr int32_t PATH_MAX_FOR_LINK = 4096;
-constexpr int32_t DEFAULT_USERID = 100;
 constexpr int32_t ERROR_FILE_NOT_FOUND = 22;
 MountManager &MountManager::GetInstance()
 {
@@ -925,29 +924,6 @@ bool MountManager::MediaFuseDirFlag(const std::string &path)
     return false;
 }
 
-void MountManager::GetAllUserId(std::vector<int32_t> &userIds)
-{
-    const std::string path(APP_EL1_PATH);
-    if (!DirExist(path)) {
-        return;
-    }
-    std::error_code iterEc;
-    for (const auto &entry : filesystem::directory_iterator(path, iterEc)) {
-        if (!entry.is_directory()) {
-            continue;
-        }
-        std::string subPath = entry.path().filename().string();
-        if (!StringIsNumber(subPath)) {
-            continue;
-        }
-        int32_t userId = atoi(subPath.c_str());
-        if (userId < DEFAULT_USERID) {
-            continue;
-        }
-        userIds.push_back(userId);
-    }
-}
-
 bool MountManager::DirExist(const std::string &dir)
 {
     filesystem::path filePath(dir);
@@ -1018,7 +994,7 @@ int32_t MountManager::PrepareAppdataDir(int32_t userId)
     HiAudit::GetInstance().WriteStart("PrepareAppdataDir", "userId=" + std::to_string(userId));
     if (userId == 0) {
         std::vector<int32_t> userIds;
-        GetAllUserId(userIds);
+        GetAllUserIds(userIds);
         if (userIds.empty()) {
             LOGI("[L2:MountManager] PrepareAppdataDir: <<< EXIT SUCCESS <<< userIds empty");
             HiAudit::GetInstance().WriteEnd("PrepareAppdataDir", E_OK, "userIds empty");
