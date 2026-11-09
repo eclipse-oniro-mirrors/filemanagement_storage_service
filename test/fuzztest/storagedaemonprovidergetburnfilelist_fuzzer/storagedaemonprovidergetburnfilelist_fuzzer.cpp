@@ -39,7 +39,7 @@ bool GetBurnFileListFuzzTest(const uint8_t *data, size_t size)
         return false;
     }
     FuzzedDataProvider fdp(data, size);
-    uint32_t code = static_cast<uint32_t>(IStorageDaemonIpcCode::ADDON_GET_BURN_FILE_LIST);
+    uint32_t code = static_cast<uint32_t>(IStorageDaemonIpcCode::COMMAND_GET_BURN_FILE_LIST);
     MessageParcel datas;
     datas.WriteInterfaceToken(StorageDaemonStub::GetDescriptor());
     datas.WriteString(fdp.ConsumeRandomLengthString(MAX_PATH_LENGTH));
