@@ -260,12 +260,19 @@ HWTEST_F(StorageStatisticRadarTest, StorageStatisticRadarTest_ParseJsonInfo_002,
         "1,2,3,4,5,6,7,8,9,10,11,",
         ",2,3,4,5,6,7,8,9,10,11,12",
         "1,2,3,4,5,6,7,8,9,10,11,1.5",
+        "1,2,-3,4,5,6,7,8,9,10,11,12",
+        "-1,2,3,4,5,6,7,8,9,10,11,12",
+        "1,2,3,4,5,6,7,8,9,10,11,-12",
     };
     for (const auto &countInfo : invalidCountInfos) {
         std::map<uint32_t, RadarStatisticInfo> statistics;
         EXPECT_FALSE(radar.ParseJsonInfo(userId, countInfo, statistics)) << "countInfo=" << countInfo;
         EXPECT_TRUE(statistics.empty()) << "countInfo=" << countInfo;
     }
+
+    std::map<uint32_t, RadarStatisticInfo> zeroStatistics;
+    EXPECT_TRUE(radar.ParseJsonInfo(userId, "0,0,0,0,0,0,0,0,0,0,0,0", zeroStatistics));
+    EXPECT_FALSE(zeroStatistics.empty());
     GTEST_LOG_(INFO) << "StorageStatisticRadarTest_ParseJsonInfo_002 end";
 }
 } // STORAGE_DAEMON
