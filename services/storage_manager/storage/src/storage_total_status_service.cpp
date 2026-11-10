@@ -16,6 +16,7 @@
 #include "storage/storage_total_status_service.h"
 
 #include "hitrace_meter.h"
+#include <cerrno>
 #include <cstdint>
 #include <cstdlib>
 #include <sys/statvfs.h>
@@ -36,6 +37,17 @@ namespace {
     constexpr int64_t SECTOR_SIZE = 512;
     constexpr int32_t ROUND_HALF = 2;
     constexpr const char *BOOT_DEVICE_SIZE_PATH = "/proc/bootdevice/size";
+
+    bool SafeStrToInt64(const std::string &str, int64_t &result)
+    {
+        errno = 0;
+        long long val = strtoll(str.c_str(), nullptr, 10);
+        if (errno == ERANGE) {
+            return false;
+        }
+        result = static_cast<int64_t>(val);
+        return true;
+    }
 } // namespace
 
 StorageTotalStatusService::StorageTotalStatusService() {}
@@ -92,9 +104,9 @@ int32_t StorageTotalStatusService::GetTotalSize(int64_t &totalSize)
     if (rawSize > ONE_TB) {
         std::string content;
         if (OHOS::LoadStringFromFile(BOOT_DEVICE_SIZE_PATH, content) && !content.empty()) {
-            int64_t sectorCount = atoll(content.c_str());
-            if (sectorCount <= 0) {
-                LOGE("GetTotalSize: atoll failed for %{public}s", BOOT_DEVICE_SIZE_PATH);
+            int64_t sectorCount = 0;
+            if (!SafeStrToInt64(content, sectorCount) || sectorCount <= 0) {
+                LOGE("GetTotalSize: invalid boot device size for %{public}s", BOOT_DEVICE_SIZE_PATH);
                 totalSize = GetRoundSize(rawSize);
             } else if (sectorCount <= INT64_MAX / SECTOR_SIZE) {
                 int64_t deviceSize = sectorCount * SECTOR_SIZE;

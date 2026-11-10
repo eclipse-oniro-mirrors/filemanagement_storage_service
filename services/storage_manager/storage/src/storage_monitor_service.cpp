@@ -15,6 +15,8 @@
 
 #include "storage/storage_monitor_service.h"
 
+#include <cerrno>
+#include <cstdlib>
 #include <sstream>
 #include <string>
 #include <ctime>
@@ -36,6 +38,20 @@
 #include "storage_stats.h"
 
 using namespace OHOS::StorageService;
+
+namespace {
+bool SafeStrToInt64(const std::string &str, int64_t &result)
+{
+    errno = 0;
+    long long val = strtoll(str.c_str(), nullptr, 10);
+    if (errno == ERANGE) {
+        return false;
+    }
+    result = static_cast<int64_t>(val);
+    return true;
+}
+} // namespace
+
 namespace OHOS {
 namespace StorageManager {
 constexpr int32_t ONE_MB = 1024 * 1024;
@@ -247,16 +263,21 @@ void StorageMonitorService::ParseStorageInodeParameters(int64_t totalInode, cons
         }
 
         if (value.length() > 1 && value.substr(value.length() - 1) == "%") {
-            int32_t percentage = std::atoi(value.substr(0, value.length() - 1).c_str());
-            if (percentage < 0 || percentage > CONST_NUM_ONE_HUNDRED) {
-                LOGE("Invalid percentage value, percentage=%{public}d", percentage);
+            int64_t percentage = 0;
+            if (!SafeStrToInt64(value.substr(0, value.length() - 1), percentage) ||
+                percentage < 0 || percentage > CONST_NUM_ONE_HUNDRED) {
+                LOGE("Invalid percentage value, value=%{public}s", value.c_str());
             } else {
                 int64_t inodeSize = (totalInode * percentage) / CONST_NUM_ONE_HUNDRED;
-                inodeThresholds_[key] = static_cast<int64_t>(inodeSize);
+                inodeThresholds_[key] = inodeSize;
             }
         } else if (value.length() > 0 && isNumberString(value)) {
-            int64_t inodeSize = std::atoi(value.c_str());
-            inodeThresholds_[key] = inodeSize;
+            int64_t inodeSize = 0;
+            if (!SafeStrToInt64(value, inodeSize)) {
+                LOGE("Invalid inode value, value=%{public}s", value.c_str());
+            } else {
+                inodeThresholds_[key] = inodeSize;
+            }
         } else {
             LOGE("parameter value format is invalid, value=%{public}s", value.c_str());
         }
@@ -281,28 +302,29 @@ void StorageMonitorService::ParseStorageSizeParameters(int64_t totalSize, const 
         }
 
         if (value.length() > 1 && value.substr(value.length() - 1) == "%") {
-            int percentage = std::atoi(value.substr(0, value.length() - 1).c_str());
-            if (percentage < 0 || percentage > CONST_NUM_ONE_HUNDRED) {
-                LOGE("Invalid percentage value");
+            int64_t percentage = 0;
+            if (!SafeStrToInt64(value.substr(0, value.length() - 1), percentage) ||
+                percentage < 0 || percentage > CONST_NUM_ONE_HUNDRED) {
+                LOGE("Invalid percentage value, value=%{public}s", value.c_str());
             } else {
                 int64_t size = (totalSize * percentage) / CONST_NUM_ONE_HUNDRED;
-                thresholds[key] = static_cast<int64_t>(size);
+                thresholds[key] = size;
             }
         } else if (value.length() > 1 && value.substr(value.length() - 1) == "G") {
-            int gigabytes = std::atoi(value.substr(0, value.length() - 1).c_str());
-            if (gigabytes < 0) {
-                LOGE("Storage value cannot be negative: %{public}d G", gigabytes);
+            int64_t gigabytes = 0;
+            if (!SafeStrToInt64(value.substr(0, value.length() - 1), gigabytes) || gigabytes < 0) {
+                LOGE("Invalid storage value, value=%{public}s", value.c_str());
             } else {
-                int64_t size = static_cast<int64_t>(gigabytes) * ONE_GB;
-                thresholds[key] = static_cast<int64_t>(size);
+                int64_t size = gigabytes * ONE_GB;
+                thresholds[key] = size;
             }
         } else if (value.length() > 1 && value.substr(value.length() - 1) == "M") {
-            int megabytes = std::atoi(value.substr(0, value.length() - 1).c_str());
-            if (megabytes < 0) {
-                LOGE("Storage value cannot be negative: %{public}d M", megabytes);
+            int64_t megabytes = 0;
+            if (!SafeStrToInt64(value.substr(0, value.length() - 1), megabytes) || megabytes < 0) {
+                LOGE("Invalid storage value, value=%{public}s", value.c_str());
             } else {
-                int64_t size = static_cast<int64_t>(megabytes) * ONE_MB;
-                thresholds[key] = static_cast<int64_t>(size);
+                int64_t size = megabytes * ONE_MB;
+                thresholds[key] = size;
             }
         } else {
             LOGE("parameter value format is invalid");
