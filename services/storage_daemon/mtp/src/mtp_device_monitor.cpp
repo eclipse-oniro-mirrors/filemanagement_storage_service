@@ -28,12 +28,19 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/xattr.h>
+#include <chrono>
+#include <cinttypes>
+#include <memory>
 #include <thread>
 #include <unistd.h>
+#include "cJSON.h"
+#include "event_info.h"
+#include "ipc/storage_manager_client.h"
 #include "mtp/mtp_lib_loader.h"
 #include "mtp/usb_event_subscriber.h"
 #include "parameter.h"
 #include "parameters.h"
+#include "sg_collect_client.h"
 #include "storage_service_errno.h"
 #include "storage_service_log.h"
 #include "storage_radar.h"
@@ -65,7 +72,48 @@ constexpr int32_t ERROR_CODE_GET_DEVICE_LIST_FAILED = -3;
 constexpr int MIN_VALUE = 0;
 constexpr int MAX_VALUE = 255;
 #endif
+constexpr int64_t MTP_ACCESS_INTERCEPTED_EVENT_ID = 0x36000000;
+constexpr const char *MTP_REPORT_VERSION = "1.0";
 std::atomic<bool> g_keepMonitoring = true;
+
+static int32_t ReportMtpSecurityInfo(const std::string &vendor, uint16_t productId,
+                                     const std::string &operationType, int32_t userId)
+{
+    LOGI("ReportMtpSecurityInfo start, operationType=%{private}s", operationType.c_str());
+    auto now = std::chrono::system_clock::now();
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch());
+    uint64_t happenTime = static_cast<uint64_t>(ms.count());
+
+    cJSON *contentJson = cJSON_CreateObject();
+    if (contentJson == nullptr) {
+        LOGE("ReportMtpSecurityInfo: create json object failed");
+        return E_ERR;
+    }
+    cJSON_AddStringToObject(contentJson, "vendor", vendor.c_str());
+    cJSON_AddNumberToObject(contentJson, "productId", productId);
+    cJSON_AddStringToObject(contentJson, "operationType", operationType.c_str());
+    cJSON_AddNumberToObject(contentJson, "userId", userId);
+    cJSON_AddNumberToObject(contentJson, "happenTime", static_cast<double>(happenTime));
+
+    char *jsonStr = cJSON_PrintUnformatted(contentJson);
+    if (jsonStr == nullptr) {
+        LOGE("ReportMtpSecurityInfo: print json failed");
+        cJSON_Delete(contentJson);
+        return E_ERR;
+    }
+    std::string content(jsonStr);
+    cJSON_free(jsonStr);
+    cJSON_Delete(contentJson);
+    OHOS::Security::SecurityGuard::EventInfo eventInfo(MTP_ACCESS_INTERCEPTED_EVENT_ID,
+        MTP_REPORT_VERSION, content);
+    LOGI("ReportMtpSecurityInfo: eventId=%{public}" PRId64 " version=%{public}s content=%{private}s",
+         MTP_ACCESS_INTERCEPTED_EVENT_ID, MTP_REPORT_VERSION, content.c_str());
+    auto wrappedInfo = std::make_shared<OHOS::Security::SecurityGuard::EventInfo>(eventInfo);
+    OHOS::Security::SecurityGuard::NativeDataCollectKit nativeDataCollectKit;
+    int32_t reportResult = nativeDataCollectKit.ReportSecurityInfo(wrappedInfo);
+    LOGI("ReportMtpSecurityInfo result: reportResult=%{public}d", reportResult);
+    return reportResult;
+}
 
 MtpDeviceMonitor::MtpDeviceMonitor() {}
 
@@ -331,6 +379,17 @@ int32_t MtpDeviceMonitor::MountMtpDevice(const std::vector<MtpDeviceInfo> &monit
     LOGI("[L2:MtpDeviceMonitor] MountMtpDevice: >>> ENTER <<< deviceCount=%{public}zu", monitorDevices.size());
     if (IsNeedDisableMtp()) {
         LOGE("[L2:MtpDeviceMonitor] MountMtpDevice: <<< EXIT FAILED <<< MTP not supported on this device");
+        if (!monitorDevices.empty()) {
+            std::vector<int32_t> activeIds;
+            int32_t userId = 0;
+            StorageManagerClient client;
+            if (client.QueryActiveOsAccountIds(activeIds) == E_OK && !activeIds.empty()) {
+                userId = activeIds[0];
+            }
+            for (const auto &device : monitorDevices) {
+                ReportMtpSecurityInfo(device.vendor, device.productId, "MountMtpDevice", userId);
+            }
+        }
         return E_NOT_SUPPORT;
     }
     std::lock_guard<std::mutex> lock(listMutex_);

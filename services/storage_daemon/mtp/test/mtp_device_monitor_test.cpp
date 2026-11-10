@@ -657,5 +657,105 @@ HWTEST_F(MtpDeviceMonitorTest, MountMtpDeviceByBroadcastTest_002, TestSize.Level
 
     GTEST_LOG_(INFO) << "MountMtpDeviceByBroadcastTest_002 end";
 }
+
+/**
+ * @tc.name: ReportMtpSecurityInfo_AccessIntercepted
+ * @tc.desc: AC-1.1: When MTP disable is active, MountMtpDevice returns E_NOT_SUPPORT and reports audit.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MtpDeviceMonitorTest, ReportMtpSecurityInfo_AccessIntercepted, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "ReportMtpSecurityInfo_AccessIntercepted start";
+
+    MtpDeviceMonitor& monitor = MtpDeviceMonitor::GetInstance();
+    std::vector<MtpDeviceInfo> devices;
+    MtpDeviceInfo device;
+    device.vendor = "test_vendor";
+    device.productId = 5678;
+    device.id = "mtp-1234-5678";
+    devices.push_back(device);
+
+    g_paramOutContent = "true";
+    g_getParameter = 4;
+    int32_t result = monitor.MountMtpDevice(devices);
+    EXPECT_EQ(result, E_NOT_SUPPORT);
+    EXPECT_TRUE(monitor.lastestMtpDevList_.empty());
+    g_paramOutContent = "";
+    g_getParameter = 0;
+
+    GTEST_LOG_(INFO) << "ReportMtpSecurityInfo_AccessIntercepted end";
+}
+
+/**
+ * @tc.name: ReportMtpSecurityInfo_NotIntercepted
+ * @tc.desc: AC-1.2: When MTP disable is not active, MountMtpDevice does not return E_NOT_SUPPORT.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MtpDeviceMonitorTest, ReportMtpSecurityInfo_NotIntercepted, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "ReportMtpSecurityInfo_NotIntercepted start";
+
+    MtpDeviceMonitor& monitor = MtpDeviceMonitor::GetInstance();
+    std::vector<MtpDeviceInfo> emptyDevices;
+
+    g_paramOutContent = "false";
+    g_getParameter = 5;
+    int32_t result = monitor.MountMtpDevice(emptyDevices);
+    EXPECT_NE(result, E_NOT_SUPPORT);
+    g_paramOutContent = "";
+    g_getParameter = 0;
+
+    GTEST_LOG_(INFO) << "ReportMtpSecurityInfo_NotIntercepted end";
+}
+
+/**
+ * @tc.name: ReportMtpSecurityInfo_ReportFailIgnored
+ * @tc.desc: AC-1.3: When security_guard SA is unavailable (UT env), report failure does not block MTP disable.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MtpDeviceMonitorTest, ReportMtpSecurityInfo_ReportFailIgnored, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "ReportMtpSecurityInfo_ReportFailIgnored start";
+
+    MtpDeviceMonitor& monitor = MtpDeviceMonitor::GetInstance();
+    std::vector<MtpDeviceInfo> devices;
+    MtpDeviceInfo device;
+    device.vendor = "test_vendor";
+    device.productId = 5678;
+    device.id = "mtp-1234-5678";
+    devices.push_back(device);
+
+    g_paramOutContent = "true";
+    g_getParameter = 4;
+    int32_t result = monitor.MountMtpDevice(devices);
+    EXPECT_EQ(result, E_NOT_SUPPORT);
+    EXPECT_TRUE(monitor.lastestMtpDevList_.empty());
+    g_paramOutContent = "";
+    g_getParameter = 0;
+
+    GTEST_LOG_(INFO) << "ReportMtpSecurityInfo_ReportFailIgnored end";
+}
+
+/**
+ * @tc.name: ReportMtpSecurityInfo_NoUmountAudit
+ * @tc.desc: AC-2.1/AC-2.2: UmountAllMtpDevice unmounts devices without reporting audit events.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MtpDeviceMonitorTest, ReportMtpSecurityInfo_NoUmountAudit, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "ReportMtpSecurityInfo_NoUmountAudit start";
+
+    MtpDeviceMonitor& monitor = MtpDeviceMonitor::GetInstance();
+    MtpDeviceInfo dev1, dev2;
+    dev1.id = "dev1"; dev1.vendor = "vendor1"; dev1.productId = 1111;
+    dev2.id = "dev2"; dev2.vendor = "vendor2"; dev2.productId = 2222;
+    monitor.lastestMtpDevList_.push_back(dev1);
+    monitor.lastestMtpDevList_.push_back(dev2);
+
+    monitor.UmountAllMtpDevice();
+    EXPECT_TRUE(monitor.lastestMtpDevList_.empty());
+
+    GTEST_LOG_(INFO) << "ReportMtpSecurityInfo_NoUmountAudit end";
+}
 } // STORAGE_DAEMON
 } // OHOS

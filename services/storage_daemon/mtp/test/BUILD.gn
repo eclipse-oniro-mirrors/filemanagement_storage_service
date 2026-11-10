@@ -130,6 +130,7 @@ ohos_unittest("mtp_device_monitor_test") {
     "ipc:ipc_single",
     "openssl:libcrypto_shared",
     "samgr:samgr_proxy",
+    "security_guard:libsg_collect_sdk",
     "usb_manager:usbsrv_client",
     "cJSON:cjson",
   ]
@@ -238,6 +239,7 @@ ohos_unittest("usb_event_subscriber_test") {
     "openssl:libcrypto_shared",
     "samgr:samgr_proxy",
     "usb_manager:usbsrv_client",
+    "security_guard:libsg_collect_sdk",
     "cJSON:cjson",
     "common_event_service:cesfwk_innerkits",
   ]
