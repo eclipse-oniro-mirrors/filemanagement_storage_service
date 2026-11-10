@@ -16,10 +16,12 @@
 #ifndef OHOS_FILEMANAGEMENT_STORAGE_SPACE_MANAGER_CACHE_CLEAN_CONTROLLER_H
 #define OHOS_FILEMANAGEMENT_STORAGE_SPACE_MANAGER_CACHE_CLEAN_CONTROLLER_H
 
+#include <memory>
 #include <mutex>
-#include <string>
-#include <vector>
 #include <sstream>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 #include <nocopyable.h>
 #include <singleton.h>

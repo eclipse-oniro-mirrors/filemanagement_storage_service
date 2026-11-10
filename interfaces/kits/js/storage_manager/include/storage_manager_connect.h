@@ -52,6 +52,12 @@ public:
 private:
     StorageManagerConnect();
     ~StorageManagerConnect();
+    // Thread-safe: acquires mutex_ to return a refcount-stable snapshot of storageManager_.
+    // The returned sptr keeps the proxy alive for the duration of the IPC, so concurrent
+    // ResetProxy() (which nulls storageManager_) cannot cause null-deref or use-after-free.
+    // Must NOT be called while already holding mutex_ (would deadlock); Connect() does not
+    // call this function, so the public methods' "Connect() then GetStorageManagerProxy()"
+    // sequence never nests the lock.
     sptr<StorageManager::IStorageManager> GetStorageManagerProxy();
     sptr<StorageManager::IStorageManager> storageManager_ = nullptr;
     sptr<IRemoteObject::DeathRecipient> deathRecipient_ = nullptr;

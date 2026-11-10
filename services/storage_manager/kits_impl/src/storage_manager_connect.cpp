@@ -17,6 +17,7 @@
 
 #include <iservice_registry.h>
 #include <system_ability_definition.h>
+#include <vector>
 
 #include "accesstoken_kit.h"
 #include "ipc_skeleton.h"
@@ -72,6 +73,8 @@ int32_t StorageManagerConnect::Connect()
 
 sptr<StorageManager::IStorageManager> StorageManagerConnect::GetStorageManagerProxy()
 {
+    // Hold mutex_ only for the snapshot copy; the lock is released before any IPC,
+    // so ResetProxy()/OnRemoteDied can still acquire it on the binder thread (no deadlock).
     std::lock_guard<std::mutex> lock(mutex_);
     return storageManager_;
 }
@@ -86,7 +89,7 @@ int32_t StorageManagerConnect::GetBundleStats(const std::string &pkgName, Bundle
     }
     auto proxy = GetStorageManagerProxy();
     if (proxy == nullptr) {
-        LOGE("StorageManagerConnect::GetBundleStats service == nullptr");
+        LOGE("StorageManagerConnect::GetBundleStats proxy == nullptr");
         return E_SERVICE_IS_NULLPTR;
     }
     return proxy->GetBundleStats(pkgName, bundleStats, appIndex, statFlag);
@@ -101,7 +104,7 @@ int32_t StorageManagerConnect::GetFreeSizeOfVolume(const std::string &volumeUuid
     }
     auto proxy = GetStorageManagerProxy();
     if (proxy == nullptr) {
-        LOGE("StorageManagerConnect::GetFreeSizeOfVolume service == nullptr");
+        LOGE("StorageManagerConnect::GetFreeSizeOfVolume proxy == nullptr");
         return E_SERVICE_IS_NULLPTR;
     }
     return proxy->GetFreeSizeOfVolume(volumeUuid, freeSize);
@@ -116,7 +119,7 @@ int32_t StorageManagerConnect::GetTotalSizeOfVolume(const std::string &volumeUui
     }
     auto proxy = GetStorageManagerProxy();
     if (proxy == nullptr) {
-        LOGE("StorageManagerConnect::GetTotalSizeOfVolume service == nullptr");
+        LOGE("StorageManagerConnect::GetTotalSizeOfVolume proxy == nullptr");
         return E_SERVICE_IS_NULLPTR;
     }
     return proxy->GetTotalSizeOfVolume(volumeUuid, totalSize);
@@ -131,7 +134,7 @@ int32_t StorageManagerConnect::GetSystemSize(int64_t &systemSize)
     }
     auto proxy = GetStorageManagerProxy();
     if (proxy == nullptr) {
-        LOGE("StorageManagerConnect::GetSystemSize service == nullptr");
+        LOGE("StorageManagerConnect::GetSystemSize proxy == nullptr");
         return E_SERVICE_IS_NULLPTR;
     }
     return proxy->GetSystemSize(systemSize);
@@ -146,7 +149,7 @@ int32_t StorageManagerConnect::GetTotalSize(int64_t &totalSize)
     }
     auto proxy = GetStorageManagerProxy();
     if (proxy == nullptr) {
-        LOGE("StorageManagerConnect::GetTotalSize service == nullptr");
+        LOGE("StorageManagerConnect::GetTotalSize proxy == nullptr");
         return E_SERVICE_IS_NULLPTR;
     }
     return proxy->GetTotalSize(totalSize);
@@ -161,7 +164,7 @@ int32_t StorageManagerConnect::GetFreeSize(int64_t &freeSize)
     }
     auto proxy = GetStorageManagerProxy();
     if (proxy == nullptr) {
-        LOGE("StorageManagerConnect::GetFreeSize service == nullptr");
+        LOGE("StorageManagerConnect::GetFreeSize proxy == nullptr");
         return E_SERVICE_IS_NULLPTR;
     }
     return proxy->GetFreeSize(freeSize);
@@ -176,7 +179,7 @@ int32_t StorageManagerConnect::GetTotalInodes(int64_t &totalInodes)
     }
     auto proxy = GetStorageManagerProxy();
     if (proxy == nullptr) {
-        LOGE("StorageManagerConnect::GetTotalInodes service == nullptr");
+        LOGE("StorageManagerConnect::GetTotalInodes proxy == nullptr");
         return E_SERVICE_IS_NULLPTR;
     }
     return proxy->GetTotalInodes(totalInodes);
@@ -191,7 +194,7 @@ int32_t StorageManagerConnect::GetFreeInodes(int64_t &freeInodes)
     }
     auto proxy = GetStorageManagerProxy();
     if (proxy == nullptr) {
-        LOGE("StorageManagerConnect::GetFreeInodes service == nullptr");
+        LOGE("StorageManagerConnect::GetFreeInodes proxy == nullptr");
         return E_SERVICE_IS_NULLPTR;
     }
     return proxy->GetFreeInodes(freeInodes);
@@ -206,7 +209,7 @@ int32_t StorageManagerConnect::GetCurrentBundleInodes(int64_t &curInodes)
     }
     auto proxy = GetStorageManagerProxy();
     if (proxy == nullptr) {
-        LOGE("StorageManagerConnect::GetCurrentBundleInodes service == nullptr");
+        LOGE("StorageManagerConnect::GetCurrentBundleInodes proxy == nullptr");
         return E_SERVICE_IS_NULLPTR;
     }
     return proxy->GetCurrentBundleInodes(curInodes);
@@ -221,7 +224,7 @@ int32_t StorageManagerConnect::GetSystemDataSize(int64_t &systemDataSize)
     }
     auto proxy = GetStorageManagerProxy();
     if (proxy == nullptr) {
-        LOGE("StorageManagerConnect::GetSystemDataSize service == nullptr");
+        LOGE("StorageManagerConnect::GetSystemDataSize proxy == nullptr");
         return E_SERVICE_IS_NULLPTR;
     }
     return proxy->GetSystemDataSize(systemDataSize);
@@ -236,7 +239,7 @@ int32_t StorageManagerConnect::GetUserStorageStats(StorageStats &storageStats)
     }
     auto proxy = GetStorageManagerProxy();
     if (proxy == nullptr) {
-        LOGE("StorageManagerConnect::GetUserStorageStats service == nullptr");
+        LOGE("StorageManagerConnect::GetUserStorageStats proxy == nullptr");
         return E_SERVICE_IS_NULLPTR;
     }
     return proxy->GetUserStorageStats(storageStats);
@@ -251,7 +254,7 @@ int32_t StorageManagerConnect::GetUserStorageStats(int32_t userId, StorageStats 
     }
     auto proxy = GetStorageManagerProxy();
     if (proxy == nullptr) {
-        LOGE("StorageManagerConnect::GetUserStorageStats service == nullptr");
+        LOGE("StorageManagerConnect::GetUserStorageStats proxy == nullptr");
         return E_SERVICE_IS_NULLPTR;
     }
     return proxy->GetUserStorageStats(userId, storageStats);
@@ -267,7 +270,7 @@ int32_t StorageManagerConnect::GetCurrentBundleStats(BundleStats &bundleStats, u
     }
     auto proxy = GetStorageManagerProxy();
     if (proxy == nullptr) {
-        LOGE("StorageManagerConnect::GetCurrentBundleStats service == nullptr");
+        LOGE("StorageManagerConnect::GetCurrentBundleStats proxy == nullptr");
         return E_SERVICE_IS_NULLPTR;
     }
     return proxy->GetCurrentBundleStats(bundleStats, statFlag);
@@ -294,7 +297,7 @@ int32_t StorageManagerConnect::DeactivateUserKey(uint32_t userId)
     }
     auto proxy = GetStorageManagerProxy();
     if (proxy == nullptr) {
-        LOGE("StorageManagerConnect::DeactivateUserKey service == nullptr");
+        LOGE("StorageManagerConnect::DeactivateUserKey proxy == nullptr");
         return E_SERVICE_IS_NULLPTR;
     }
     return proxy->LockUserScreen(userId);
@@ -370,7 +373,7 @@ int32_t StorageManagerConnect::GetUserStorageStatsByType(int32_t userId, Storage
     }
     auto proxy = GetStorageManagerProxy();
     if (proxy == nullptr) {
-        LOGE("StorageManagerConnect::GetUserStorageStatsByType service == nullptr");
+        LOGE("StorageManagerConnect::GetUserStorageStatsByType proxy == nullptr");
         return E_SERVICE_IS_NULLPTR;
     }
     return proxy->GetUserStorageStatsByType(userId, storageStats, type);
@@ -385,7 +388,7 @@ int32_t StorageManagerConnect::SetExtBundleStats(uint32_t userId, ExtBundleStats
     }
     auto proxy = GetStorageManagerProxy();
     if (proxy == nullptr) {
-        LOGE("StorageManagerConnect::SetExtBundleStats service == nullptr");
+        LOGE("StorageManagerConnect::SetExtBundleStats proxy == nullptr");
         return E_SERVICE_IS_NULLPTR;
     }
     return proxy->SetExtBundleStats(userId, stats);
@@ -400,7 +403,7 @@ int32_t StorageManagerConnect::GetExtBundleStats(uint32_t userId, ExtBundleStats
     }
     auto proxy = GetStorageManagerProxy();
     if (proxy == nullptr) {
-        LOGE("StorageManagerConnect::GetExtBundleStats service == nullptr");
+        LOGE("StorageManagerConnect::GetExtBundleStats proxy == nullptr");
         return E_SERVICE_IS_NULLPTR;
     }
     return proxy->GetExtBundleStats(userId, stats);
@@ -415,7 +418,7 @@ int32_t StorageManagerConnect::GetAllExtBundleStats(uint32_t userId, std::vector
     }
     auto proxy = GetStorageManagerProxy();
     if (proxy == nullptr) {
-        LOGE("StorageManagerConnect::GetAllExtBundleStats service == nullptr");
+        LOGE("StorageManagerConnect::GetAllExtBundleStats proxy == nullptr");
         return E_SERVICE_IS_NULLPTR;
     }
     return proxy->GetAllExtBundleStats(userId, statsVec);
@@ -430,10 +433,10 @@ int32_t StorageManagerConnect::ListUserdataDirInfo(std::vector<UserdataDirInfo> 
     }
     auto proxy = GetStorageManagerProxy();
     if (proxy == nullptr) {
-        LOGE("StorageManagerConnect::ListUserdataDirInfo service == nullptr");
+        LOGE("StorageManagerConnect::ListUserdataDirInfo proxy == nullptr");
         return E_SERVICE_IS_NULLPTR;
     }
     return proxy->ListUserdataDirInfo(scanDirs);
 }
-} // StorageManager
-} // OHOS
+} // namespace StorageManager
+} // namespace OHOS
