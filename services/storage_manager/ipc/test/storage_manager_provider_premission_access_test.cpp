@@ -63,7 +63,7 @@ int AccessTokenKit::VerifyAccessToken(AccessTokenID tokenID, const std::string &
 }
 } // namespace Security::AccessToken
 
-pid_t IPCSkeleton::GetCallingAppUid()
+pid_t GetCallingAppUid()
 {
     return g_appUid;
 }
