@@ -52,6 +52,7 @@ public:
 private:
     StorageManagerConnect();
     ~StorageManagerConnect();
+    sptr<StorageManager::IStorageManager> GetStorageManagerProxy();
     sptr<StorageManager::IStorageManager> storageManager_ = nullptr;
     sptr<IRemoteObject::DeathRecipient> deathRecipient_ = nullptr;
     std::mutex mutex_;

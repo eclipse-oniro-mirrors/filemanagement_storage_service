@@ -337,31 +337,32 @@ int32_t CacheCleanController::ExecuteCacheCleaning(const std::vector<CleanCacheI
     const std::vector<CleanCacheInfo> &cleanAllCacheInfos,
     const CleanResources &resources, CleanStats &stats)
 {
-    extraData_.str("");
+    std::ostringstream extraData;
+    extraData.str("");
     auto timeStamp = GetCurrentTime();
-    extraData_ << "{startTimeStamp:" << timeStamp << "}" << std::endl;
-    extraData_ << "{userId:" << resources.userId << "}" << std::endl;
+    extraData << "{startTimeStamp:" << timeStamp << "}" << std::endl;
+    extraData << "{userId:" << resources.userId << "}" << std::endl;
     // Clean all cache for remaining apps
-    int32_t ret = CleanAllCacheForApps(cleanAllCacheInfos, resources, stats);
+    int32_t ret = CleanAllCacheForApps(cleanAllCacheInfos, resources, stats, extraData);
     if (ret != E_OK) {
         LOGE("Full clean failed, ret=%{public}d", ret);
         return ret;
     }
 
     // Clean rank-based cache
-    ret = CleanRankBasedCache(rankedCleanInfos, resources, stats);
+    ret = CleanRankBasedCache(rankedCleanInfos, resources, stats, extraData);
     if (ret != E_OK) {
         LOGE("Rank-based clean failed, ret=%{public}d", ret);
         return ret;
     }
-    extraData_ << "{totalCacheBeforeClean:" << stats.cleanBefore << "}" << std::endl;
-    extraData_ << "{totalCacheAfterClean:" << stats.cleanAfter << "}" << std::endl;
-    extraData_ << "{appSuccCount:" << stats.totalCleanedCount << "}" << std::endl;
-    extraData_ << "{appFailCount:" << stats.failedCount << "}" << std::endl;
+    extraData << "{totalCacheBeforeClean:" << stats.cleanBefore << "}" << std::endl;
+    extraData << "{totalCacheAfterClean:" << stats.cleanAfter << "}" << std::endl;
+    extraData << "{appSuccCount:" << stats.totalCleanedCount << "}" << std::endl;
+    extraData << "{appFailCount:" << stats.failedCount << "}" << std::endl;
     timeStamp = GetCurrentTime();
-    extraData_ << "{endTimeStamp:" << timeStamp << "}" << std::endl;
-    PrintOverLongLog(extraData_.str());
-    StorageService::StorageRadar::ReportStorageStatusRadar("cacheCleanResult", extraData_.str());
+    extraData << "{endTimeStamp:" << timeStamp << "}" << std::endl;
+    PrintOverLongLog(extraData.str());
+    StorageService::StorageRadar::ReportStorageStatusRadar("cacheCleanResult", extraData.str());
     if (timeStamp > RECORD_DATA_AGING_TIME) {
         DelayedSingleton<CleanRecordStore>::GetInstance()->Delete(timeStamp - RECORD_DATA_AGING_TIME);
     }
@@ -398,7 +399,7 @@ void CacheCleanController::PrintOverLongLog(std::string str)
 }
 
 int32_t CacheCleanController::CleanRankBasedCache(const std::vector<CleanCacheInfo> &rankedCleanInfos,
-    const CleanResources &resources, CleanStats &stats)
+    const CleanResources &resources, CleanStats &stats, std::ostringstream &extraData)
 {
     LOGI("Starting rank-based cleaning for %{public}zu apps", rankedCleanInfos.size());
 
@@ -423,7 +424,7 @@ int32_t CacheCleanController::CleanRankBasedCache(const std::vector<CleanCacheIn
 
         int32_t rank = static_cast<int32_t>(i + 1);
         int32_t ret = CleanSingleAppWithQuota(rankedCleanInfos[i], rank, resources, stats,
-            systemAppCacheQuata);
+            systemAppCacheQuata, extraData);
         if (ret != E_OK) {
             continue;
         }
@@ -434,7 +435,8 @@ int32_t CacheCleanController::CleanRankBasedCache(const std::vector<CleanCacheIn
 
 int32_t CacheCleanController::CleanSingleAppWithQuota(const CleanCacheInfo &cleanInfo, int32_t rank,
     const CleanResources &resources, CleanStats &stats,
-    const std::unordered_map<std::string, int32_t> &systemAppCacheQuata)
+    const std::unordered_map<std::string, int32_t> &systemAppCacheQuata,
+    std::ostringstream &extraData)
 {
     int32_t quotaMB = 0;
     int32_t ret = quotaCalculator_->GetQuotaByRank(rank, resources.totalStorage, quotaMB);
@@ -464,28 +466,28 @@ int32_t CacheCleanController::CleanSingleAppWithQuota(const CleanCacheInfo &clea
     LOGD("Cleaning %{public}s: rank=%{public}d, quota=%{public}d MB",
          cleanInfo.bundleName.c_str(), rank, quotaMB);
 
-    return PerformCacheCleaning(cacheInfo, resources, stats);
+    return PerformCacheCleaning(cacheInfo, resources, stats, extraData);
 }
 
 void CacheCleanController::WriteCleanInfoToExtra(const CleanCacheInfo &cleanInfo, uint64_t before,
-    uint64_t after, bool isSucc)
+    uint64_t after, bool isSucc, std::ostringstream &extraData)
 {
     std::string index = "";
     if (cleanInfo.appIndex != 0) {
         index = std::string(",IDX:") + std::to_string(cleanInfo.appIndex);
     }
     if (isSucc) {
-        extraData_ << "{BN:" << cleanInfo.bundleName << index <<
+        extraData << "{BN:" << cleanInfo.bundleName << index <<
             ",CT:" << cleanInfo.cacheThreshold << ",BS:" << before <<
             ",AS:" << after << "}" << std::endl;
             return;
     }
-    extraData_ << "{BN:" << cleanInfo.bundleName << index <<
+    extraData << "{BN:" << cleanInfo.bundleName << index <<
             ",CT:" << cleanInfo.cacheThreshold << ",FAIL}" << std::endl;
 }
 
 int32_t CacheCleanController::PerformCacheCleaning(const CleanCacheInfo &cleanInfo,
-    const CleanResources &resources, CleanStats &stats)
+    const CleanResources &resources, CleanStats &stats, std::ostringstream &extraData)
 {
     uint64_t beforeCleanedSize = 0;
     uint64_t afterCleanedSize = 0;
@@ -496,20 +498,20 @@ int32_t CacheCleanController::PerformCacheCleaning(const CleanCacheInfo &cleanIn
         LOGE("Failed to clean %{public}s, ret=%{public}d",
              cleanInfo.bundleName.c_str(), cleanRet);
         stats.failedCount++;
-        WriteCleanInfoToExtra(cleanInfo, beforeCleanedSize, afterCleanedSize, false);
+        WriteCleanInfoToExtra(cleanInfo, beforeCleanedSize, afterCleanedSize, false, extraData);
         return E_FAIL;
     }
 
     stats.totalCleanedCount++;
     SafeAccumulate(stats.cleanBefore, beforeCleanedSize);
     SafeAccumulate(stats.cleanAfter, afterCleanedSize);
-    WriteCleanInfoToExtra(cleanInfo, beforeCleanedSize, afterCleanedSize, true);
+    WriteCleanInfoToExtra(cleanInfo, beforeCleanedSize, afterCleanedSize, true, extraData);
 
     return E_OK;
 }
 
 int32_t CacheCleanController::CleanAllCacheForApps(const std::vector<CleanCacheInfo> &cleanAllCacheInfos,
-    const CleanResources &resources, CleanStats &stats)
+    const CleanResources &resources, CleanStats &stats, std::ostringstream &extraData)
 {
     LOGI("Starting full cache clean for %{public}zu apps", cleanAllCacheInfos.size());
     if (quotaCalculator_ == nullptr) {
@@ -544,14 +546,14 @@ int32_t CacheCleanController::CleanAllCacheForApps(const std::vector<CleanCacheI
             LOGE("Failed to clean %{public}s, ret=%{public}d",
                  cleanAllCacheInfos[i].bundleName.c_str(), cleanRet);
             stats.failedCount++;
-            WriteCleanInfoToExtra(cacheInfo, beforeCleanedSize, afterCleanedSize, false);
+            WriteCleanInfoToExtra(cacheInfo, beforeCleanedSize, afterCleanedSize, false, extraData);
             continue;
         }
 
         stats.totalCleanedCount++;
         SafeAccumulate(stats.cleanBefore, beforeCleanedSize);
         SafeAccumulate(stats.cleanAfter, afterCleanedSize);
-        WriteCleanInfoToExtra(cacheInfo, beforeCleanedSize, afterCleanedSize, true);
+        WriteCleanInfoToExtra(cacheInfo, beforeCleanedSize, afterCleanedSize, true, extraData);
     }
 
     return E_OK;
