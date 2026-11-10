@@ -338,7 +338,6 @@ int32_t CacheCleanController::ExecuteCacheCleaning(const std::vector<CleanCacheI
     const CleanResources &resources, CleanStats &stats)
 {
     std::ostringstream extraData;
-    extraData.str("");
     auto timeStamp = GetCurrentTime();
     extraData << "{startTimeStamp:" << timeStamp << "}" << std::endl;
     extraData << "{userId:" << resources.userId << "}" << std::endl;
