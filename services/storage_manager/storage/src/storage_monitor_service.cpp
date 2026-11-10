@@ -43,11 +43,13 @@ namespace {
 bool SafeStrToInt64(const std::string &str, int64_t &result)
 {
     errno = 0;
-    long long val = strtoll(str.c_str(), nullptr, 10);
+    const char *start = str.c_str();
+    char *endptr = nullptr;
+    long long val = strtoll(start, &endptr, 10);
     if (errno == ERANGE) {
         return false;
     }
-    result = static_cast<int64_t>(val);
+    result = (endptr == start) ? 0 : static_cast<int64_t>(val);
     return true;
 }
 } // namespace
@@ -301,29 +303,28 @@ void StorageMonitorService::ParseStorageSizeParameters(int64_t totalSize, const 
             continue;
         }
 
-        if (value.length() > 1 && value.substr(value.length() - 1) == "%") {
+        if (value.length() <= 1) {
+            LOGE("parameter value format is invalid");
+            continue;
+        }
+        std::string prefix = value.substr(0, value.length() - 1);
+        char suffix = value[value.length() - 1];
+        if (suffix == '%') {
             int64_t percentage = 0;
-            if (!SafeStrToInt64(value.substr(0, value.length() - 1), percentage) ||
-                percentage < 0 || percentage > CONST_NUM_ONE_HUNDRED) {
+            if (!SafeStrToInt64(prefix, percentage) || percentage < 0 ||
+                percentage > CONST_NUM_ONE_HUNDRED) {
                 LOGE("Invalid percentage value, value=%{public}s", value.c_str());
             } else {
                 int64_t size = (totalSize * percentage) / CONST_NUM_ONE_HUNDRED;
                 thresholds[key] = size;
             }
-        } else if (value.length() > 1 && value.substr(value.length() - 1) == "G") {
-            int64_t gigabytes = 0;
-            if (!SafeStrToInt64(value.substr(0, value.length() - 1), gigabytes) || gigabytes < 0) {
+        } else if (suffix == 'G' || suffix == 'M') {
+            int64_t num = 0;
+            if (!SafeStrToInt64(prefix, num) || num < 0) {
                 LOGE("Invalid storage value, value=%{public}s", value.c_str());
             } else {
-                int64_t size = gigabytes * ONE_GB;
-                thresholds[key] = size;
-            }
-        } else if (value.length() > 1 && value.substr(value.length() - 1) == "M") {
-            int64_t megabytes = 0;
-            if (!SafeStrToInt64(value.substr(0, value.length() - 1), megabytes) || megabytes < 0) {
-                LOGE("Invalid storage value, value=%{public}s", value.c_str());
-            } else {
-                int64_t size = megabytes * ONE_MB;
+                int64_t unit = (suffix == 'G') ? ONE_GB : ONE_MB;
+                int64_t size = num * unit;
                 thresholds[key] = size;
             }
         } else {

@@ -41,11 +41,13 @@ namespace {
     bool SafeStrToInt64(const std::string &str, int64_t &result)
     {
         errno = 0;
-        long long val = strtoll(str.c_str(), nullptr, 10);
+        const char *start = str.c_str();
+        char *endptr = nullptr;
+        long long val = strtoll(start, &endptr, 10);
         if (errno == ERANGE) {
             return false;
         }
-        result = static_cast<int64_t>(val);
+        result = (endptr == start) ? 0 : static_cast<int64_t>(val);
         return true;
     }
 } // namespace
