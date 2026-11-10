@@ -47,7 +47,10 @@ namespace {
         if (errno == ERANGE) {
             return false;
         }
-        result = (endptr == start) ? 0 : static_cast<int64_t>(val);
+        if (endptr == start) {
+            val = 0;
+        }
+        result = static_cast<int64_t>(val);
         return true;
     }
 } // namespace
