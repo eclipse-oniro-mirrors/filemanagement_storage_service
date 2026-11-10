@@ -93,6 +93,13 @@ ohos_static_library("libfscryptutils") {
 
   subsystem_name = "filemanagement"
   part_name = "storage_service"
+  cflags_cc = [
+    "-fdata-sections",
+    "-ffunction-sections",
+    "-fno-unwind-tables",
+    "-fno-asynchronous-unwind-tables",
+    "-Os",
+  ]
 }
 
 ohos_static_library("libfscryptutils_static") {

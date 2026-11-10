@@ -25,6 +25,13 @@ idl_gen_interface("storage_daemon_interface") {
   configs = [ ":storage_daemon_config" ]
   part_name = "storage_service"
   subsystem_name = "filemanagement"
+  cflags_cc = [
+    "-fdata-sections",
+    "-ffunction-sections",
+    "-fno-unwind-tables",
+    "-fno-asynchronous-unwind-tables",
+    "-Os",
+  ]
 }
 
 ohos_source_set("storage_daemon_ipc") {
@@ -47,6 +54,13 @@ ohos_source_set("storage_daemon_ipc") {
   ]
   part_name = "storage_service"
   subsystem_name = "filemanagement"
+  cflags_cc = [
+    "-fdata-sections",
+    "-ffunction-sections",
+    "-fno-unwind-tables",
+    "-fno-asynchronous-unwind-tables",
+    "-Os",
+  ]
 }
 
 ohos_source_set("storage_daemon_header") {
@@ -327,6 +341,13 @@ ohos_executable("storage_daemon") {
   subsystem_name = "filemanagement"
   part_name = "storage_service"
   install_enable = true
+  cflags_cc = [
+    "-fdata-sections",
+    "-ffunction-sections",
+    "-fno-unwind-tables",
+    "-fno-asynchronous-unwind-tables",
+    "-Os",
+  ]
 }
 
 config("sdc_config") {
@@ -400,7 +421,6 @@ ohos_executable("sdc") {
     "c_utils:utils",
     "hilog:libhilog",
     "ipc:ipc_single",
-    "safwk:system_ability_fwk",
     "samgr:samgr_proxy",
   ]
 
@@ -507,6 +527,13 @@ ohos_shared_library("storage_common_utils") {
   subsystem_name = "filemanagement"
   part_name = "storage_service"
   install_enable = true
+  cflags_cc = [
+    "-fdata-sections",
+    "-ffunction-sections",
+    "-fno-unwind-tables",
+    "-fno-asynchronous-unwind-tables",
+    "-Os",
+  ]
 }
 
 ohos_prebuilt_etc("usb_config.para") {
