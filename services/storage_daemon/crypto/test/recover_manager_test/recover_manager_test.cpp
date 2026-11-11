@@ -23,10 +23,15 @@
 
 #ifdef RECOVER_KEY_TEE_ENVIRONMENT
 #include "tee_client_api.h"
+#else
+using TEEC_Result = uint32_t;
+using TEEC_ReturnCode = uint32_t;
+constexpr TEEC_Result TEEC_SUCCESS = 0;
+#endif
 namespace {
-    TEEC_Result g_initializeContext;
-    TEEC_Result g_invokeCommand;
-    int g_memcpyRet;
+    TEEC_Result g_initializeContext = TEEC_SUCCESS;
+    TEEC_Result g_invokeCommand = TEEC_SUCCESS;
+    int g_memcpyRet = 0;
 }
 
 int memcpy_s(void *dest, size_t destMax, const void *src, size_t count)
@@ -34,6 +39,7 @@ int memcpy_s(void *dest, size_t destMax, const void *src, size_t count)
     return g_memcpyRet;
 }
 
+#ifdef RECOVER_KEY_TEE_ENVIRONMENT
 TEEC_Result TEEC_InitializeContext(const char *name, TEEC_Context *context)
 {
     return g_initializeContext;
@@ -96,6 +102,7 @@ HWTEST_F(RecoveryManagerTest, RecoveryManager_IsEncryptionEnabled_001, TestSize.
     GTEST_LOG_(INFO) << "RecoveryManager_IsEncryptionEnabled_001 end";
 }
 
+#ifdef RECOVER_KEY_TEE_ENVIRONMENT
 /**
  * @tc.name: RecoveryManager_ResetSecretWithRecoveryKeyToTee_001
  * @tc.desc: Verify the ResetSecretWithRecoveryKeyToTee function.
@@ -123,7 +130,9 @@ HWTEST_F(RecoveryManagerTest, RecoveryManager_ResetSecretWithRecoveryKeyToTee_00
 
     GTEST_LOG_(INFO) << "RecoveryManager_ResetSecretWithRecoveryKeyToTee_001 end";
 }
+#endif
 
+#ifdef RECOVER_KEY_TEE_ENVIRONMENT
 /**
  * @tc.name: RecoveryManager_ResetSecretWithRecoveryKey_001
  * @tc.desc: Verify the ResetSecretWithRecoveryKey function.
@@ -159,6 +168,7 @@ HWTEST_F(RecoveryManagerTest, RecoveryManager_ResetSecretWithRecoveryKey_001, Te
 
     GTEST_LOG_(INFO) << "RecoveryManager_ResetSecretWithRecoveryKey_001 end";
 }
+#endif
 
 /**
  * @tc.name: RecoveryManager_InstallDeCe_001
@@ -315,6 +325,7 @@ HWTEST_F(RecoveryManagerTest, RecoveryManager_GenerateKeyDesc_001, TestSize.Leve
     GTEST_LOG_(INFO) << "RecoveryManager_GenerateKeyDesc_001 end";
 }
 
+#ifdef RECOVER_KEY_TEE_ENVIRONMENT
 /**
  * @tc.name: RecoveryManager_CreateRecoverKey_001
  * @tc.desc: Verify the CreateRecoverKey function.
@@ -356,7 +367,9 @@ HWTEST_F(RecoveryManagerTest, RecoveryManager_CreateRecoverKey_001, TestSize.Lev
 
     GTEST_LOG_(INFO) << "RecoveryManager_CreateRecoverKey_001 end";
 }
+#endif
 
+#ifdef RECOVER_KEY_TEE_ENVIRONMENT
 /**
  * @tc.name: RecoveryManager_SetRecoverKeyToTee_001
  * @tc.desc: Verify the SetRecoverKeyToTee function.
@@ -384,4 +397,5 @@ HWTEST_F(RecoveryManagerTest, RecoveryManager_SetRecoverKeyToTee_001, TestSize.L
 
     GTEST_LOG_(INFO) << "RecoveryManager_SetRecoverKeyToTee_001 end";
 }
+#endif
 } // OHOS::StorageDaemon

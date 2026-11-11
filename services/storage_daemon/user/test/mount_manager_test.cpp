@@ -466,22 +466,18 @@ HWTEST_F(MountManagerTest, Storage_Manager_MountManagerTest_UMountDlpFuse_001, T
     std::string dstPath = "/data/service/el1/public/dlp_credential_service/testUMountDlpFuse";
     ForceCreateDirectory(dlpPath);
     ForceCreateDirectory(dstPath);
-    errno = ENOENT;
-    EXPECT_CALL(*fileUtilMoc_, UMount2(_, _)).WillOnce(Return(1));
+    EXPECT_CALL(*fileUtilMoc_, UMount2(_, _)).WillOnce(SetErrnoAndReturn(ENOENT, 1));
     int32_t ret = MountManager::GetInstance().UMountDlpFuse(dstPath);
     EXPECT_EQ(ret, E_OK);
 
-    errno = EINVAL;
-    EXPECT_CALL(*fileUtilMoc_, UMount2(_, _)).WillOnce(Return(1));
+    EXPECT_CALL(*fileUtilMoc_, UMount2(_, _)).WillOnce(SetErrnoAndReturn(EINVAL, 1));
     ret = MountManager::GetInstance().UMountDlpFuse(dstPath);
     EXPECT_EQ(ret, E_OK);
 
-    errno = EBUSY;
-    EXPECT_CALL(*fileUtilMoc_, UMount2(_, _)).WillOnce(Return(1));
+    EXPECT_CALL(*fileUtilMoc_, UMount2(_, _)).WillOnce(SetErrnoAndReturn(EBUSY, 1));
     ret = MountManager::GetInstance().UMountDlpFuse(dstPath);
     EXPECT_EQ(ret, E_UMOUNT_DLP_FUSE);
 
-    errno = 0;
     EXPECT_CALL(*fileUtilMoc_, UMount2(_, _)).WillOnce(Return(0));
     ret = MountManager::GetInstance().UMountDlpFuse(dstPath);
     EXPECT_EQ(ret, E_OK);
@@ -655,24 +651,18 @@ HWTEST_F(MountManagerTest, Storage_Manager_MountManagerTest_MountDfsDocs_002, Te
     std::string deviceId = "f6d4c0864707aefte7a78f09473aa122ff57fc8";
 
     EXPECT_CALL(*fileUtilMoc_, PrepareDir(_, _, _, _)).WillOnce(Return(true));
-    EXPECT_CALL(*fileUtilMoc_, Mount(_, _, _, _, _)).WillOnce(Return(1));
-    errno = EPERM;
+    EXPECT_CALL(*fileUtilMoc_, Mount(_, _, _, _, _)).WillOnce(SetErrnoAndReturn(EPERM, 1));
     int32_t ret = MountManager::GetInstance().MountDfsDocs(userId, relativePath, deviceId, deviceId);
-    errno = 0;
     EXPECT_EQ(ret, E_USER_MOUNT_ERR);
 
     EXPECT_CALL(*fileUtilMoc_, PrepareDir(_, _, _, _)).WillOnce(Return(true));
-    EXPECT_CALL(*fileUtilMoc_, Mount(_, _, _, _, _)).WillOnce(Return(1));
-    errno = EBUSY;
+    EXPECT_CALL(*fileUtilMoc_, Mount(_, _, _, _, _)).WillOnce(SetErrnoAndReturn(EBUSY, 1));
     ret = MountManager::GetInstance().MountDfsDocs(userId, relativePath, deviceId, deviceId);
-    errno = 0;
     EXPECT_EQ(ret, E_OK);
 
     EXPECT_CALL(*fileUtilMoc_, PrepareDir(_, _, _, _)).WillOnce(Return(true));
-    EXPECT_CALL(*fileUtilMoc_, Mount(_, _, _, _, _)).WillOnce(Return(1));
-    errno = EEXIST;
+    EXPECT_CALL(*fileUtilMoc_, Mount(_, _, _, _, _)).WillOnce(SetErrnoAndReturn(EEXIST, 1));
     ret = MountManager::GetInstance().MountDfsDocs(userId, relativePath, deviceId, deviceId);
-    errno = 0;
     EXPECT_EQ(ret, E_OK);
 
     EXPECT_CALL(*fileUtilMoc_, PrepareDir(_, _, _, _)).WillOnce(Return(true));
@@ -697,24 +687,18 @@ HWTEST_F(MountManagerTest, Storage_Manager_MountManagerTest_MountDfsDocs_003, Te
     std::string deviceId = "f6d4c0864707aefte7a78f09473aa122ff57fc8";
 
     EXPECT_CALL(*fileUtilMoc_, PrepareDir(_, _, _, _)).WillOnce(Return(true));
-    EXPECT_CALL(*fileUtilMoc_, Mount(_, _, _, _, _)).WillOnce(Return(1));
-    errno = EBUSY;
+    EXPECT_CALL(*fileUtilMoc_, Mount(_, _, _, _, _)).WillOnce(SetErrnoAndReturn(EBUSY, 1));
     int32_t ret = MountManager::GetInstance().MountDfsDocs(userId, relativePath, deviceId, deviceId);
-    errno = 0;
     EXPECT_EQ(ret, E_OK);
 
     EXPECT_CALL(*fileUtilMoc_, PrepareDir(_, _, _, _)).WillOnce(Return(true));
-    EXPECT_CALL(*fileUtilMoc_, Mount(_, _, _, _, _)).WillOnce(Return(1));
-    errno = EEXIST;
+    EXPECT_CALL(*fileUtilMoc_, Mount(_, _, _, _, _)).WillOnce(SetErrnoAndReturn(EEXIST, 1));
     ret = MountManager::GetInstance().MountDfsDocs(userId, relativePath, deviceId, deviceId);
-    errno = 0;
     EXPECT_EQ(ret, E_OK);
 
     EXPECT_CALL(*fileUtilMoc_, PrepareDir(_, _, _, _)).WillOnce(Return(true));
-    EXPECT_CALL(*fileUtilMoc_, Mount(_, _, _, _, _)).WillOnce(Return(1));
-    errno = EEXIST;
+    EXPECT_CALL(*fileUtilMoc_, Mount(_, _, _, _, _)).WillOnce(SetErrnoAndReturn(EEXIST, 1));
     ret = MountManager::GetInstance().MountDfsDocs(userId, relativePath, deviceId, deviceId);
-    errno = 0;
     EXPECT_EQ(ret, E_OK);
     GTEST_LOG_(INFO) << "Storage_Manager_MountManagerTest_MountDfsDocs_003 end";
 }
@@ -734,24 +718,18 @@ HWTEST_F(MountManagerTest, Storage_Manager_MountManagerTest_MountDfsDocs_004, Te
     std::string deviceId = "f6d4c0864707aefte7a78f09473aa122ff57fc8";
 
     EXPECT_CALL(*fileUtilMoc_, PrepareDir(_, _, _, _)).WillOnce(Return(true));
-    EXPECT_CALL(*fileUtilMoc_, Mount(_, _, _, _, _)).WillOnce(Return(1));
-    errno = EPERM;
+    EXPECT_CALL(*fileUtilMoc_, Mount(_, _, _, _, _)).WillOnce(SetErrnoAndReturn(EPERM, 1));
     int32_t ret = MountManager::GetInstance().MountDfsDocs(userId, relativePath, deviceId, deviceId);
-    errno = 0;
     EXPECT_EQ(ret, E_USER_MOUNT_ERR);
 
     EXPECT_CALL(*fileUtilMoc_, PrepareDir(_, _, _, _)).WillOnce(Return(true));
-    EXPECT_CALL(*fileUtilMoc_, Mount(_, _, _, _, _)).WillOnce(Return(1));
-    errno = EBUSY;
+    EXPECT_CALL(*fileUtilMoc_, Mount(_, _, _, _, _)).WillOnce(SetErrnoAndReturn(EBUSY, 1));
     ret = MountManager::GetInstance().MountDfsDocs(userId, relativePath, deviceId, deviceId);
-    errno = 0;
     EXPECT_EQ(ret, E_OK);
 
     EXPECT_CALL(*fileUtilMoc_, PrepareDir(_, _, _, _)).WillOnce(Return(true));
-    EXPECT_CALL(*fileUtilMoc_, Mount(_, _, _, _, _)).WillOnce(Return(1));
-    errno = EEXIST;
+    EXPECT_CALL(*fileUtilMoc_, Mount(_, _, _, _, _)).WillOnce(SetErrnoAndReturn(EEXIST, 1));
     ret = MountManager::GetInstance().MountDfsDocs(userId, relativePath, deviceId, deviceId);
-    errno = 0;
     EXPECT_EQ(ret, E_OK);
 
     EXPECT_CALL(*fileUtilMoc_, PrepareDir(_, _, _, _)).WillOnce(Return(true));
@@ -882,8 +860,7 @@ HWTEST_F(MountManagerTest, Storage_Daemon_MountManagerExtTest_UMountDisShareFile
     std::vector<std::string> distributeDirs;
     distributeDirs.push_back("/data/service/el2/100/hmdfs/account/data/com.test/.remote_share/123456789/Photo");
     EXPECT_CALL(*fileUtilMoc_, IsPathMounted(_)).WillRepeatedly(Return(true));
-    EXPECT_CALL(*fileUtilMoc_, UMount2(_, _)).WillRepeatedly(Return(1));
-    errno = ENOENT;
+    EXPECT_CALL(*fileUtilMoc_, UMount2(_, _)).WillRepeatedly(SetErrnoAndReturn(ENOENT, 1));
     auto ret = MountManager::GetInstance().UMountDisShareFile(distributeDirs);
     EXPECT_EQ(ret, E_OK);
     GTEST_LOG_(INFO) << "Storage_Daemon_MountManagerExtTest_UMountDisShareFile_006 end";
@@ -901,8 +878,7 @@ HWTEST_F(MountManagerTest, Storage_Daemon_MountManagerExtTest_UMountDisShareFile
     std::vector<std::string> distributeDirs;
     distributeDirs.push_back("/data/service/el2/100/hmdfs/account/data/com.test/.remote_share/123456789/Photo");
     EXPECT_CALL(*fileUtilMoc_, IsPathMounted(_)).WillRepeatedly(Return(true));
-    EXPECT_CALL(*fileUtilMoc_, UMount2(_, _)).WillRepeatedly(Return(1));
-    errno = EINVAL;
+    EXPECT_CALL(*fileUtilMoc_, UMount2(_, _)).WillRepeatedly(SetErrnoAndReturn(EINVAL, 1));
     auto ret = MountManager::GetInstance().UMountDisShareFile(distributeDirs);
     EXPECT_EQ(ret, E_OK);
     GTEST_LOG_(INFO) << "Storage_Daemon_MountManagerExtTest_UMountDisShareFile_007 end";
@@ -1296,22 +1272,18 @@ HWTEST_F(MountManagerTest, Storage_Manager_MountManagerTest_UMountCloudDiskFuse_
     ForceCreateDirectory(path);
     EXPECT_CALL(*fileUtilMoc_, IsPathMounted(_)).WillRepeatedly(Return(true));
 
-    errno = ENOENT;
-    EXPECT_CALL(*fileUtilMoc_, UMount2(_, _)).WillOnce(Return(1));
+    EXPECT_CALL(*fileUtilMoc_, UMount2(_, _)).WillOnce(SetErrnoAndReturn(ENOENT, 1));
     int32_t ret = MountManager::GetInstance().UMountCloudDiskFuse(userId, path);
     EXPECT_EQ(ret, E_OK);
 
-    errno = EINVAL;
-    EXPECT_CALL(*fileUtilMoc_, UMount2(_, _)).WillOnce(Return(1));
+    EXPECT_CALL(*fileUtilMoc_, UMount2(_, _)).WillOnce(SetErrnoAndReturn(EINVAL, 1));
     ret = MountManager::GetInstance().UMountCloudDiskFuse(userId, path);
     EXPECT_EQ(ret, E_OK);
 
-    errno = EBUSY;
-    EXPECT_CALL(*fileUtilMoc_, UMount2(_, _)).WillOnce(Return(1));
+    EXPECT_CALL(*fileUtilMoc_, UMount2(_, _)).WillOnce(SetErrnoAndReturn(EBUSY, 1));
     ret = MountManager::GetInstance().UMountCloudDiskFuse(userId, path);
     EXPECT_EQ(ret, E_UMOUNT_CLOUDDISK_FUSE);
 
-    errno = 0;
     EXPECT_CALL(*fileUtilMoc_, UMount2(_, _)).WillOnce(Return(0));
     ret = MountManager::GetInstance().UMountCloudDiskFuse(userId, path);
     EXPECT_EQ(ret, E_OK);
@@ -1381,12 +1353,10 @@ HWTEST_F(MountManagerTest, Storage_Manager_MountManagerTest_UMountUdmfClipFuse_0
     std::string path = "/mnt/data/100/udmf_fuse/test_umount";
     ForceCreateDirectory(path);
 
-    errno = EBUSY;
-    EXPECT_CALL(*fileUtilMoc_, UMount2(_, _)).WillOnce(Return(-1));
+    EXPECT_CALL(*fileUtilMoc_, UMount2(_, _)).WillOnce(SetErrnoAndReturn(EBUSY, -1));
     int32_t ret = MountManager::GetInstance().UMountUdmfClipFuse(userId, path);
     EXPECT_EQ(ret, E_UMOUNT_UDMF_CLIP_FUSE);
 
-    errno = 0;
     EXPECT_CALL(*fileUtilMoc_, UMount2(_, _)).WillOnce(Return(0));
     ret = MountManager::GetInstance().UMountUdmfClipFuse(userId, path);
     EXPECT_EQ(ret, E_OK);

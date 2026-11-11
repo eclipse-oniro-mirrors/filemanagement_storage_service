@@ -87,7 +87,7 @@ HWTEST_F(FscryptKeyV1ExtTest, FscryptKeyV1Ext_GetMappedUserId_001, TestSize.Leve
     if (!fileExist) {
         EXPECT_EQ(ext.GetMappedUserId(100, TYPE_EL2), 100);
         std::error_code errCode;
-        std::filesystem::create_directory(NEED_RESTORE_PATH, errCode);
+        std::filesystem::create_directories(NEED_RESTORE_PATH, errCode);
         ASSERT_TRUE(errCode.value() == 0);
     }
 
