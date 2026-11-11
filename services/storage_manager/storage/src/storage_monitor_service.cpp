@@ -323,10 +323,10 @@ void StorageMonitorService::ParseStorageSizeParameters(int64_t totalSize, const 
             }
         } else if (suffix == 'G' || suffix == 'M') {
             int64_t num = 0;
-            if (!SafeStrToInt64(prefix, num) || num < 0) {
+            int64_t unit = (suffix == 'G') ? ONE_GB : ONE_MB;
+            if (!SafeStrToInt64(prefix, num) || num < 0 || num > INT64_MAX / unit) {
                 LOGE("Invalid storage value, value=%{public}s", value.c_str());
             } else {
-                int64_t unit = (suffix == 'G') ? ONE_GB : ONE_MB;
                 int64_t size = num * unit;
                 thresholds[key] = size;
             }
