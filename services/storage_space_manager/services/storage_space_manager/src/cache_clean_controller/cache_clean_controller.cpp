@@ -406,7 +406,7 @@ int32_t CacheCleanController::CleanRankBasedCache(const std::vector<CleanCacheIn
         LOGE("quotaCalculator_ is null, cannot get system app cache size");
         return E_FAIL;
     }
-    std::unordered_map<std::string, int32_t> systemAppCacheQuata = quotaCalculator_->GetSystemAppCacheSize();
+    std::unordered_map<std::string, int32_t> systemAppCacheQuota = quotaCalculator_->GetSystemAppCacheSize();
 
     for (size_t i = 0; i < rankedCleanInfos.size(); ++i) {
         if (stopCleanCacheFlag_.load()) {
@@ -423,7 +423,7 @@ int32_t CacheCleanController::CleanRankBasedCache(const std::vector<CleanCacheIn
 
         int32_t rank = static_cast<int32_t>(i + 1);
         int32_t ret = CleanSingleAppWithQuota(rankedCleanInfos[i], rank, resources, stats,
-            systemAppCacheQuata, extraData);
+            systemAppCacheQuota, extraData);
         if (ret != E_OK) {
             continue;
         }
@@ -434,7 +434,7 @@ int32_t CacheCleanController::CleanRankBasedCache(const std::vector<CleanCacheIn
 
 int32_t CacheCleanController::CleanSingleAppWithQuota(const CleanCacheInfo &cleanInfo, int32_t rank,
     const CleanResources &resources, CleanStats &stats,
-    const std::unordered_map<std::string, int32_t> &systemAppCacheQuata,
+    const std::unordered_map<std::string, int32_t> &systemAppCacheQuota,
     std::ostringstream &extraData)
 {
     int32_t quotaMB = 0;
@@ -449,8 +449,8 @@ int32_t CacheCleanController::CleanSingleAppWithQuota(const CleanCacheInfo &clea
         }
     }
 
-    if (systemAppCacheQuata.find(cleanInfo.bundleName) != systemAppCacheQuata.end()) {
-        quotaMB = systemAppCacheQuata.at(cleanInfo.bundleName);
+    if (systemAppCacheQuota.find(cleanInfo.bundleName) != systemAppCacheQuota.end()) {
+        quotaMB = systemAppCacheQuota.at(cleanInfo.bundleName);
         LOGI("Use systemApp config, %{public}s: %{public}d MB", cleanInfo.bundleName.c_str(), quotaMB);
     }
     if (quotaMB < 0) {
@@ -517,7 +517,7 @@ int32_t CacheCleanController::CleanAllCacheForApps(const std::vector<CleanCacheI
         LOGE("quotaCalculator_ is null, cannot get system app cache size");
         return E_FAIL;
     }
-    std::unordered_map<std::string, int32_t> systemAppCacheQuata = quotaCalculator_->GetSystemAppCacheSize();
+    std::unordered_map<std::string, int32_t> systemAppCacheQuota = quotaCalculator_->GetSystemAppCacheSize();
     for (size_t i = 0; i < cleanAllCacheInfos.size(); ++i) {
         if (stopCleanCacheFlag_.load()) {
             LOGE("Cleanup conditions not met, stopCleanCacheFlag is true");
@@ -529,8 +529,8 @@ int32_t CacheCleanController::CleanAllCacheForApps(const std::vector<CleanCacheI
         // cacheThreshold=0 means clean all cache
         CleanCacheInfo cacheInfo = cleanAllCacheInfos[i];
         cacheInfo.cacheThreshold = 0;
-        if (systemAppCacheQuata.find(cacheInfo.bundleName) != systemAppCacheQuata.end()) {
-            int32_t sysCacheMB = systemAppCacheQuata.at(cacheInfo.bundleName);
+        if (systemAppCacheQuota.find(cacheInfo.bundleName) != systemAppCacheQuota.end()) {
+            int32_t sysCacheMB = systemAppCacheQuota.at(cacheInfo.bundleName);
             if (sysCacheMB >= 0) {
                 cacheInfo.cacheThreshold = static_cast<uint64_t>(sysCacheMB) * MB_TO_BYTES;
                 LOGI("Use systemApp config, %{public}s: %{public}d MB", cacheInfo.bundleName.c_str(), sysCacheMB);

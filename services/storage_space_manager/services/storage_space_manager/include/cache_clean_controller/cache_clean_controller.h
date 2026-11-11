@@ -318,7 +318,7 @@ public:
                                        int32_t rank,
                                        const CleanResources &resources,
                                        CleanStats &stats,
-                                       const std::unordered_map<std::string, int32_t> &systemAppCacheQuata,
+                                        const std::unordered_map<std::string, int32_t> &systemAppCacheQuota,
                                        std::ostringstream &extraData);
 
     /**
