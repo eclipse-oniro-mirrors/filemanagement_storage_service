@@ -2517,12 +2517,16 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_GetDqBlkSpacesByUi
     std::vector<int32_t> uids{1000, 999999};
     std::vector<NextDqBlk> dqBlks;
     auto ret = storageDaemonProviderTest_->GetDqBlkSpacesByUids(uids, dqBlks);
+#ifdef ENABLE_EMULATOR
+    EXPECT_TRUE(ret == E_NOT_SUPPORT);
+#else
     EXPECT_TRUE(ret == E_OK);
+#endif
     uids.erase(std::remove(uids.begin(), uids.end(), 999999), uids.end());
-    #ifdef ENABLE_EMULATOR
+#ifdef ENABLE_EMULATOR
     ret = storageDaemonProviderTest_->GetDqBlkSpacesByUids(uids, dqBlks);
-    EXPECT_TRUE(ret == E_OK);
-    #endif
+    EXPECT_TRUE(ret == E_NOT_SUPPORT);
+#endif
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_GetDqBlkSpacesByUids_001 end";
 }
 

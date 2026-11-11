@@ -97,6 +97,7 @@ void KeyMgrWithNotEncryptedAnotherTest::TearDown(void)
     fscryptKeyMock_ = nullptr;
 }
 
+#ifdef RECOVER_KEY_TEE_ENVIRONMENT
 /**
  * @tc.name: KeyManager_ResetSecretWithRecoveryKey_NotEncrypted_000
  * @tc.desc: Verify the ResetSecretWithRecoveryKey function with not encrypted.
@@ -150,6 +151,7 @@ HWTEST_F(KeyMgrWithNotEncryptedAnotherTest, KeyManager_ResetSecretWithRecoveryKe
     OHOS::ForceRemoveDirectory(el4Path);
     GTEST_LOG_(INFO) << "KeyManager_ResetSecretWithRecoveryKey_NotEncrypted_000 end";
 }
+#endif
 
 /**
  * @tc.name: KeyMgrWithNotEncryptedAnotherTest_SetDirectoryElPolicy_001

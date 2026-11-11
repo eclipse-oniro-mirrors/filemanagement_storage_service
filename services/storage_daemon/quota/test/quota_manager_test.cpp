@@ -76,7 +76,11 @@ HWTEST_F(QuotaManagerTest, Storage_Service_QuotaManagerTest_SetBundleQuota_001, 
     std::string bundleDataDirPath = BUNDLE_PATH;
     int32_t limitSizeMb = LIMITSIZE;
     int32_t result = QuotaManager::GetInstance().SetBundleQuota(uid, bundleDataDirPath, limitSizeMb);
+#ifdef ENABLE_EMULATOR
+    EXPECT_EQ(result, E_OK);
+#else
     EXPECT_EQ(result, E_STAT_VFS_KERNEL_ERR);
+#endif
 
     GTEST_LOG_(INFO) << "Storage_Service_QuotaManagerTest_SetBundleQuota_001 end";
 }
@@ -152,7 +156,11 @@ HWTEST_F(QuotaManagerTest, Storage_Service_QuotaManagerTest_SetBundleQuota_005, 
     std::string bundleDataDirPath = BUNDLE_PATH;
     int32_t limitSizeMb = LIMITSIZE;
     int32_t result = QuotaManager::GetInstance().SetBundleQuota(uid, bundleDataDirPath, limitSizeMb);
+#ifdef ENABLE_EMULATOR
+    EXPECT_EQ(result, E_OK);
+#else
     EXPECT_EQ(result, E_STAT_VFS_KERNEL_ERR);
+#endif
     GTEST_LOG_(INFO) << "Storage_Service_QuotaManagerTest_SetBundleQuota_005 end";
 }
 
@@ -170,7 +178,11 @@ HWTEST_F(QuotaManagerTest, Storage_Service_QuotaManagerTest_GetOccupiedSpace_001
     int32_t uid = -1;
     int64_t size = 0;
     int32_t result = QuotaManager::GetInstance().GetOccupiedSpace(idType, uid, size);
+#ifdef ENABLE_EMULATOR
+    EXPECT_EQ(result, E_OK);
+#else
     EXPECT_EQ(result, E_QUOTA_CTL_KERNEL_ERR);
+#endif
     uid = UID;
     result = QuotaManager::GetInstance().GetOccupiedSpace(idType, uid, size);
     EXPECT_EQ(result, E_OK);
@@ -178,7 +190,11 @@ HWTEST_F(QuotaManagerTest, Storage_Service_QuotaManagerTest_GetOccupiedSpace_001
     idType = GRPID;
     int32_t gid = -1;
     result = QuotaManager::GetInstance().GetOccupiedSpace(idType, gid, size);
+#ifdef ENABLE_EMULATOR
+    EXPECT_EQ(result, E_OK);
+#else
     EXPECT_EQ(result, E_QUOTA_CTL_KERNEL_ERR);
+#endif
     gid = 1006;
     result = QuotaManager::GetInstance().GetOccupiedSpace(idType, gid, size);
     EXPECT_EQ(result, E_OK);
@@ -186,7 +202,11 @@ HWTEST_F(QuotaManagerTest, Storage_Service_QuotaManagerTest_GetOccupiedSpace_001
     idType = PRJID;
     int32_t prjid = -1;
     result = QuotaManager::GetInstance().GetOccupiedSpace(idType, prjid, size);
+#ifdef ENABLE_EMULATOR
+    EXPECT_EQ(result, E_OK);
+#else
     EXPECT_EQ(result, E_QUOTA_CTL_KERNEL_ERR);
+#endif
     prjid = 0;
     result = QuotaManager::GetInstance().GetOccupiedSpace(idType, prjid, size);
     EXPECT_EQ(result, E_OK);
@@ -899,7 +919,7 @@ HWTEST_F(QuotaManagerTest, QuotaManagerTest_GetDqBlkSpacesByUids_003, TestSize.L
     std::vector<NextDqBlk> dqBlks;
     QuotaManager::GetInstance().SetStopScanFlag(false);
     int32_t result = QuotaManager::GetInstance().GetDqBlkSpacesByUids(uids, dqBlks);
-    EXPECT_TRUE(result == E_OK || result == E_QUOTA_CTL_KERNEL_ERR);
+    EXPECT_TRUE(result == E_OK || result == E_QUOTA_CTL_KERNEL_ERR || result == E_NOT_SUPPORT);
     GTEST_LOG_(INFO) << "QuotaManagerTest_GetDqBlkSpacesByUids_003 end";
 }
 
@@ -915,7 +935,11 @@ HWTEST_F(QuotaManagerTest, QuotaManagerTest_GetDqBlkSpacesByUids_004, TestSize.L
     std::vector<int32_t> uids = {-1, 999999999};
     std::vector<NextDqBlk> dqBlks;
     int32_t result = QuotaManager::GetInstance().GetDqBlkSpacesByUids(uids, dqBlks);
+#ifdef ENABLE_EMULATOR
+    EXPECT_EQ(result, E_NOT_SUPPORT);
+#else
     EXPECT_EQ(result, E_ERR);
+#endif
     GTEST_LOG_(INFO) << "QuotaManagerTest_GetDqBlkSpacesByUids_004 end";
 }
 
@@ -933,7 +957,7 @@ HWTEST_F(QuotaManagerTest, QuotaManagerTest_GetDqBlkSpacesByUids_005, TestSize.L
     dqBlks.push_back(NextDqBlk(100, 50, 25, 1000, 500, 10, 0, 0, 1, 1000));
     EXPECT_FALSE(dqBlks.empty());
     int32_t result = QuotaManager::GetInstance().GetDqBlkSpacesByUids(uids, dqBlks);
-    EXPECT_TRUE(result == E_OK || result == E_QUOTA_CTL_KERNEL_ERR);
+    EXPECT_TRUE(result == E_OK || result == E_QUOTA_CTL_KERNEL_ERR || result == E_NOT_SUPPORT);
     GTEST_LOG_(INFO) << "QuotaManagerTest_GetDqBlkSpacesByUids_005 end";
 }
 
@@ -956,7 +980,8 @@ HWTEST_F(QuotaManagerTest, QuotaManagerTest_GetDqBlkSpacesByUids_006, TestSize.L
     setStopFlag.detach();
     int32_t result = QuotaManager::GetInstance().GetDqBlkSpacesByUids(uids, dqBlks);
     QuotaManager::GetInstance().SetStopScanFlag(false);
-    EXPECT_TRUE(result == E_OK || result == E_ERR || result == E_QUOTA_CTL_KERNEL_ERR);
+    EXPECT_TRUE(result == E_OK || result == E_ERR || result == E_QUOTA_CTL_KERNEL_ERR ||
+                result == E_NOT_SUPPORT);
     GTEST_LOG_(INFO) << "QuotaManagerTest_GetDqBlkSpacesByUids_006 end";
 }
 

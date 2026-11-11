@@ -62,6 +62,10 @@ ohos_unittest("quota_manager_test") {
     "init:libbegetutil",
     "ipc:ipc_single",
   ]
+
+  if (is_emulator) {
+    defines += [ "ENABLE_EMULATOR" ]
+  }
 }
 
 group("storage_daemon_quota_test") {

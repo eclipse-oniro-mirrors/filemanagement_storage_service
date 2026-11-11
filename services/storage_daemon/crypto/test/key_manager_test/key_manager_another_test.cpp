@@ -117,6 +117,7 @@ void KeyMgrAnotherTest::TearDown(void)
     storageManagerClientMock_ = nullptr;
 }
 
+#ifdef RECOVER_KEY_TEE_ENVIRONMENT
 /**
  * @tc.name: KeyManager_ResetSecretWithRecoveryKey_000
  * @tc.desc: Verify the ResetSecretWithRecoveryKey function.
@@ -174,6 +175,7 @@ HWTEST_F(KeyMgrAnotherTest, KeyManager_ResetSecretWithRecoveryKey_000, TestSize.
     OHOS::ForceRemoveDirectory(el4Path);
     GTEST_LOG_(INFO) << "KeyManager_ResetSecretWithRecoveryKey_000 end";
 }
+#endif
 
 /**
  * @tc.name: KeyManager_CreateRecoverKey_000

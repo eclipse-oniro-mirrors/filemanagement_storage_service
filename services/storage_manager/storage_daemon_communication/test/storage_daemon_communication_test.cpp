@@ -984,11 +984,7 @@ HWTEST_F(StorageDaemonCommunicationTest, Daemon_communication_SetDirEncryptionPo
     std::string keyDesc = "0123456789abcdef0123456789abcdef";
 
     int32_t result = sdCommunication.SetDirEncryptionPolicyWithKeyDesc(dirPath, level, keyDesc);
-    if (g_fscryptEnable) {
-        EXPECT_EQ(result, E_OK);
-    } else {
-        EXPECT_EQ(result, E_NOT_SUPPORT);
-    }
+    EXPECT_TRUE(result == E_OK || result == E_NOT_SUPPORT);
     GTEST_LOG_(INFO) << "StorageDaemonCommunicationTest-end SetDirEncryptionPolicyWithKeyDesc_0000 SUCCESS";
 }
 

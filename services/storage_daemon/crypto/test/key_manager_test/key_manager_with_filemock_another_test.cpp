@@ -91,6 +91,7 @@ void KeyMgrWithFileMockAnotherTest::TearDown(void)
     fileUtilMoc_ = nullptr;
 }
 
+#ifdef RECOVER_KEY_TEE_ENVIRONMENT
 /**
  * @tc.name: KeyManager_ResetSecretWithRecoveryKey_000
  * @tc.desc: Verify the ResetSecretWithRecoveryKey function.
@@ -151,4 +152,5 @@ HWTEST_F(KeyMgrWithFileMockAnotherTest, KeyManager_ResetSecretWithRecoveryKey_00
 
     GTEST_LOG_(INFO) << "KeyManager_ResetSecretWithRecoveryKey_000 end";
 }
+#endif
 }

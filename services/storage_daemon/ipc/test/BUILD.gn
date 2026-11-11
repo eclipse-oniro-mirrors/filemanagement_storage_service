@@ -274,6 +274,10 @@ ohos_unittest("storage_daemon_provider_test") {
     external_deps += [ "user_auth_framework:userauth_client" ]
   }
 
+  if (is_emulator) {
+    defines += [ "ENABLE_EMULATOR" ]
+  }
+
   use_exceptions = true
 }
 

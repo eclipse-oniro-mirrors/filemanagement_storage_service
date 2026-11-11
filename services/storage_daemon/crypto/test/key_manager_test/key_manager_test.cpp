@@ -1683,9 +1683,32 @@ HWTEST_F(KeyManagerTest, KeyManager_IsNeedRollbackVersion_001, TestSize.Level1)
     auto ret = KeyManager::GetInstance().IsNeedRollbackVersion(TEST_DIR);
     EXPECT_FALSE(ret);
 
-    TEST_DIR = "/data/test";
-    ret = KeyManager::GetInstance().IsNeedRollbackVersion(TEST_DIR);
+    std::string testPath = "/data/test/is_need_rollback";
+    std::string needRestorePath = testPath + "/latest/need_restore";
+    OHOS::ForceCreateDirectory(testPath + "/latest");
+    {
+        std::ofstream flagFile(needRestorePath);
+        EXPECT_TRUE(flagFile.is_open());
+        flagFile << "5";
+    }
+    ret = KeyManager::GetInstance().IsNeedRollbackVersion(needRestorePath);
     EXPECT_TRUE(ret);
+
+    {
+        std::ofstream flagFile(needRestorePath, std::ios::trunc);
+        flagFile << "1";
+    }
+    ret = KeyManager::GetInstance().IsNeedRollbackVersion(needRestorePath);
+    EXPECT_FALSE(ret);
+
+    {
+        std::ofstream flagFile(needRestorePath, std::ios::trunc);
+        flagFile << "3";
+    }
+    ret = KeyManager::GetInstance().IsNeedRollbackVersion(needRestorePath);
+    EXPECT_FALSE(ret);
+
+    OHOS::ForceRemoveDirectory(testPath);
     GTEST_LOG_(INFO) << "KeyManager_IsNeedRollbackVersion_0100 end";
 }
 
