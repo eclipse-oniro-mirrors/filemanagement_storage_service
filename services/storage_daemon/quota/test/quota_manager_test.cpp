@@ -980,8 +980,7 @@ HWTEST_F(QuotaManagerTest, QuotaManagerTest_GetDqBlkSpacesByUids_006, TestSize.L
     setStopFlag.detach();
     int32_t result = QuotaManager::GetInstance().GetDqBlkSpacesByUids(uids, dqBlks);
     QuotaManager::GetInstance().SetStopScanFlag(false);
-    EXPECT_TRUE(result == E_OK || result == E_ERR || result == E_QUOTA_CTL_KERNEL_ERR ||
-                result == E_NOT_SUPPORT);
+    EXPECT_TRUE(result == E_OK || result == E_ERR || result == E_QUOTA_CTL_KERNEL_ERR || result == E_NOT_SUPPORT);
     GTEST_LOG_(INFO) << "QuotaManagerTest_GetDqBlkSpacesByUids_006 end";
 }
 
