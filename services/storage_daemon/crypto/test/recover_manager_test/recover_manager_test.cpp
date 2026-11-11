@@ -29,8 +29,8 @@ using TEEC_ReturnCode = uint32_t;
 constexpr TEEC_Result TEEC_SUCCESS = 0;
 #endif
 namespace {
-    TEEC_Result g_initializeContext = 0;
-    TEEC_Result g_invokeCommand = 0;
+    TEEC_Result g_initializeContext = TEEC_SUCCESS;
+    TEEC_Result g_invokeCommand = TEEC_SUCCESS;
     int g_memcpyRet = 0;
 }
 
