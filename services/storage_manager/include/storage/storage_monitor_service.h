@@ -79,6 +79,12 @@ private:
 
     // stats
     void HapAndSaStatisticsThd();
+#ifdef CDC_STORAGE
+    void CdcHapAndSaStatisticsTimer();
+    void CdcStorageScanTimer();
+    int64_t cdcLastHapSaMs_ = 0;
+    int64_t cdcLastScanMs_ = 0;
+#endif
 
     void PublishCleanCacheEvent(const std::string &cleanLevel, bool isCleanSpace, struct SizeInfo &sizeInfo);
     int32_t SendCommonEventToCleanCache(const std::string &cleanLevel, struct SizeInfo &sizeInfo, bool isCleanSpace);

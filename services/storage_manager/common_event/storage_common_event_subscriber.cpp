@@ -127,6 +127,8 @@ void StorageCommonEventSubscriber::HandleBatteryChangedEvent(int batteryCapacity
 
 void StorageCommonEventSubscriber::CheckAndTriggerStatistic()
 {
+    // CDC: event-driven scan trigger is disabled on car devices;
+#ifndef CDC_STORAGE
     uint8_t currentDeviceState = deviceState_.load();
     int currentBatteryCapacity = batteryCapacity_.load();
     bool isChargingScreenOff = (currentDeviceState == STATE_CHARGING_SCREEN_OFF);
@@ -138,6 +140,7 @@ void StorageCommonEventSubscriber::CheckAndTriggerStatistic()
     } else {
         StorageManagerScan::GetInstance().StopScan();
     }
+#endif
 }
 }  // namespace StorageManager
 }  // namespace OHOS

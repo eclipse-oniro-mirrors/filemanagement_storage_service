@@ -34,6 +34,9 @@
 #include "storage_service_errno.h"
 #include "storage_service_log.h"
 #include "storage_stats.h"
+#ifdef CDC_STORAGE
+#include "scan/storage_manager_scan.h"
+#endif
 
 using namespace OHOS::StorageService;
 namespace OHOS {
@@ -52,6 +55,12 @@ constexpr int32_t STORAGE_FIRST_STATIC_HOUR = 0;
 constexpr int32_t STORAGE_SECOND_STATIC_HOUR = 8;
 constexpr int32_t STORAGE_THIRD_STATIC_HOUR = 16;
 constexpr int32_t STORAGE_FIRST_STATIC_MINUTE = 0;
+#ifdef CDC_STORAGE
+constexpr int32_t CDC_STATISTICS_INTERVAL_MS = 60 * 60 * 1000; // 1h
+constexpr int32_t CDC_SCAN_INTERVAL_MS = 2 * 60 * 60 * 1000; // 2h
+constexpr int32_t CDC_STATS_FIRST_DELAY_MS = 30 * 60 * 1000; // statistics first report at T+1.5h
+constexpr int32_t CDC_SCAN_LEAD_OFFSET_MS = 60 * 60 * 1000; // scan leads statistics by 1h
+#endif
 constexpr const char *STORAGE_ALERT_CLEANUP_PARAMETER = "const.storage_service.storage_alert_policy";
 constexpr const char *DEFAULT_PARAMS = "notify_l:500M/notify_m:2G/notify_h:10%/clean_l:750M/clean_m:5%/clean_h:12%";
 constexpr const char *STORAGE_ALERT_INODE_CLEANUP_PARAMETER = "const.storage_service.inode_alert_policy";
@@ -116,6 +125,42 @@ void StorageMonitorService::StartEventHandler()
     runner->Run();
 }
 
+#ifdef CDC_STORAGE
+void StorageMonitorService::CdcHapAndSaStatisticsTimer()
+{
+    int64_t nowMs = static_cast<int64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count());
+    if (cdcLastHapSaMs_ == 0) {
+        cdcLastHapSaMs_ = nowMs + CDC_STATS_FIRST_DELAY_MS; // skip boot-time report, first report at T+1.5h
+        return;
+    }
+    if (nowMs - cdcLastHapSaMs_ < CDC_STATISTICS_INTERVAL_MS) {
+        return;
+    }
+    cdcLastHapSaMs_ = nowMs;
+    LOGI("CDC statistics timer triggered.");
+    StorageDfxReporter::GetInstance().CheckAndTriggerHapAndSaStatistics();
+}
+
+void StorageMonitorService::CdcStorageScanTimer()
+{
+    int64_t nowMs = static_cast<int64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count());
+    if (cdcLastScanMs_ == 0) {
+        cdcLastScanMs_ = nowMs - CDC_SCAN_LEAD_OFFSET_MS; // first scan at T+1h
+        return;
+    }
+    if (nowMs - cdcLastScanMs_ < CDC_SCAN_INTERVAL_MS) {
+        return;
+    }
+    cdcLastScanMs_ = nowMs;
+    LOGI("CDC scan timer triggered.");
+    StorageManagerScan::GetInstance().StartScan();
+}
+#endif
+
 void StorageMonitorService::Execute()
 {
     if (eventHandler_ == nullptr) {
@@ -123,7 +168,12 @@ void StorageMonitorService::Execute()
         return;
     }
     MonitorAndManageStorage();
+#ifdef CDC_STORAGE
+    CdcHapAndSaStatisticsTimer();
+    CdcStorageScanTimer();
+#else
     HapAndSaStatisticsThd();
+#endif
     auto executeFunc = [this] { Execute(); };
     eventHandler_->PostTask(executeFunc, DEFAULT_CHECK_INTERVAL);
 }

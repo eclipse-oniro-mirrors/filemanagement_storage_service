@@ -47,11 +47,15 @@ constexpr double DIVISOR = 1000.0 * 1000.0;
 constexpr double BASE_NUMBER = 10.0;
 constexpr int32_t ACCURACY_NUM = 2;
 constexpr int32_t SCAN_TIMEOUT_MS = 30000;       // The scanning times out after 30 seconds.
+#ifndef CDC_STORAGE
 constexpr int64_t TIME_INTERVAL_MS = 24 * 60 * 60 * 1000;  // Number of milliseconds in 24 hours
+#endif
 constexpr int32_t WAIT_THREAD_TIMEOUT_MS = 5000;
 constexpr int64_t DEFAULT_ROOT_SIZE = 200000000;     // fallback root partition size
 constexpr int64_t DEFAULT_SYSTEM_SIZE = 10000000;     // fallback system size
+#ifndef CDC_STORAGE
 constexpr int64_t SCAN_SIZE_CHANGE_THRESHOLD = 1024 * 1024 * 1024;     // fallback memory manager size
+#endif
 constexpr int32_t TOP_LARGE_COUNT = 50;
 
 void StorageManagerScan::InitEventHandler()
@@ -189,6 +193,12 @@ void StorageManagerScan::StopScan()
 
 bool StorageManagerScan::CheckScanPreconditions()
 {
+#ifdef CDC_STORAGE
+    // CDC: scan cadence is owned by the steady-clock timer in StorageMonitorService.
+    // No wall-clock throttle here (the original 24h check only serves the
+    // event-driven path on non-CDC builds).
+    return true;
+#else
     if (isFirstScan_) {
         LOGI("CheckScanPreconditions: first scan, allow to scan");
         return true;
@@ -212,6 +222,7 @@ bool StorageManagerScan::CheckScanPreconditions()
     LOGI("CheckScanPreconditions: timeDiff=%{public}lldms < 24h, skip scan",
          static_cast<long long>(timeDiff));
     return false;
+#endif
 }
 
 void StorageManagerScan::LaunchScanWorker()
@@ -383,10 +394,15 @@ void StorageManagerScan::CalculateFinalSizes(int64_t startTimeMs, const ScanResu
     int64_t rootSize = scanResult.rootSize - scanResult.rgmManagerRootSize;
     int64_t systemSize = scanResult.systemSize;
     int64_t foundationSize = scanResult.foundationSize;
+#ifdef CDC_STORAGE
+    // CDC: report large files/dirs on every scan, no size-change threshold.
+    ReportLargeFilesAndDirs(scanResult.largeFiles, scanResult.largeDirs);
+#else
     if (std::abs(rootSize + systemSize + foundationSize - rootSize_ - systemSize_ - foundationSize_) >
         SCAN_SIZE_CHANGE_THRESHOLD) {
         ReportLargeFilesAndDirs(scanResult.largeFiles, scanResult.largeDirs);
     }
+#endif
     rootSize_ = rootSize;
     systemSize_ = systemSize;
     foundationSize_ = foundationSize;
