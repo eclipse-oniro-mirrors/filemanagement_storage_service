@@ -16,10 +16,12 @@
 #ifndef OHOS_FILEMANAGEMENT_STORAGE_SPACE_MANAGER_CACHE_CLEAN_CONTROLLER_H
 #define OHOS_FILEMANAGEMENT_STORAGE_SPACE_MANAGER_CACHE_CLEAN_CONTROLLER_H
 
+#include <memory>
 #include <mutex>
-#include <string>
-#include <vector>
 #include <sstream>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 #include <nocopyable.h>
 #include <singleton.h>
@@ -282,7 +284,8 @@ public:
      */
     int32_t CleanRankBasedCache(const std::vector<CleanCacheInfo> &rankedCleanInfos,
                                  const CleanResources &resources,
-                                 CleanStats &stats);
+                                 CleanStats &stats,
+                                 std::ostringstream &extraData);
 
     /**
      * @brief Clean all cache for apps.
@@ -293,7 +296,8 @@ public:
      */
     int32_t CleanAllCacheForApps(const std::vector<CleanCacheInfo> &cleanAllCacheInfos,
                                   const CleanResources &resources,
-                                  CleanStats &stats);
+                                  CleanStats &stats,
+                                  std::ostringstream &extraData);
 
     /**
      * @brief Prepare resources for cache cleaning.
@@ -311,10 +315,11 @@ public:
      * @return Returns E_OK on success, error code otherwise.
      */
     int32_t CleanSingleAppWithQuota(const CleanCacheInfo &cleanInfo,
-                                      int32_t rank,
-                                      const CleanResources &resources,
-                                      CleanStats &stats,
-                                      const std::unordered_map<std::string, int32_t> &systemAppCacheQuata);
+                                       int32_t rank,
+                                       const CleanResources &resources,
+                                       CleanStats &stats,
+                                        const std::unordered_map<std::string, int32_t> &systemAppCacheQuota,
+                                       std::ostringstream &extraData);
 
     /**
      * @brief Perform cache cleaning for a single app.
@@ -324,8 +329,9 @@ public:
      * @return Returns E_OK on success, error code otherwise.
      */
     int32_t PerformCacheCleaning(const CleanCacheInfo &cleanInfo,
-                                  const CleanResources &resources,
-                                  CleanStats &stats);
+                                   const CleanResources &resources,
+                                   CleanStats &stats,
+                                   std::ostringstream &extraData);
 
     /**
      * @brief Query bundle stats for ranking.
@@ -369,7 +375,8 @@ public:
 
 private:
     void PrintOverLongLog(std::string str);
-    void WriteCleanInfoToExtra(const CleanCacheInfo &cleanInfo, uint64_t before, uint64_t after, bool isSucc);
+    void WriteCleanInfoToExtra(const CleanCacheInfo &cleanInfo, uint64_t before, uint64_t after, bool isSucc,
+                               std::ostringstream &extraData);
     int32_t ExecuteCleanBundleCache(int32_t userId);
     int32_t GetDefaultQuotaByRank(int32_t appRank, int64_t totalStorage, int32_t &quota);
 
@@ -379,7 +386,6 @@ private:
     std::shared_ptr<IQuotaCalculator> quotaCalculator_;
     std::mutex loadQuotaMutex_;
     std::atomic<bool> stopCleanCacheFlag_{false};  // Stop clean cache flag
-    std::ostringstream extraData_;
 };
 
 } // namespace StorageSpaceManager

@@ -962,7 +962,7 @@ HWTEST_F(CacheCleanControllerTest, WriteCleanInfoToExtra_Success_AppIndexZero, T
     GTEST_LOG_(INFO) << "CacheCleanControllerTest_WriteCleanInfoToExtra_Success_AppIndexZero start";
 
     ASSERT_NE(controller_, nullptr);
-    controller_->extraData_.str("");
+    std::ostringstream extraData;
 
     CleanCacheInfo cleanInfo;
     cleanInfo.bundleName = "com.example.test";
@@ -974,9 +974,9 @@ HWTEST_F(CacheCleanControllerTest, WriteCleanInfoToExtra_Success_AppIndexZero, T
     uint64_t after = 5 * 1024 * 1024;
     bool isSucc = true;
 
-    controller_->WriteCleanInfoToExtra(cleanInfo, before, after, isSucc);
+    controller_->WriteCleanInfoToExtra(cleanInfo, before, after, isSucc, extraData);
 
-    std::string output = controller_->extraData_.str();
+    std::string output = extraData.str();
     EXPECT_NE(output.find("BN:com.example.test"), std::string::npos);
     EXPECT_NE(output.find("CT:1048576"), std::string::npos);
     EXPECT_NE(output.find("BS:10485760"), std::string::npos);
@@ -999,7 +999,7 @@ HWTEST_F(CacheCleanControllerTest, WriteCleanInfoToExtra_Success_AppIndexNonZero
     GTEST_LOG_(INFO) << "CacheCleanControllerTest_WriteCleanInfoToExtra_Success_AppIndexNonZero start";
 
     ASSERT_NE(controller_, nullptr);
-    controller_->extraData_.str("");
+    std::ostringstream extraData;
 
     CleanCacheInfo cleanInfo;
     cleanInfo.bundleName = "com.example.multi";
@@ -1011,9 +1011,9 @@ HWTEST_F(CacheCleanControllerTest, WriteCleanInfoToExtra_Success_AppIndexNonZero
     uint64_t after = 8 * 1024 * 1024;
     bool isSucc = true;
 
-    controller_->WriteCleanInfoToExtra(cleanInfo, before, after, isSucc);
+    controller_->WriteCleanInfoToExtra(cleanInfo, before, after, isSucc, extraData);
 
-    std::string output = controller_->extraData_.str();
+    std::string output = extraData.str();
     EXPECT_NE(output.find("BN:com.example.multi"), std::string::npos);
     EXPECT_NE(output.find(",IDX:2"), std::string::npos);
     EXPECT_NE(output.find("CT:2097152"), std::string::npos);
@@ -1037,7 +1037,7 @@ HWTEST_F(CacheCleanControllerTest, WriteCleanInfoToExtra_Failure_AppIndexZero, T
     GTEST_LOG_(INFO) << "CacheCleanControllerTest_WriteCleanInfoToExtra_Failure_AppIndexZero start";
 
     ASSERT_NE(controller_, nullptr);
-    controller_->extraData_.str("");
+    std::ostringstream extraData;
 
     CleanCacheInfo cleanInfo;
     cleanInfo.bundleName = "com.example.fail";
@@ -1049,9 +1049,9 @@ HWTEST_F(CacheCleanControllerTest, WriteCleanInfoToExtra_Failure_AppIndexZero, T
     uint64_t after = 0;
     bool isSucc = false;
 
-    controller_->WriteCleanInfoToExtra(cleanInfo, before, after, isSucc);
+    controller_->WriteCleanInfoToExtra(cleanInfo, before, after, isSucc, extraData);
 
-    std::string output = controller_->extraData_.str();
+    std::string output = extraData.str();
     EXPECT_NE(output.find("BN:com.example.fail"), std::string::npos);
     EXPECT_NE(output.find("CT:3145728"), std::string::npos);
     EXPECT_NE(output.find("FAIL"), std::string::npos);
@@ -1076,7 +1076,7 @@ HWTEST_F(CacheCleanControllerTest, WriteCleanInfoToExtra_Failure_AppIndexNonZero
     GTEST_LOG_(INFO) << "CacheCleanControllerTest_WriteCleanInfoToExtra_Failure_AppIndexNonZero start";
 
     ASSERT_NE(controller_, nullptr);
-    controller_->extraData_.str("");
+    std::ostringstream extraData;
 
     CleanCacheInfo cleanInfo;
     cleanInfo.bundleName = "com.example.failmulti";
@@ -1088,9 +1088,9 @@ HWTEST_F(CacheCleanControllerTest, WriteCleanInfoToExtra_Failure_AppIndexNonZero
     uint64_t after = 0;
     bool isSucc = false;
 
-    controller_->WriteCleanInfoToExtra(cleanInfo, before, after, isSucc);
+    controller_->WriteCleanInfoToExtra(cleanInfo, before, after, isSucc, extraData);
 
-    std::string output = controller_->extraData_.str();
+    std::string output = extraData.str();
     EXPECT_NE(output.find("BN:com.example.failmulti"), std::string::npos);
     EXPECT_NE(output.find(",IDX:3"), std::string::npos);
     EXPECT_NE(output.find("CT:4194304"), std::string::npos);
