@@ -39,6 +39,7 @@ namespace OHOS {
 namespace StorageDaemon {
 
 constexpr const char *MOUNT_PATH_PREFIX = "/mnt/data/";
+constexpr const char *PC_ENC_MOUNT_PREFIX = "/data/service/el1/public/pc_encryption_extension_service";
 constexpr int32_t WAIT_MOUNT_TIMEOUT_S = 60;
 constexpr size_t SHA256_DIGEST_BIT_MASK = 0x0f;
 constexpr size_t SHA256_DIGEST_VERSION = 0x50;
@@ -159,7 +160,7 @@ int32_t IVolumeOperator::ValidateMountRequest(const std::string& devPath, const 
         LOGE("IVolumeOperator::Mount mountPath or mountData contains invalid content");
         return E_PARAMS_INVALID;
     }
-    if (mountPath.find(MOUNT_PATH_PREFIX) != 0) {
+    if (mountPath.find(MOUNT_PATH_PREFIX) != 0 && mountPath.find(PC_ENC_MOUNT_PREFIX) != 0) {
         LOGE("IVolumeOperator::Mount invalid mountPath prefix");
         return E_PARAMS_INVALID;
     }
