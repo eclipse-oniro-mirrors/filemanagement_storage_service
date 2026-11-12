@@ -3766,5 +3766,129 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_UMountUdmfClipFuse
     OHOS::ForceRemoveDirectory(path);
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_UMountUdmfClipFuse_005 end";
 }
+
+#ifdef DISK_MANAGER
+/**
+ * @tc.name: StorageDaemonProviderTest_GetDiskPowerCycleCount_001
+ * @tc.desc: GetDiskPowerCycleCount with wrong uid returns E_PERMISSION_DENIED.
+ * @tc.type: FUNC
+ * @tc.require: NA
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_GetDiskPowerCycleCount_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_GetDiskPowerCycleCount_001 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
+    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
+    uint64_t count = 0;
+    int32_t ret = storageDaemonProviderTest_->GetDiskPowerCycleCount("nvme0n1", count);
+    EXPECT_EQ(ret, E_PERMISSION_DENIED);
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_GetDiskPowerCycleCount_001 end";
+}
+
+/**
+ * @tc.name: StorageDaemonProviderTest_GetDiskPowerCycleCount_002
+ * @tc.desc: GetDiskPowerCycleCount with empty devName returns E_PARAMS_INVALID.
+ * @tc.type: FUNC
+ * @tc.require: NA
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_GetDiskPowerCycleCount_002, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_GetDiskPowerCycleCount_002 start";
+    SetCallingUid(DISK_MANAGER_UID);
+    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
+    uint64_t count = 0;
+    int32_t ret = storageDaemonProviderTest_->GetDiskPowerCycleCount("", count);
+    EXPECT_EQ(ret, E_PARAMS_INVALID);
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_GetDiskPowerCycleCount_002 end";
+}
+
+/**
+ * @tc.name: StorageDaemonProviderTest_GetDiskPowerCycleCount_003
+ * @tc.desc: GetDiskPowerCycleCount with devName containing / returns E_PARAMS_INVALID.
+ * @tc.type: FUNC
+ * @tc.require: NA
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_GetDiskPowerCycleCount_003, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_GetDiskPowerCycleCount_003 start";
+    SetCallingUid(DISK_MANAGER_UID);
+    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
+    uint64_t count = 0;
+    int32_t ret = storageDaemonProviderTest_->GetDiskPowerCycleCount("sda/b", count);
+    EXPECT_EQ(ret, E_PARAMS_INVALID);
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_GetDiskPowerCycleCount_003 end";
+}
+
+/**
+ * @tc.name: StorageDaemonProviderTest_GetDiskPowerCycleCount_004
+ * @tc.desc: GetDiskPowerCycleCount with valid uid and devName returns E_OK.
+ * @tc.type: FUNC
+ * @tc.require: NA
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_GetDiskPowerCycleCount_004, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_GetDiskPowerCycleCount_004 start";
+    SetCallingUid(DISK_MANAGER_UID);
+    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
+    uint64_t count = 0;
+    int32_t ret = storageDaemonProviderTest_->GetDiskPowerCycleCount("nvme0n1", count);
+    EXPECT_EQ(ret, E_OK);
+    EXPECT_EQ(count, 0);
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_GetDiskPowerCycleCount_004 end";
+}
+
+/**
+ * @tc.name: StorageDaemonProviderTest_GetDiskPowerOnHours_001
+ * @tc.desc: GetDiskPowerOnHours with wrong uid returns E_PERMISSION_DENIED.
+ * @tc.type: FUNC
+ * @tc.require: NA
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_GetDiskPowerOnHours_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_GetDiskPowerOnHours_001 start";
+    SetCallingUid(STORAGE_MANAGER_UID);
+    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
+    uint64_t hours = 0;
+    int32_t ret = storageDaemonProviderTest_->GetDiskPowerOnHours("nvme0n1", hours);
+    EXPECT_EQ(ret, E_PERMISSION_DENIED);
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_GetDiskPowerOnHours_001 end";
+}
+
+/**
+ * @tc.name: StorageDaemonProviderTest_GetDiskPowerOnHours_002
+ * @tc.desc: GetDiskPowerOnHours with empty devName returns E_PARAMS_INVALID.
+ * @tc.type: FUNC
+ * @tc.require: NA
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_GetDiskPowerOnHours_002, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_GetDiskPowerOnHours_002 start";
+    SetCallingUid(DISK_MANAGER_UID);
+    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
+    uint64_t hours = 0;
+    int32_t ret = storageDaemonProviderTest_->GetDiskPowerOnHours("", hours);
+    EXPECT_EQ(ret, E_PARAMS_INVALID);
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_GetDiskPowerOnHours_002 end";
+}
+
+/**
+ * @tc.name: StorageDaemonProviderTest_GetDiskPowerOnHours_003
+ * @tc.desc: GetDiskPowerOnHours with valid uid and devName returns E_OK.
+ * @tc.type: FUNC
+ * @tc.require: NA
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_GetDiskPowerOnHours_003, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_GetDiskPowerOnHours_003 start";
+    SetCallingUid(DISK_MANAGER_UID);
+    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
+    uint64_t hours = 0;
+    int32_t ret = storageDaemonProviderTest_->GetDiskPowerOnHours("nvme0n1", hours);
+    EXPECT_EQ(ret, E_OK);
+    EXPECT_EQ(hours, 0);
+    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_GetDiskPowerOnHours_003 end";
+}
+#endif
+
 } // namespace StorageDaemon
 } // namespace OHOS

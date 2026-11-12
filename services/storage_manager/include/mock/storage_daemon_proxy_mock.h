@@ -183,6 +183,8 @@ public:
                                    uint64_t &dmDev) override;
     virtual int32_t GetBurnFileList(const std::string &srcDir, int32_t offset, int32_t pageSize,
                                    std::vector<std::string> &fileList, bool &hasMore) override;
+    virtual int32_t GetDiskPowerCycleCount(const std::string &devName, uint64_t &powerCycleCount) override;
+    virtual int32_t GetDiskPowerOnHours(const std::string &devName, uint64_t &powerOnHours) override;
 private:
     static inline BrokerDelegator<StorageDaemonProxy> delegator_;
     int32_t SendRequest(uint32_t code, MessageParcel &data, MessageParcel &reply, MessageOption &option);
