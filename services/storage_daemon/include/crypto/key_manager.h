@@ -196,7 +196,7 @@ private:
     int32_t FileBasedEncryptfsMount();
     int32_t InstallEmptyUserKeyForRecovery(uint32_t userId);
 #endif
-#if defined(PC_ENCRYPTION_EXTENSION)
+#ifdef PC_ENCRYPTION_EXTENSION
     int32_t MountRecoverPaths();
 #endif
     using KeyMap = std::map<KeyType, std::shared_ptr<BaseKey>>;

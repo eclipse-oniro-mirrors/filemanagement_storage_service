@@ -83,11 +83,11 @@ constexpr const char *FILE_BASED_ENCRYPT_SRC_PATH = "/mnt/data_old/service/el1/p
 constexpr const char *FILE_BASED_ENCRYPT_DST_PATH = "/data/service/el1/public/sec_storage_data/fbe3";
 constexpr int32_t DEFAULT_REPAIR_USERID = 10736;
 #endif
-#if defined(PC_ENCRYPTION_EXTENSION)
-const char RECOVER_PIN_SRC_PATH[] = "/mnt/data_old/service/el1/public/sec_storage_data/pin";
-const char RECOVER_PIN_DST_PATH[] = "/data/service/el1/public/sec_storage_data/pin";
-const char RECOVER_SD_SRC_PATH[] = "/mnt/data_old/service/el1/public/storage_daemon";
-const char RECOVER_SD_DST_PATH[] = "/data/service/el1/public/storage_daemon";
+#ifdef PC_ENCRYPTION_EXTENSION
+constexpr const char *RECOVER_PIN_SRC_PATH = "/mnt/data_old/service/el1/public/sec_storage_data/pin";
+constexpr const char *RECOVER_PIN_DST_PATH = "/data/service/el1/public/sec_storage_data/pin";
+constexpr const char *RECOVER_SD_SRC_PATH = "/mnt/data_old/service/el1/public/storage_daemon";
+constexpr const char *RECOVER_SD_DST_PATH = "/data/service/el1/public/storage_daemon";
 #endif
 
 static bool IsEncryption()
@@ -2183,14 +2183,16 @@ int KeyManager::SetRecoverKey(const std::vector<uint8_t> &key, bool needMountPat
         LOGE("[L3:KeyManager] SetRecoverKey: <<< EXIT FAILED <<< [failed to set recovery key]");
         return E_SET_RECOVERY_KEY_ERR;
     }
-#if defined(PC_ENCRYPTION_EXTENSION)
-    if (needMountPath) {
-        int32_t mountRet = MountRecoverPaths();
-        if (mountRet != E_OK) {
-            LOGE("[L3:KeyManager] SetRecoverKey: MountRecoverPaths failed, ret=%{public}d, key setting not rolled back",
-                mountRet);
-            return mountRet;
-        }
+#ifdef PC_ENCRYPTION_EXTENSION
+    if (!needMountPath) {
+        LOGI("[L3:KeyManager] SetRecoverKey: <<< EXIT SUCCESS <<< [retval=0]");
+        return E_OK;
+    }
+    int32_t mountRet = MountRecoverPaths();
+    if (mountRet != E_OK) {
+        LOGE("[L3:KeyManager] SetRecoverKey: MountRecoverPaths failed, ret=%{public}d, key setting not rolled back",
+            mountRet);
+        return mountRet;
     }
 #endif
     LOGI("[L3:KeyManager] SetRecoverKey: <<< EXIT SUCCESS <<< [retval=0]");
@@ -2272,7 +2274,7 @@ int32_t KeyManager::InstallEmptyUserKeyForRecovery(uint32_t userId)
 }
 #endif
 
-#if defined(PC_ENCRYPTION_EXTENSION)
+#ifdef PC_ENCRYPTION_EXTENSION
 int32_t KeyManager::MountRecoverPaths()
 {
     LOGI("[L3:KeyManager] MountRecoverPaths: >>> ENTER <<<");
