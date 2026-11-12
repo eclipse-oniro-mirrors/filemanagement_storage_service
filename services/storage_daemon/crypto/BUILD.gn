@@ -126,6 +126,10 @@ ohos_static_library("libsdcrypto") {
     defines += [ "PC_ENCRYPTION_EXTENSION" ]
   }
 
+  if (enable_test_fault_injection) {
+    defines += [ "ENABLE_TEST_FAULT_INJECTION" ]
+  }
+
   subsystem_name = "filemanagement"
   part_name = "storage_service"
 }

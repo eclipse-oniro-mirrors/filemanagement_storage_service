@@ -22,6 +22,7 @@
 #include "utils/storage_radar.h"
 #include "utils/string_utils.h"
 #include "utils/hi_audit.h"
+#include "utils/test_fault_injection.h"
 
 using namespace OHOS::StorageService;
 namespace OHOS {
@@ -45,6 +46,7 @@ int AppCloneKeyManager::ActiveAppCloneUserKey(unsigned int &failedUserId)
             continue;
         }
         HiAudit::GetInstance().WriteStart("AppCloneKeyManager::ActiveAppCloneUserKey start");
+        FAULT_POINT("active_app_clone_el2");
         int ret = KeyManager::GetInstance().ActiveCeSceSeceUserKey(userId, EL2_KEY, {}, {});
         if (ret != E_OK && ret != E_ACTIVE_REPEATED) {
             failedUserId = static_cast<unsigned int>(userId);
@@ -53,6 +55,7 @@ int AppCloneKeyManager::ActiveAppCloneUserKey(unsigned int &failedUserId)
             StorageRadar::ReportActiveUserKey("ActiveUserKey::ActiveAppCloneUserKey", userId, ret, "EL2");
             return ret;
         }
+        FAULT_POINT("active_app_clone_el3");
         ret = KeyManager::GetInstance().ActiveCeSceSeceUserKey(userId, EL3_KEY, {}, {});
         if (ret != E_OK && ret != E_ACTIVE_REPEATED) {
             failedUserId = static_cast<unsigned int>(userId);
@@ -61,6 +64,7 @@ int AppCloneKeyManager::ActiveAppCloneUserKey(unsigned int &failedUserId)
             StorageRadar::ReportActiveUserKey("ActiveUserKey::ActiveAppCloneUserKey", userId, ret, "EL3");
             return ret;
         }
+        FAULT_POINT("active_app_clone_el4");
         ret = KeyManager::GetInstance().ActiveCeSceSeceUserKey(userId, EL4_KEY, {}, {});
         if (ret != E_OK && ret != E_ACTIVE_REPEATED) {
             failedUserId = static_cast<unsigned int>(userId);

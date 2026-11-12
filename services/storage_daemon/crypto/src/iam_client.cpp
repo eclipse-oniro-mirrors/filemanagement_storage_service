@@ -21,6 +21,7 @@
 #include "utils/storage_radar.h"
 #include "utils/disk_utils.h"
 #include "utils/file_utils.h"
+#include "utils/test_fault_injection.h"
 
 using namespace OHOS::StorageService;
 namespace OHOS {
@@ -75,6 +76,7 @@ bool IamClient::GetSecureUid(uint32_t userId, uint64_t &secureUid)
 {
     LOGI("[L4:IamClient] GetSecureUid: >>> ENTER <<< userId=%{public}u", userId);
 #ifdef USER_AUTH_FRAMEWORK
+    FAULT_POINT("iam_get_secure_uid");
     LOGI("[L4:IamClient] GetSecureUid: get secure uid real !");
     auto startTime = StorageService::StorageRadar::RecordCurrentTime();
     secureUidStatus_ = FAILED;
@@ -122,6 +124,7 @@ bool IamClient::GetSecUserInfo(uint32_t userId, UserIam::UserAuth::SecUserInfo &
 {
     LOGI("[L4:IamClient] GetSecUserInfo: >>> ENTER <<< userId=%{public}u", userId);
 #ifdef USER_AUTH_FRAMEWORK
+    FAULT_POINT("iam_get_sec_user_info");
     LOGI("[L4:IamClient] GetSecUserInfo: Get SecUserInfo real !");
     auto startTime = StorageService::StorageRadar::RecordCurrentTime();
     secUserInfoState_ = SEC_USER_INFO_FAILED;

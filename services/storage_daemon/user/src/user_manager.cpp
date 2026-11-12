@@ -27,6 +27,7 @@
 #include "utils/hi_audit.h"
 #include "utils/storage_radar.h"
 #include "utils/string_utils.h"
+#include "utils/test_fault_injection.h"
 #include "ipc/storage_manager_client.h"
 
 #include "user/user_path_resolver.h"
@@ -214,6 +215,7 @@ int32_t UserManager::CreateServiceDirs(int32_t userId, uint32_t flags)
 int32_t UserManager::DestroyUserDirs(int32_t userId, uint32_t flags)
 {
     LOGI("[L2:UserManager] DestroyUserDirs: >>> ENTER <<< userId=%{public}d, flags=%{public}u", userId, flags);
+    FAULT_POINT("destroy_user_dirs_entry");
     std::lock_guard<std::mutex> lock(mutex_);
     int32_t ret = CheckUserIdRange(userId);
     if (ret != E_OK) {
@@ -242,6 +244,7 @@ int32_t UserManager::DestroyUserDirs(int32_t userId, uint32_t flags)
         auto err = dirInfo->RemoveDir();
         ret = (err != E_OK) ? err : ret;
     }
+    FAULT_POINT("destroy_user_dirs_after_remove");
     LOGI("[L2:UserManager] DestroyUserDirs: <<< EXIT SUCCESS <<< userId=%{public}d, ret=%{public}d", userId, ret);
     return ret;
 }

@@ -23,6 +23,7 @@
 #include "openssl_crypto.h"
 #include "storage_service_log.h"
 #include "utils/storage_radar.h"
+#include "utils/test_fault_injection.h"
 
 using namespace OHOS::StorageService;
 namespace {
@@ -563,6 +564,7 @@ int FBEX::GenerateAppkey(UserIdToFbeStr &userIdToFbe, uint32_t hashId, std::uniq
                          uint32_t size)
 {
     LOGI("[L7:FBEX] GenerateAppkey: >>> ENTER <<<");
+    FAULT_POINT("fbex_generate_app_key");
     int fd = open(FBEX_UECE_PATH, O_RDWR);
     if (fd < 0) {
         int tmpErrno = errno;

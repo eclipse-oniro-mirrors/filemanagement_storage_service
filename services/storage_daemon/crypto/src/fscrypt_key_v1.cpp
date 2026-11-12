@@ -27,6 +27,7 @@
 #include "utils/disk_utils.h"
 #include "utils/file_utils.h"
 #include "utils/storage_radar.h"
+#include "utils/test_fault_injection.h"
 
 using namespace OHOS::StorageService;
 namespace OHOS {
@@ -443,6 +444,7 @@ int32_t FscryptKeyV1::EncryptClassE(const UserAuth &auth, bool &isSupport, uint3
 int32_t FscryptKeyV1::InstallKeyToKeyring()
 {
     LOGI("[L5:FscryptKeyV1] InstallKeyToKeyring: >>> ENTER <<< dir=%{public}s", dir_.c_str());
+    FAULT_POINT("install_key_to_keyring");
     fscrypt_key fskey;
     fskey.mode = FS_ENCRYPTION_MODE_AES_256_XTS;
     fskey.size = keyInfo_.key.size;

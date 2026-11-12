@@ -29,6 +29,7 @@
 #include "utils/file_utils.h"
 #include "utils/mount_argument_utils.h"
 #include "utils/string_utils.h"
+#include "utils/test_fault_injection.h"
 #include "user/user_path_resolver.h"
 #include "user/system_mount_manager.h"
 
@@ -510,6 +511,7 @@ int32_t MountManager::MountFileSystem(int32_t userId)
         LOGE("[L2:MountManager] MountFileSystem: <<< EXIT FAILED <<< MountHmdfs failed, ret=%{public}d", ret);
         return ret;
     }
+    FAULT_POINT("mount_file_system_after_hmdfs");
     MountSharefs(userId);
     MountAppdata(userId, false);
     LOGI("[L2:MountManager] MountFileSystem: <<< EXIT SUCCESS <<< userId=%{public}d", userId);
@@ -620,7 +622,7 @@ int32_t MountManager::UmountByUser(int32_t userId)
             res = unMount;
         }
     }
-
+    FAULT_POINT("umount_by_user_before_cloud");
     LOGI("[L2:MountManager] UmountByUser: umount cloud mount point start.");
     int32_t cloudUMount = SystemMountManager::GetInstance().UMountCloudByUserId(userId);
     res = (cloudUMount != E_OK) ? cloudUMount : res;
@@ -992,6 +994,7 @@ int32_t MountManager::PrepareAppdataDir(int32_t userId)
 {
     LOGI("[L2:MountManager] PrepareAppdataDir: >>> ENTER <<< userId=%{public}d", userId);
     HiAudit::GetInstance().WriteStart("PrepareAppdataDir", "userId=" + std::to_string(userId));
+    FAULT_POINT("prepare_app_data_dir_entry");
     if (userId == 0) {
         std::vector<int32_t> userIds;
         GetAllUserIds(userIds);
