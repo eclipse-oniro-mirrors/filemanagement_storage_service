@@ -192,6 +192,9 @@ private:
     int GenerateAppkeyWithRecover(uint32_t userId, uint32_t hashId, std::string &keyId);
     int UpdateClassEBackUpFix(uint32_t userId);
 
+    int32_t BindMountPath(const std::string &srcPath, const std::string &dstPath,
+        const std::string &funcName, int32_t umountErr, int32_t mountErr);
+
 #ifdef RECOVER_KEY_TEE_ENVIRONMENT
     int32_t FileBasedEncryptfsMount();
     int32_t InstallEmptyUserKeyForRecovery(uint32_t userId);

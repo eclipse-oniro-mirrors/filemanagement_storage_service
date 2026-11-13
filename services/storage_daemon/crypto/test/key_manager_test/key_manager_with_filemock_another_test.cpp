@@ -187,7 +187,7 @@ HWTEST_F(KeyMgrWithFileMockAnotherTest, KeyManager_SetRecoverKey_NeedMountPath_0
 
 /**
  * @tc.name: KeyManager_SetRecoverKey_NeedMountPath_002
- * @tc.desc: Verify SetRecoverKey returns E_UMOUNT_RECOVER_KEY when UMount fails.
+ * @tc.desc: Verify SetRecoverKey returns E_UMOUNT_RECOVER_KEY when UMount fails at first pair.
  * @tc.type: FUNC
  * @tc.require: IAHHWW
  */
@@ -204,7 +204,7 @@ HWTEST_F(KeyMgrWithFileMockAnotherTest, KeyManager_SetRecoverKey_NeedMountPath_0
 
 /**
  * @tc.name: KeyManager_SetRecoverKey_NeedMountPath_003
- * @tc.desc: Verify SetRecoverKey returns E_MOUNT_RECOVER_KEY when Mount fails.
+ * @tc.desc: Verify SetRecoverKey returns E_MOUNT_RECOVER_KEY when Mount fails at first pair.
  * @tc.type: FUNC
  * @tc.require: IAHHWW
  */
@@ -222,7 +222,7 @@ HWTEST_F(KeyMgrWithFileMockAnotherTest, KeyManager_SetRecoverKey_NeedMountPath_0
 
 /**
  * @tc.name: KeyManager_SetRecoverKey_NeedMountPath_004
- * @tc.desc: Verify SetRecoverKey returns E_OK when all mount operations succeed.
+ * @tc.desc: Verify SetRecoverKey returns E_OK when all 5 mount pairs succeed.
  * @tc.type: FUNC
  * @tc.require: IAHHWW
  */
@@ -235,6 +235,44 @@ HWTEST_F(KeyMgrWithFileMockAnotherTest, KeyManager_SetRecoverKey_NeedMountPath_0
     EXPECT_CALL(*fileUtilMoc_, Mount(_, _, _, _, _)).WillRepeatedly(Return(0));
     EXPECT_EQ(KeyManager::GetInstance().SetRecoverKey(key, true), E_OK);
     GTEST_LOG_(INFO) << "KeyManager_SetRecoverKey_NeedMountPath_004 end";
+}
+
+/**
+ * @tc.name: KeyManager_SetRecoverKey_NeedMountPath_005
+ * @tc.desc: Verify SetRecoverKey returns E_UMOUNT_RECOVER_KEY when UMount fails at last pair.
+ * @tc.type: FUNC
+ * @tc.require: IAHHWW
+ */
+HWTEST_F(KeyMgrWithFileMockAnotherTest, KeyManager_SetRecoverKey_NeedMountPath_005, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "KeyManager_SetRecoverKey_NeedMountPath_005 Start";
+    std::vector<uint8_t> key;
+    EXPECT_CALL(*recoveryMgrMock_, SetRecoverKey(_)).WillOnce(Return(E_OK));
+    EXPECT_CALL(*fileUtilMoc_, UMount(_))
+        .WillOnce(Return(0)).WillOnce(Return(0)).WillOnce(Return(0)).WillOnce(Return(0)).WillOnce(Return(1));
+    EXPECT_CALL(*fileUtilMoc_, Mount(_, _, _, _, _)).WillRepeatedly(Return(0));
+    errno = 0;
+    EXPECT_EQ(KeyManager::GetInstance().SetRecoverKey(key, true), E_UMOUNT_RECOVER_KEY);
+    GTEST_LOG_(INFO) << "KeyManager_SetRecoverKey_NeedMountPath_005 end";
+}
+
+/**
+ * @tc.name: KeyManager_SetRecoverKey_NeedMountPath_006
+ * @tc.desc: Verify SetRecoverKey returns E_MOUNT_RECOVER_KEY when Mount fails at last pair.
+ * @tc.type: FUNC
+ * @tc.require: IAHHWW
+ */
+HWTEST_F(KeyMgrWithFileMockAnotherTest, KeyManager_SetRecoverKey_NeedMountPath_006, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "KeyManager_SetRecoverKey_NeedMountPath_006 Start";
+    std::vector<uint8_t> key;
+    EXPECT_CALL(*recoveryMgrMock_, SetRecoverKey(_)).WillOnce(Return(E_OK));
+    EXPECT_CALL(*fileUtilMoc_, UMount(_)).WillRepeatedly(Return(0));
+    EXPECT_CALL(*fileUtilMoc_, Mount(_, _, _, _, _))
+        .WillOnce(Return(0)).WillOnce(Return(0)).WillOnce(Return(0)).WillOnce(Return(0)).WillOnce(Return(1));
+    errno = 0;
+    EXPECT_EQ(KeyManager::GetInstance().SetRecoverKey(key, true), E_MOUNT_RECOVER_KEY);
+    GTEST_LOG_(INFO) << "KeyManager_SetRecoverKey_NeedMountPath_006 end";
 }
 #endif
 }
