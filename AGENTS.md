@@ -14,6 +14,8 @@
 - `services/storage_daemon/mtpfs/`、`gphotofs/`：MTP/gphoto FUSE 挂载（由 `support_open_source_libmtp`/`support_open_source_libgphoto2` 门控）。
 - `test/`、`test/fuzztest/`：单元测试和 fuzz 目标。
 
+本仓无嵌套 AGENTS.md / CLAUDE.md / Cursor rules；子系统级指引以本文件为准。
+
 ### 高频改动 / 高风险路径
 
 - `services/storage_daemon/user/src/user_manager.cpp`（`StartUser`/`StopUser`，按用户挂载 EL2-EL5）。
@@ -155,6 +157,8 @@ prebuilts/build-tools/linux-x86/bin/ninja -C out/rk3568 StorageDaemonProviderTes
 `need_restore`、`EL5_KEY`、`ActiveUserKeyAndPrepare`、`-ENOENT`、`NotifyUeceActivation` → `crypto-key-management.md`；`EJECTING`、`MOUNTED→REMOVED` → `disk-volume-lifecycle.md` + `enums-and-state-machine.md`；`ForceRemoveDirectory`、`RmDirRecurse` → `constraints-and-traps.md`；`PrepareAddUser→CompleteAddUser→ActiveUserKey→PrepareStartUser` → `user-directory-lifecycle.md`；`JsErrCode`、`E_IPCSS`、`E_SUPPORTEDFS`、JS/CJ/Taihe 错误码映射 → 本文件「项目约束·`JsErrCode` 双枚举约束」+ `storage_service_errno.h`（`JsErrCode` 隐式自增，禁中间插入）。
 
 ## 项目约束
+
+> 标注「禁止/不得」的为硬性规则，违反即不可提交；标注「需人工确认/须取得确认」的须在改动前取得维护者确认。
 
 - 用户时序不可跳步：`PrepareAddUser`（生成 EL1-EL5 密钥+建目录）→ `CompleteAddUser`（清 need_restore）→ `ActiveUserKey`（解锁时激活 EL2-EL5）→ `PrepareStartUser`（触发 Daemon `StartUser`：建 EL2-EL5 服务目录+挂载，须在密钥激活后）。缺步会导致 EL2-EL5 服务目录/挂载未建立或密钥未激活。
 - 卷状态不可跳转：`MOUNTED → EJECTING → REMOVED`，必须经过 EJECTING，不可直接置 REMOVED。
