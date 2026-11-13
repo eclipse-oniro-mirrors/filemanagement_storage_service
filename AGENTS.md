@@ -8,7 +8,23 @@
 - `services/storage_manager/`：系统 SA（ID 5003），负责卷/磁盘状态维护、用户生命周期、空间统计与监控、IPC 桥接到 Daemon（ID 5004）。
 - `interfaces/innerkits/`、`interfaces/kits/`：Native 内部 API 和 JS/ETS 对外 API。
 - `services/common/`：共享常量、日志宏、错误码定义。
+- `services/storage_space_manager/`：独立 SA，负责空间统计/配额/监控（自有 IDL `IStorageSpaceManager.idl`，自有权限 `STORAGE_MANAGER`/`MOUNT_UNMOUNT_MANAGER`/`MOUNT_FORMAT_MANAGER`）。
+- `interfaces/kits/js/`、`interfaces/kits/taihe/`（key_manager、storage_statistics）、`interfaces/kits/cj/`：JS/ETS、Taihe/ANI、CJ FFI 对外 kits。
+- `tools/ohos-storage-manager/`：`ohos-storageManager` CLI 工具。
+- `services/storage_daemon/mtpfs/`、`gphotofs/`：MTP/gphoto FUSE 挂载（由 `support_open_source_libmtp`/`support_open_source_libgphoto2` 门控）。
 - `test/`、`test/fuzztest/`：单元测试和 fuzz 目标。
+
+本仓无嵌套 AGENTS.md / CLAUDE.md / Cursor rules；子系统级指引以本文件为准。
+
+### 高频改动 / 高风险路径
+
+- `services/storage_daemon/user/src/user_manager.cpp`（`StartUser`/`StopUser`，按用户挂载 EL2-EL5）。
+- `services/storage_daemon/libfscrypt/src/key_control.c`（fscrypt 密钥 add/remove）。
+- `services/storage_daemon/crypto/src/key_manager.cpp`（`GenerateUserKeys`/`ActiveUserKey`/`ClearKey`）与 `crypto/src/base_key.cpp`（`ClearKey` 流程，`ForceRemoveDirectory` 调用点）。
+- `services/storage_daemon/utils/file_utils.cpp::RmDirRecurse`（递归删除，见「高危删除约束」）。
+- `services/storage_manager/ipc/src/storage_manager_provider.cpp`（`StorageManagerProvider : SystemAbility, StorageManagerStub`；`CheckClientPermission`；白名单 UID；`REGISTER_SYSTEM_ABILITY_BY_ID(..., 5003)`）。
+- `interfaces/innerkits/storage_manager/native/storage_service_errno.h`（错误码唯一来源，`STORAGE_SERVICE_SYS_CAP_TAG=13600000`）。
+- IDL 文件 `services/storage_manager/IStorageManager.idl`、`services/storage_daemon/IStorageDaemon.idl`、`services/storage_space_manager/interfaces/innerkits/IStorageSpaceManager.idl`（经 `idl_gen_interface` 生成 stub/proxy）。
 
 ## 构建和验证
 
@@ -17,10 +33,31 @@
 ```sh
 ./build.sh --product-name rk3568 --build-target storage_daemon --ccache
 ./build.sh --product-name rk3568 --build-target storage_manager --ccache
+./build.sh --product-name rk3568 --build-target //foundation/filemanagement/storage_service/services/storage_daemon:storage_daemon_unit_test --ccache
+./build.sh --product-name rk3568 --build-target //foundation/filemanagement/storage_service/services/storage_manager:storage_manager_unit_test --ccache
+./build.sh --product-name rk3568 --build-target //foundation/filemanagement/storage_service/test/fuzztest:storage_service_fuzztest --ccache
 prebuilts/build-tools/linux-x86/bin/ninja -C out/rk3568 StorageDaemonProviderTest
 ```
 
+测试目标共三个（见 `bundle.json` 的 `test` 数组）：`storage_daemon_unit_test`、`storage_manager_unit_test`、`storage_service_fuzztest`，须按改动范围选择至少一个相关目标。
+
 涉及真实磁盘、加密、多用户或配额的行为，需要补充板侧证据。提交使用 `git commit -s`，并保留 `Co-Authored-By: Agent`。变更需通过单元测试和 fuzz 测试。
+
+### 静态分析 / 风格
+
+无仓库级 cpplint/cpucodecheck 目标；`.clang-format` 为风格基准；`branch_protector_ret="pac_ret"`、`cfi`/`cfi_cross_dso`、`integer_overflow`、`ubsan`、`boundary_sanitize` 按目标在 BUILD.gn 中启用（如 `interfaces/innerkits/storage_manager/native/BUILD.gn`），不得剥离。
+
+### API / 契约检查
+
+公共/innerkits 改动须核对 `bundle.json` `inner_kits` 声明的导出头与 `interfaces/innerkits/storage_manager/native/storage_service_errno.h` 错误码一致；无仓库级 `api_check`，须人工对比导出头与 `inner_kits` 声明，确认签名/枚举/错误码无意外变更。
+
+### 完成定义
+
+完成 = 受影响 target 构建通过 + 相关单元测试通过 + fuzz 构建/运行通过（fuzz-sensitive 改动）+ 高危改动附板侧证据 + 无新增 `E_ERR` + 日志必打节点齐全 + 约束披露完整。回复须含：变更文件、执行的命令与结果、板侧证据 Y/N、权限/兼容/DFX/多用户/加密影响、剩余风险。
+
+### 无法本地验证时
+
+若无法在本地构建或板侧验证，须列出未执行命令、原因与风险，不得将未执行项描述为已通过。
 
 ## 错误码与代码规范
 
@@ -87,7 +124,7 @@ prebuilts/build-tools/linux-x86/bin/ninja -C out/rk3568 StorageDaemonProviderTes
 
 ## 知识索引
 
-稳定背景知识放在 `docs/knowledge/`。改动前按场景读取对应文件：
+稳定背景知识放在 `docs/knowledge/`。改动前按场景读取对应文件。改动前先在工作说明中确认：(1) 任务分类；(2) 已读取的 `docs/knowledge/*` 文件；(3) 本次触达的「项目约束」中的高风险约束，若未触达也明确说明。
 
 | 场景 | 先读 |
 |------|------|
@@ -104,7 +141,24 @@ prebuilts/build-tools/linux-x86/bin/ninja -C out/rk3568 StorageDaemonProviderTes
 | 日志查看、SA 状态检查、问题定位 | `docs/knowledge/debugging-guide.md` |
 | 编译宏差异、HUKS/OsAccount 不可用 | `docs/knowledge/external-dependencies.md` |
 
+### 路径 → 文档
+
+| 改动路径 | 先读 |
+| --- | --- |
+| `services/storage_daemon/user/` | `docs/knowledge/user-directory-lifecycle.md` |
+| `services/storage_daemon/libfscrypt/`、`crypto/` | `docs/knowledge/crypto-key-management.md` |
+| `services/storage_manager/ipc/` | `docs/knowledge/ipc-interface-guide.md` |
+| `services/storage_space_manager/`、配额/监控 | `docs/knowledge/storage-quota-monitoring.md` |
+| `services/storage_daemon/disk/`、卷状态 | `docs/knowledge/disk-volume-lifecycle.md` |
+| `interfaces/kits/{js,taihe,cj}/`、`services/storage_manager/{kits_impl,cj_impl}/` | 本文件「错误码范围」「项目约束·`JsErrCode` 双枚举约束」；`interfaces/innerkits/storage_manager/native/storage_service_errno.h` |
+
+### 词汇 → 文档
+
+`need_restore`、`EL5_KEY`、`ActiveUserKeyAndPrepare`、`-ENOENT`、`NotifyUeceActivation` → `crypto-key-management.md`；`EJECTING`、`MOUNTED→REMOVED` → `disk-volume-lifecycle.md` + `enums-and-state-machine.md`；`ForceRemoveDirectory`、`RmDirRecurse` → `constraints-and-traps.md`；`PrepareAddUser→CompleteAddUser→ActiveUserKey→PrepareStartUser` → `user-directory-lifecycle.md`；`JsErrCode`、`E_IPCSS`、`E_SUPPORTEDFS`、JS/CJ/Taihe 错误码映射 → 本文件「项目约束·`JsErrCode` 双枚举约束」+ `storage_service_errno.h`（`JsErrCode` 隐式自增，禁中间插入）。
+
 ## 项目约束
+
+> 标注「禁止/不得」的为硬性规则，违反即不可提交；标注「需人工确认/须取得确认」的须在改动前取得维护者确认。
 
 - 用户时序不可跳步：`PrepareAddUser`（生成 EL1-EL5 密钥+建目录）→ `CompleteAddUser`（清 need_restore）→ `ActiveUserKey`（解锁时激活 EL2-EL5）→ `PrepareStartUser`（触发 Daemon `StartUser`：建 EL2-EL5 服务目录+挂载，须在密钥激活后）。缺步会导致 EL2-EL5 服务目录/挂载未建立或密钥未激活。
 - 卷状态不可跳转：`MOUNTED → EJECTING → REMOVED`，必须经过 EJECTING，不可直接置 REMOVED。
@@ -114,3 +168,9 @@ prebuilts/build-tools/linux-x86/bin/ninja -C out/rk3568 StorageDaemonProviderTes
 - 高危删除约束：对路径执行不可逆删除（递归删除、`RmDirRecurse`/`ForceRemoveDirectory`、`unlink`、`rmdir` 等）前，必须确认目标真实后端即预期对象——挂载类间接层（设备挂载/绑定挂载/重复或多层挂载等）会使挂载点目录的真实后端≠表面，对残留挂载层的挂载点递归删会穿透到源数据导致数据丢失。删挂载点目录前必须逐层彻底卸载、确认无残留挂载层，否则禁止执行、需人工确认。
 - ELX 密钥删除约束：删除 EL1~EL5 任一等级密钥是不可逆操作——`ClearKey` 会擦除密钥材料并递归删除密钥目录与备份目录（`ForceRemoveDirectory`），密钥一旦删除则对应等级加密数据永久无法解密；且低等级（如 EL1）删除会令 EL2~EL5 链式依赖断裂、高等级数据一并无法激活。删除前必须确认已无回滚/恢复需要：存在 `need_restore` 标志或半成品/待恢复态时禁止销毁密钥材料（须先恢复或重建），并在用户/设备销毁流程确认完成后再执行，否则禁止删除、需人工确认。
 - EL5 解密窗口期禁令：`PrepareAddUser`/`CompleteAddUser` 完成后到 EL5 完全解密（`ActiveUserKey4Single` 中 EL5 经 `ActiveUserKeyAndPrepare(EL5_KEY)` 激活 + `NotifyUeceActivation` 回调完成）前，除删除用户外禁止 `InactiveKey(USER_DESTROY)`/`ClearKey`/`DoDeleteUserCeEceSeceKeys` 销毁用户密钥，否则 EL5 密钥被驱逐后 UECE 无法解密。`ActiveUserKeyAndPrepare` 的 `-ENOENT` 分支以 `if (type != EL5_KEY)` 守卫跳过销毁，该守卫必须保持（详见 `docs/knowledge/crypto-key-management.md`）。
+- 公共 API 与错误码兼容：`bundle.json` 声明 4 个 inner_kits（2 个在 `interfaces/innerkits/`：`storage_manager/native`、`acl/native`；另含 `services/storage_daemon/libfscrypt` 与 `interfaces/kits/cj/storage_manager`）与 `interfaces/kits/{js,taihe,cj}/*` 为公共契约；不得无意改变签名、参数、返回值、错误码语义或枚举值顺序；新增错误码须落入 `interfaces/innerkits/storage_manager/native/storage_service_errno.h` 已声明范围并更新该文件。
+- `JsErrCode` 双枚举约束：`storage_service_errno.h` 含两个枚举——`ErrNo`（13600000+，C/Native 面向）与 `JsErrCode`（JS/CJ/Taihe 面向，行 334+）。`JsErrCode` 存在隐式自增成员（`E_IPCSS = TAG+1` 之后 `E_SUPPORTEDFS` 等逐个 +1），禁止在中间插入值；新增必须 append 到末尾并显式赋值，否则会平移所有下游 JS 错误码、破坏公共契约。错误码范围表（见「错误码范围」）为非穷举，其余范围以 `storage_service_errno.h` 全表为准。
+- 生成代码边界：`idl_gen_interface` 生成的 `StorageManagerStub`/`StorageDaemonStub`/`OnRemoteRequest` 派发（输出到 `${target_gen_dir}`）与 `taihe_ffi_gen` 生成的 ANI/CJ 绑定为生成物；修改前先改 IDL（`IStorageManager.idl`/`IStorageDaemon.idl`/`IStorageSpaceManager.idl` 或 `.taihe`）再重新生成，不得直接编辑生成文件。
+- 第三方依赖：`libfuse`/`libusb`/`libmtp`/`ntfs-3g`/`libgphoto2` 升级或裁剪须验证板侧挂载/热插拔/MTP/光驱行为；`bounds_checking_function` 提供的 `memcpy_s`/`strcpy_s` 为强制安全函数，禁止裸 `memcpy`/`strcpy`。
+- IPC 权限校验：新增 IPC stub 须在 `services/storage_manager/ipc/src/storage_manager_provider.cpp::CheckClientPermission` 注册对应权限字符串；现有权限 `ohos.permission.STORAGE_MANAGER`/`STORAGE_MANAGER_CRYPT`/`MOUNT_UNMOUNT_MANAGER`/`MOUNT_FORMAT_MANAGER`/`PUBLISH_SYSTEM_COMMON_EVENT`；`ACCOUNT_UID`(3058)/`BACKUP_SA_UID`(1089)/`FOUNDATION_UID`(5523) 等白名单 UID 自动放行，改动白名单须取得确认。
+- 应用 ID 与用户 ID 区分：获取应用 appId 使用 `IPCSkeleton::GetCallingAppUid()`，用于获取应用包信息；获取应用 userId 使用 `IPCSkeleton::GetCallingUid()`，主要用于 PC 场景获取用户 ID。两者语义不同，不可混用。
