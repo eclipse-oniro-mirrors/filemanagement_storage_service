@@ -454,6 +454,7 @@ ohos_unittest("KeyManagerWithFileMockAnotherTest") {
 
   if (enable_tee_client) {
     defines += [ "RECOVER_KEY_TEE_ENVIRONMENT" ]
+    defines += [ "PC_ENCRYPTION_EXTENSION" ]
     external_deps += [ "tee_client:libteec" ]
   }
 
