@@ -172,4 +172,6 @@ interface OHOS.StorageDaemon.IStorageDaemon{
      [ipccode 268] void UMountUdmfClipFuse([in] int userId, [in] String path);
      [ipccode 269] void GetBurnFileList([in] String srcDir, [in] int offset, [in] int pageSize,
          [out] String[] fileList, [out] boolean hasMore);
+     [ipccode 271] void GetDiskPowerCycleCount([in] String devName, [out] unsigned long powerCycleCount);
+     [ipccode 272] void GetDiskPowerOnHours([in] String devName, [out] unsigned long powerOnHours);
 }

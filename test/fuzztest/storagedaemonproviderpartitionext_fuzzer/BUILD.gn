@@ -107,6 +107,7 @@ ohos_static_library("storagedaemonprovider_partitionext_fuzztest") {
       "${storage_daemon_path}/disk_manager/src/disk/dm_device.cpp",
       "${storage_daemon_path}/disk_manager/src/disk/disk_utils.cpp",
       "${storage_daemon_path}/disk_manager/src/disk/scan_device.cpp",
+      "${storage_daemon_path}/disk_manager/src/disk/smart_reader.cpp",
       "${storage_daemon_path}/disk_manager/src/volume/volume_utils.cpp",
       "${storage_daemon_path}/disk_manager/src/volume/volume_operator_factory.cpp",
       "${storage_daemon_path}/disk_manager/src/volume/udf_operator.cpp",

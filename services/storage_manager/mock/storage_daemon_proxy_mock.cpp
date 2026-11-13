@@ -542,5 +542,19 @@ int32_t StorageDaemonProxy::GetBurnFileList(const std::string &srcDir, int32_t o
     (void)hasMore;
     return E_OK;
 }
+
+int32_t StorageDaemonProxy::GetDiskPowerCycleCount(const std::string &devName, uint64_t &powerCycleCount)
+{
+    (void)devName;
+    (void)powerCycleCount;
+    return E_OK;
+}
+
+int32_t StorageDaemonProxy::GetDiskPowerOnHours(const std::string &devName, uint64_t &powerOnHours)
+{
+    (void)devName;
+    (void)powerOnHours;
+    return E_OK;
+}
 } // StorageDaemon
 } // namespace OHOS

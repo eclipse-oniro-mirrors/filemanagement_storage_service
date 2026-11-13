@@ -56,6 +56,7 @@
 #include <sys/sysmacros.h>
 #include "disk_manager/disk/dm_device.h"
 #include "disk_manager/disk/scan_device.h"
+#include "disk_manager/disk/smart_reader.h"
 #include "disk_manager/disk/disk_utils.h"
 #include "disk_manager/volume/volume_utils.h"
 #include "disk_manager/volume/volume_operator_factory.h"
@@ -3542,6 +3543,50 @@ int32_t StorageDaemonProvider::GetBurnFileList(const std::string &dirPath, int32
     LOGI("[L1:StorageDaemonProvider] GetBurnFileList: EXIT total=%{public}zu returned=%{public}zu "
          "bytes=%{public}zu hasMore=%{public}d",
          allFiles.size(), fileList.size(), accumulated, hasMore);
+    return E_OK;
+#else
+    return E_NOT_SUPPORT;
+#endif
+}
+
+int32_t StorageDaemonProvider::GetDiskPowerCycleCount(const std::string &devName, uint64_t &powerCycleCount)
+{
+#ifdef DISK_MANAGER
+    LOGI("[L1:StorageDaemonProvider] GetDiskPowerCycleCount: >>> ENTER <<< devName=%{public}s", devName.c_str());
+    auto uid = IPCSkeleton::GetCallingUid();
+    if (uid != DISK_MANAGER_UID) {
+        LOGE("[L1:StorageDaemonProvider] GetDiskPowerCycleCount: <<< EXIT FAILED <<< uid=%{public}d is invalid", uid);
+        return E_PERMISSION_DENIED;
+    }
+    if (devName.empty() || devName.find('/') != std::string::npos || devName.find("..") != std::string::npos) {
+        LOGE("[L1:StorageDaemonProvider] GetDiskPowerCycleCount: invalid devName");
+        return E_PARAMS_INVALID;
+    }
+    powerCycleCount = SmartReader::GetDiskPowerCycleCount(devName);
+    LOGI("[L1:StorageDaemonProvider] GetDiskPowerCycleCount: <<< EXIT SUCCESS <<< count=%{public}llu",
+         (unsigned long long)powerCycleCount);
+    return E_OK;
+#else
+    return E_NOT_SUPPORT;
+#endif
+}
+
+int32_t StorageDaemonProvider::GetDiskPowerOnHours(const std::string &devName, uint64_t &powerOnHours)
+{
+#ifdef DISK_MANAGER
+    LOGI("[L1:StorageDaemonProvider] GetDiskPowerOnHours: >>> ENTER <<< devName=%{public}s", devName.c_str());
+    auto uid = IPCSkeleton::GetCallingUid();
+    if (uid != DISK_MANAGER_UID) {
+        LOGE("[L1:StorageDaemonProvider] GetDiskPowerOnHours: <<< EXIT FAILED <<< uid=%{public}d is invalid", uid);
+        return E_PERMISSION_DENIED;
+    }
+    if (devName.empty() || devName.find('/') != std::string::npos || devName.find("..") != std::string::npos) {
+        LOGE("[L1:StorageDaemonProvider] GetDiskPowerOnHours: invalid devName");
+        return E_PARAMS_INVALID;
+    }
+    powerOnHours = SmartReader::GetDiskPowerOnHours(devName);
+    LOGI("[L1:StorageDaemonProvider] GetDiskPowerOnHours: <<< EXIT SUCCESS <<< hours=%{public}llu",
+         (unsigned long long)powerOnHours);
     return E_OK;
 #else
     return E_NOT_SUPPORT;

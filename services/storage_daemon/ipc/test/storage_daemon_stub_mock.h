@@ -134,6 +134,8 @@ public:
     MOCK_METHOD4(CreateDmLinear, int32_t(const std::string &,
                                         uint64_t, uint64_t, uint64_t &));
     MOCK_METHOD5(GetBurnFileList, int32_t(const std::string &, int32_t, int32_t, std::vector<std::string> &, bool &));
+    MOCK_METHOD2(GetDiskPowerCycleCount, int32_t(const std::string &, uint64_t &));
+    MOCK_METHOD2(GetDiskPowerOnHours, int32_t(const std::string &, uint64_t &));
 };
 }  // namespace StorageDaemon
 }  // namespace OHOS
