@@ -274,5 +274,42 @@ HWTEST_F(KeyMgrWithFileMockAnotherTest, KeyManager_SetRecoverKey_NeedMountPath_0
     EXPECT_EQ(KeyManager::GetInstance().SetRecoverKey(key, true), E_MOUNT_RECOVER_KEY);
     GTEST_LOG_(INFO) << "KeyManager_SetRecoverKey_NeedMountPath_006 end";
 }
+
+/**
+ * @tc.name: KeyManager_SetRecoverKey_NeedMountPath_007
+ * @tc.desc: Verify SetRecoverKey returns E_OK when UMount fails with tolerated errno (ENOENT).
+ * @tc.type: FUNC
+ * @tc.require: IAHHWW
+ */
+HWTEST_F(KeyMgrWithFileMockAnotherTest, KeyManager_SetRecoverKey_NeedMountPath_007, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "KeyManager_SetRecoverKey_NeedMountPath_007 Start";
+    std::vector<uint8_t> key;
+    EXPECT_CALL(*recoveryMgrMock_, SetRecoverKey(_)).WillOnce(Return(E_OK));
+    EXPECT_CALL(*fileUtilMoc_, UMount(_))
+        .WillRepeatedly(Invoke([](const std::string &) -> int32_t { errno = ENOENT; return 1; }));
+    EXPECT_CALL(*fileUtilMoc_, Mount(_, _, _, _, _)).WillRepeatedly(Return(0));
+    EXPECT_EQ(KeyManager::GetInstance().SetRecoverKey(key, true), E_OK);
+    GTEST_LOG_(INFO) << "KeyManager_SetRecoverKey_NeedMountPath_007 end";
+}
+
+/**
+ * @tc.name: KeyManager_SetRecoverKey_NeedMountPath_008
+ * @tc.desc: Verify SetRecoverKey returns E_OK when Mount fails with tolerated errno (EEXIST).
+ * @tc.type: FUNC
+ * @tc.require: IAHHWW
+ */
+HWTEST_F(KeyMgrWithFileMockAnotherTest, KeyManager_SetRecoverKey_NeedMountPath_008, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "KeyManager_SetRecoverKey_NeedMountPath_008 Start";
+    std::vector<uint8_t> key;
+    EXPECT_CALL(*recoveryMgrMock_, SetRecoverKey(_)).WillOnce(Return(E_OK));
+    EXPECT_CALL(*fileUtilMoc_, UMount(_)).WillRepeatedly(Return(0));
+    EXPECT_CALL(*fileUtilMoc_, Mount(_, _, _, _, _))
+        .WillRepeatedly(Invoke([](const std::string &, const std::string &, const char *,
+            unsigned long, const void *) -> int32_t { errno = EEXIST; return 1; }));
+    EXPECT_EQ(KeyManager::GetInstance().SetRecoverKey(key, true), E_OK);
+    GTEST_LOG_(INFO) << "KeyManager_SetRecoverKey_NeedMountPath_008 end";
+}
 #endif
 }
