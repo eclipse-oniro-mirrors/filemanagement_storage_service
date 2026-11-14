@@ -2217,7 +2217,7 @@ int32_t KeyManager::BindMountPath(const std::string &srcPath, const std::string 
     }
     errno = 0;
     ret = Mount(srcPath, dstPath, nullptr, MS_BIND, nullptr);
-    if (ret != E_OK && errno != EEXIST && errno != EBUSY) {
+    if (ret != E_OK && errno != EEXIST) {
         LOGE("[L3:KeyManager] %{public}s: <<< EXIT FAILED <<< [failed to bind mount, src=%{public}s,"
             " dst=%{public}s, err=%{public}d]", funcName.c_str(), srcPath.c_str(), dstPath.c_str(), errno);
         std::string extraData = "srcPath=" + srcPath + ",dstPath=" + dstPath +
