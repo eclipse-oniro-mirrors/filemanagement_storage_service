@@ -78,9 +78,11 @@ constexpr uint32_t FILE_ENCRY_ERROR_UECE_AUTH_STATUS_WRONG = 0xFBE30034;
 constexpr int32_t WAIT_THREAD_TIMEOUT_MS = 500;
 #endif
 
+#if defined(RECOVER_KEY_TEE_ENVIRONMENT) || defined(PC_ENCRYPTION_EXTENSION)
 constexpr const char *FILE_BASED_ENCRYPT_SRC_PATH = "/mnt/data_old/service/el1/public/sec_storage_data/fbe3";
 constexpr const char *FILE_BASED_ENCRYPT_DST_PATH = "/data/service/el1/public/sec_storage_data/fbe3";
 constexpr int32_t DEFAULT_REPAIR_USERID = 10736;
+#endif
 
 #ifdef PC_ENCRYPTION_EXTENSION
 constexpr const char *RECOVER_PIN_SRC_PATH = "/mnt/data_old/service/el1/public/sec_storage_data/pin";
@@ -2202,6 +2204,7 @@ int KeyManager::SetRecoverKey(const std::vector<uint8_t> &key, bool needMountPat
     return E_OK;
 }
 
+#if defined(RECOVER_KEY_TEE_ENVIRONMENT) || defined(PC_ENCRYPTION_EXTENSION)
 int32_t KeyManager::BindMountPath(const std::string &srcPath, const std::string &dstPath,
     const std::string &funcName, int32_t umountErr, int32_t mountErr)
 {
@@ -2227,6 +2230,7 @@ int32_t KeyManager::BindMountPath(const std::string &srcPath, const std::string 
     }
     return E_OK;
 }
+#endif
 
 #ifdef RECOVER_KEY_TEE_ENVIRONMENT
 int32_t KeyManager::FileBasedEncryptfsMount()
