@@ -17,6 +17,7 @@
 #include <sys/syscall.h>
 #include <climits>
 #include <cstdlib>
+#include <string>
 
 #include "utils/storage_radar.h"
 #include <singleton.h>
@@ -84,7 +85,7 @@ constexpr const char *PROCESS_NAME_FOUNDATION = "foundation";
 bool CheckClientPermission(const std::string &permissionStr)
 {
     Security::AccessToken::AccessTokenID tokenCaller = IPCSkeleton::GetCallingTokenID();
-    auto uid = IPCSkeleton::GetCallingUid();
+    auto uid = IPCSkeleton::GetCallingAppUid();
     auto tokenType = Security::AccessToken::AccessTokenKit::GetTokenTypeFlag(tokenCaller);
     int res;
     if (tokenType == Security::AccessToken::TOKEN_NATIVE && uid == ACCOUNT_UID) {
@@ -134,7 +135,7 @@ bool CheckClientPermissionForShareFile()
         return false;
     }
 
-    auto uid = IPCSkeleton::GetCallingUid();
+    auto uid = IPCSkeleton::GetCallingAppUid();
     if (nativeInfo.processName != PROCESS_NAME_FOUNDATION || uid != FOUNDATION_UID) {
         LOGE("CheckClientPermissionForShareFile error, processName is %{public}s, uid is %{public}d",
              nativeInfo.processName.c_str(), uid);
@@ -207,7 +208,7 @@ int32_t StorageManagerProvider::PrepareAddUser(int32_t userId, uint32_t flags)
     std::string message = "PrepareAddUser Begin, flags:" + std::to_string(flags);
     StorageRadar::ReportFucBehavior("PrepareAddUser", userId, message, E_OK);
     if (!CheckClientPermissionForCrypt(PERMISSION_STORAGE_MANAGER_CRYPT) &&
-        IPCSkeleton::GetCallingUid() != ACCOUNT_UID) {
+        IPCSkeleton::GetCallingAppUid() != ACCOUNT_UID) {
         return E_PERMISSION_DENIED;
     }
     LOGI("StorageManagerProvider::PrepareAddUser, userId:%{public}d", userId);
@@ -229,7 +230,7 @@ int32_t StorageManagerProvider::RemoveUser(int32_t userId, uint32_t flags)
     std::string message = "RemoveUser Begin, flags:" + std::to_string(flags);
     StorageRadar::ReportFucBehavior("RemoveUser", userId, message, E_OK);
     if (!CheckClientPermissionForCrypt(PERMISSION_STORAGE_MANAGER_CRYPT) &&
-        IPCSkeleton::GetCallingUid() != ACCOUNT_UID) {
+        IPCSkeleton::GetCallingAppUid() != ACCOUNT_UID) {
         return E_PERMISSION_DENIED;
     }
     LOGI("StorageManagerProvider::RemoveUser, userId:%{public}d", userId);
@@ -251,7 +252,7 @@ int32_t StorageManagerProvider::PrepareStartUser(int32_t userId)
     StorageDaemon::IncreaseThreadPriority("storage_manager");
     StorageRadar::ReportFucBehavior("PrepareStartUser", userId, "PrepareStartUser Begin", E_OK);
     if (!CheckClientPermissionForCrypt(PERMISSION_STORAGE_MANAGER_CRYPT) &&
-        IPCSkeleton::GetCallingUid() != ACCOUNT_UID) {
+        IPCSkeleton::GetCallingAppUid() != ACCOUNT_UID) {
         StorageDaemon::DecreaseThreadPriority("storage_manager");
         return E_PERMISSION_DENIED;
     }
@@ -274,7 +275,7 @@ int32_t StorageManagerProvider::StopUser(int32_t userId)
 {
     StorageRadar::ReportFucBehavior("StopUser", userId, "StopUser Begin", E_OK);
     if (!CheckClientPermissionForCrypt(PERMISSION_STORAGE_MANAGER_CRYPT) &&
-        IPCSkeleton::GetCallingUid() != ACCOUNT_UID) {
+        IPCSkeleton::GetCallingAppUid() != ACCOUNT_UID) {
         return E_PERMISSION_DENIED;
     }
     LOGI("StorageManagerProvider::StopUser, userId:%{public}d", userId);
@@ -297,7 +298,7 @@ int32_t StorageManagerProvider::CompleteAddUser(int32_t userId)
 {
     StorageRadar::ReportFucBehavior("CompleteAddUser", userId, "CompleteAddUser Begin", E_OK);
     if (!CheckClientPermissionForCrypt(PERMISSION_STORAGE_MANAGER_CRYPT) &&
-        IPCSkeleton::GetCallingUid() != ACCOUNT_UID) {
+        IPCSkeleton::GetCallingAppUid() != ACCOUNT_UID) {
         return E_PERMISSION_DENIED;
     }
     LOGI("StorageManagerProvider::CompleteAddUser, userId:%{public}d", userId);
@@ -649,9 +650,9 @@ int32_t StorageManagerProvider::EraseAllUserEncryptedKeys()
         LOGE("Permission check failed, for storage_manager_crypt");
         return E_PERMISSION_DENIED;
     }
-    auto callingUid = IPCSkeleton::GetCallingUid();
-    if (callingUid != UPDATE_SERVICE_UID) {
-        LOGE("Permission check failed, the UID is not in the trustlist, uid: %{public}d", callingUid);
+    auto callingAppUid = IPCSkeleton::GetCallingAppUid();
+    if (callingAppUid != UPDATE_SERVICE_UID) {
+        LOGE("Permission check failed, the UID is not in the trustlist, uid: %{public}d", callingAppUid);
         return E_PERMISSION_DENIED;
     }
 #ifdef USER_CRYPTO_MANAGER
@@ -728,7 +729,7 @@ int32_t StorageManagerProvider::ActiveUserKey(uint32_t userId,
                           ", secret size: " + std::to_string(secret.size());
     StorageRadar::ReportFucBehavior("ActiveUserKey", userId, message, E_OK);
     if (!CheckClientPermissionForCrypt(PERMISSION_STORAGE_MANAGER_CRYPT) &&
-        IPCSkeleton::GetCallingUid() != ACCOUNT_UID) {
+        IPCSkeleton::GetCallingAppUid() != ACCOUNT_UID) {
         StorageDaemon::DecreaseThreadPriority("storage_manager");
         return E_PERMISSION_DENIED;
     }
@@ -780,13 +781,13 @@ int32_t StorageManagerProvider::InactiveUserKey(uint32_t userId)
 int32_t StorageManagerProvider::LockUserScreen(uint32_t userId)
 {
     std::string bundleName;
-    int32_t uid = IPCSkeleton::GetCallingUid();
+    int32_t appUid = IPCSkeleton::GetCallingAppUid();
     auto bundleMgr = BundleMgrConnector::GetInstance().GetBundleMgrProxy();
     if (bundleMgr == nullptr) {
         LOGE("Connect bundle manager sa proxy failed.");
         return E_SERVICE_IS_NULLPTR;
     }
-    if (!bundleMgr->GetBundleNameForUid(uid, bundleName)) {
+    if (!bundleMgr->GetBundleNameForUid(appUid, bundleName)) {
         LOGE("Invoke bundleMgr interface to get bundle name failed.");
         StorageService::StorageRadar::ReportUserManager(
             "StorageManagerStub::HandleLockUserScreen", E_BUNDLEMGR_ERROR, userId,
@@ -795,8 +796,8 @@ int32_t StorageManagerProvider::LockUserScreen(uint32_t userId)
     }
 
     if (bundleName != SCENEBOARD_BUNDLE_NAME && bundleName != SYSTEMUI_BUNDLE_NAME) {
-        LOGE("permissionCheck error, caller is %{public}s(%{public}d), should be %{public}s", bundleName.c_str(), uid,
-             SCENEBOARD_BUNDLE_NAME);
+        LOGE("permissionCheck error, caller is %{public}s(%{public}d), should be %{public}s", bundleName.c_str(),
+             appUid, SCENEBOARD_BUNDLE_NAME);
         return E_PERMISSION_DENIED;
     }
     if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER_CRYPT)) {
@@ -1116,7 +1117,7 @@ int32_t StorageManagerProvider::GetUserStorageStatsByType(int32_t userId,
                                                           const std::string &type)
 {
     StorageRadar::ReportFucBehavior("GetUserStorageStatsByType", userId, "GetUserStorageStatsByType Begin", E_OK);
-    if (IPCSkeleton::GetCallingUid() != BACKUP_SA_UID) {
+    if (IPCSkeleton::GetCallingAppUid() != BACKUP_SA_UID) {
         LOGE("StorageManager permissionCheck error, calling uid is invalid, need backup_sa uid.");
         return E_PERMISSION_DENIED;
     }
@@ -1168,9 +1169,9 @@ int32_t StorageManagerProvider::MountDfsDocs(int32_t userId,
         return E_PARAMS_INVALID;
     }
     // Only for dfs create device dir and bind mount from DFS Docs.
-    if (IPCSkeleton::GetCallingUid() != DFS_UID) {
+    if (IPCSkeleton::GetCallingAppUid() != DFS_UID) {
         LOGE("HandleMountDfsDocs permissionCheck error, calling uid now is %{public}d, should be DFS_UID: %{public}d",
-             IPCSkeleton::GetCallingUid(), DFS_UID);
+             IPCSkeleton::GetCallingAppUid(), DFS_UID);
         return E_PERMISSION_DENIED;
     }
     LOGI("StorageManagerProvider::MountDfsDocs start.");
@@ -1206,9 +1207,9 @@ int32_t StorageManagerProvider::UMountDfsDocs(int32_t userId,
         return E_PARAMS_INVALID;
     }
     // Only for dfs create device dir and bind mount from DFS Docs.
-    if (IPCSkeleton::GetCallingUid() != DFS_UID) {
+    if (IPCSkeleton::GetCallingAppUid() != DFS_UID) {
         LOGE("HandleUMountDfsDocs permissionCheck error, calling uid now is %{public}d, should be DFS_UID: %{public}d",
-             IPCSkeleton::GetCallingUid(), DFS_UID);
+             IPCSkeleton::GetCallingAppUid(), DFS_UID);
         return E_PERMISSION_DENIED;
     }
     LOGI("StorageManagerProvider::UMountDfsDocs start.");
@@ -1232,19 +1233,19 @@ int32_t StorageManagerProvider::MountMediaFuse(int32_t userId, int32_t &devFd)
 
     // Only for medialibrary to mount fuse.
     std::string bundleName;
-    int32_t uid = IPCSkeleton::GetCallingUid();
+    int32_t appUid = IPCSkeleton::GetCallingAppUid();
     auto bundleMgr = BundleMgrConnector::GetInstance().GetBundleMgrProxy();
     if (bundleMgr == nullptr) {
         LOGE("Connect bundle manager sa proxy failed.");
         return E_SERVICE_IS_NULLPTR;
     }
-    if (!bundleMgr->GetBundleNameForUid(uid, bundleName)) {
+    if (!bundleMgr->GetBundleNameForUid(appUid, bundleName)) {
         LOGE("Invoke bundleMgr interface to get bundle name failed.");
         return E_BUNDLEMGR_ERROR;
     }
     if (bundleName != MEDIALIBRARY_BUNDLE_NAME) {
-        LOGE("permissionCheck error, caller is %{public}s(%{public}d), should be %{public}s", bundleName.c_str(), uid,
-             MEDIALIBRARY_BUNDLE_NAME);
+        LOGE("permissionCheck error, caller is %{public}s(%{public}d), should be %{public}s", bundleName.c_str(),
+             appUid, MEDIALIBRARY_BUNDLE_NAME);
         return E_PERMISSION_DENIED;
     }
     devFd = -1;
@@ -1269,19 +1270,19 @@ int32_t StorageManagerProvider::UMountMediaFuse(int32_t userId)
 
     // Only for medialibrary to mount fuse.
     std::string bundleName;
-    int32_t uid = IPCSkeleton::GetCallingUid();
+    int32_t appUid = IPCSkeleton::GetCallingAppUid();
     auto bundleMgr = BundleMgrConnector::GetInstance().GetBundleMgrProxy();
     if (bundleMgr == nullptr) {
         LOGE("Connect bundle manager sa proxy failed.");
         return E_SERVICE_IS_NULLPTR;
     }
-    if (!bundleMgr->GetBundleNameForUid(uid, bundleName)) {
+    if (!bundleMgr->GetBundleNameForUid(appUid, bundleName)) {
         LOGE("Invoke bundleMgr interface to get bundle name failed.");
         return E_BUNDLEMGR_ERROR;
     }
     if (bundleName != MEDIALIBRARY_BUNDLE_NAME) {
-        LOGE("permissionCheck error, caller is %{public}s(%{public}d), should be %{public}s", bundleName.c_str(), uid,
-             MEDIALIBRARY_BUNDLE_NAME);
+        LOGE("permissionCheck error, caller is %{public}s(%{public}d), should be %{public}s", bundleName.c_str(),
+             appUid, MEDIALIBRARY_BUNDLE_NAME);
         return E_PERMISSION_DENIED;
     }
     auto& sdCommunication = StorageDaemonCommunication::GetInstance();
@@ -1365,9 +1366,9 @@ int32_t StorageManagerProvider::MountDlpFuse(const std::string &dstPath, int32_t
     if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER)) {
         return E_PERMISSION_DENIED;
     }
-    if (IPCSkeleton::GetCallingUid() != DLP_UID) {
+    if (IPCSkeleton::GetCallingAppUid() != DLP_UID) {
         LOGE("MountDlpFuse permissionCheck error, calling uid now is %{public}d, should be DLP_UID: %{public}d",
-             IPCSkeleton::GetCallingUid(), DLP_UID);
+             IPCSkeleton::GetCallingAppUid(), DLP_UID);
         return E_PERMISSION_DENIED;
     }
 #ifdef PC_USER_MANAGER
@@ -1390,9 +1391,9 @@ int32_t StorageManagerProvider::UMountDlpFuse(const std::string &dstPath)
     if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER)) {
         return E_PERMISSION_DENIED;
     }
-    if (IPCSkeleton::GetCallingUid() != DLP_UID) {
+    if (IPCSkeleton::GetCallingAppUid() != DLP_UID) {
         LOGE("UMountDlpFuse permissionCheck error, calling uid now is %{public}d, should be DLP_UID: %{public}d",
-             IPCSkeleton::GetCallingUid(), DLP_UID);
+             IPCSkeleton::GetCallingAppUid(), DLP_UID);
         return E_PERMISSION_DENIED;
     }
 #ifdef PC_USER_MANAGER
@@ -1414,10 +1415,10 @@ int32_t StorageManagerProvider::MountCloudDiskFuse(int32_t userId, const std::st
         LOGE("StorageManagerProvider::MountCloudDiskFuse userId %{public}d out of range", userId);
         return err;
     }
-    if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER) || IPCSkeleton::GetCallingUid() != CLOUD_DISK_UID) {
+    if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER) || IPCSkeleton::GetCallingAppUid() != CLOUD_DISK_UID) {
         LOGE("MountCloudDiskFuse permissionCheck error, "
              "calling uid now is %{public}d, should be CLOUD_DISK_UID: %{public}d",
-             IPCSkeleton::GetCallingUid(), CLOUD_DISK_UID);
+             IPCSkeleton::GetCallingAppUid(), CLOUD_DISK_UID);
 
         return E_PERMISSION_DENIED;
     }
@@ -1443,10 +1444,10 @@ int32_t StorageManagerProvider::UMountCloudDiskFuse(int32_t userId, const std::s
         LOGE("StorageManagerProvider::UMountCloudDiskFuse userId %{public}d out of range", userId);
         return err;
     }
-    if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER) || IPCSkeleton::GetCallingUid() != CLOUD_DISK_UID) {
+    if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER) || IPCSkeleton::GetCallingAppUid() != CLOUD_DISK_UID) {
         LOGE("UMountCloudDiskFuse permissionCheck error, "
              "calling uid now is %{public}d, should be CLOUD_DISK_UID: %{public}d",
-             IPCSkeleton::GetCallingUid(), CLOUD_DISK_UID);
+             IPCSkeleton::GetCallingAppUid(), CLOUD_DISK_UID);
 
         return E_PERMISSION_DENIED;
     }
@@ -1474,7 +1475,7 @@ int32_t StorageManagerProvider::MountUdmfClipFuse(int32_t userId, const std::str
         LOGE("MountUdmfClipFuse CheckClientPermission failed");
         return E_PERMISSION_DENIED;
     }
-    auto callUid = IPCSkeleton::GetCallingUid();
+    auto callUid = IPCSkeleton::GetCallingAppUid();
     if (callUid != UDMF_UID && callUid != CLIPBOARD_UID) {
         LOGE("MountUdmfClipFuse uid check error, calling uid %{public}d is invalid", callUid);
         return E_PERMISSION_DENIED;
@@ -1501,7 +1502,7 @@ int32_t StorageManagerProvider::UMountUdmfClipFuse(int32_t userId, const std::st
         LOGE("UMountUdmfClipFuse CheckClientPermission failed");
         return E_PERMISSION_DENIED;
     }
-    auto callUid = IPCSkeleton::GetCallingUid();
+    auto callUid = IPCSkeleton::GetCallingAppUid();
     if (callUid != UDMF_UID && callUid != CLIPBOARD_UID) {
         LOGE("UMountUdmfClipFuse uid check error, calling uid %{public}d is invalid", callUid);
         return E_PERMISSION_DENIED;
@@ -1569,7 +1570,7 @@ int32_t StorageManagerProvider::ResetSecretWithRecoveryKey(uint32_t userId,
 int32_t StorageManagerProvider::MountDisShareFile(int32_t userId, const std::map<std::string, std::string> &shareFiles)
 {
     StorageRadar::ReportFucBehavior("MountDisShareFile", userId, "MountDisShareFile Begin", E_OK);
-    int32_t uid = IPCSkeleton::GetCallingUid();
+    int32_t uid = IPCSkeleton::GetCallingAppUid();
     if (uid != DFS_UID) {
         LOGE("MountDisShareFile permissionCheck error, calling uid is %{public}d", uid);
         return E_PERMISSION_DENIED;
@@ -1605,7 +1606,7 @@ int32_t StorageManagerProvider::UMountDisShareFile(int32_t userId, const std::st
 {
     std::string message = "UMountDisShareFile Begin, networkId: " + GetAnonyString(networkId);
     StorageRadar::ReportFucBehavior("UMountDisShareFile", userId, message, E_OK);
-    int32_t uid = IPCSkeleton::GetCallingUid();
+    int32_t uid = IPCSkeleton::GetCallingAppUid();
     if (uid != DFS_UID) {
         LOGE("UMountDisShareFile permissionCheck error, calling uid is %{public}d", uid);
         return E_PERMISSION_DENIED;
@@ -1631,7 +1632,7 @@ int32_t StorageManagerProvider::UMountDisShareFile(int32_t userId, const std::st
 
 int32_t StorageManagerProvider::UMountDisShareFile(const std::vector<std::string> &distributeDirs)
 {
-    int32_t uid = IPCSkeleton::GetCallingUid();
+    int32_t uid = IPCSkeleton::GetCallingAppUid();
     std::string message = "UMountDisShareFile Begin, distributeDirs size: " + std::to_string(distributeDirs.size());
     StorageRadar::ReportFucBehavior("UMountDisShareFile", uid, message, E_OK);
     if (uid != DFS_UID) {
@@ -1665,7 +1666,7 @@ int32_t StorageManagerProvider::InactiveUserPublicDirKey(uint32_t userId)
 {
     StorageRadar::ReportFucBehavior("InactiveUserPublicDirKey", userId, "InactiveUserPublicDirKey Begin", E_OK);
     if (!CheckClientPermissionForCrypt(PERMISSION_STORAGE_MANAGER_CRYPT) ||
-		IPCSkeleton::GetCallingUid() != SPACE_ABILITY_SERVICE_UID) {
+		IPCSkeleton::GetCallingAppUid() != SPACE_ABILITY_SERVICE_UID) {
         return E_PERMISSION_DENIED;
     }
 #if defined(USER_CRYPTO_MANAGER) && defined(PC_USER_MANAGER)
@@ -1689,7 +1690,7 @@ int32_t StorageManagerProvider::UpdateUserPublicDirPolicy(uint32_t userId)
 {
     StorageRadar::ReportFucBehavior("UpdateUserPublicDirPolicy", userId, "UpdateUserPublicDirPolicy Begin", E_OK);
     if (!CheckClientPermissionForCrypt(PERMISSION_STORAGE_MANAGER_CRYPT) ||
-		IPCSkeleton::GetCallingUid() != SPACE_ABILITY_SERVICE_UID) {
+		IPCSkeleton::GetCallingAppUid() != SPACE_ABILITY_SERVICE_UID) {
         return E_PERMISSION_DENIED;
     }
 #if defined(USER_CRYPTO_MANAGER) && defined(PC_USER_MANAGER)
@@ -1749,9 +1750,9 @@ int32_t StorageManagerProvider::NotifyUserChangedEvent(uint32_t userId, uint32_t
 {
     StorageDaemon::IncreaseThreadPriority("storage_manager");
     StorageRadar::ReportFucBehavior("NotifyUserChangedEvent", userId, "NotifyUserChangedEvent Begin", E_OK);
-    pid_t callingUid = IPCSkeleton::GetCallingUid();
-    if (!CheckClientPermissionForCrypt(PERMISSION_STORAGE_MANAGER_CRYPT) && callingUid != ACCOUNT_UID) {
-        LOGE("NotifyUserChangedEvent permission denied ! uid: %{public}d", callingUid);
+    pid_t callingAppUid = IPCSkeleton::GetCallingAppUid();
+    if (!CheckClientPermissionForCrypt(PERMISSION_STORAGE_MANAGER_CRYPT) && callingAppUid != ACCOUNT_UID) {
+        LOGE("NotifyUserChangedEvent permission denied ! uid: %{public}d", callingAppUid);
         StorageDaemon::DecreaseThreadPriority("storage_manager");
         return E_PERMISSION_DENIED;
     }
@@ -1880,9 +1881,9 @@ int32_t StorageManagerProvider::GetAllExtBundleStats(uint32_t userId, std::vecto
 
 int32_t StorageManagerProvider::NotifyCreateBundleDataDirWithEl(uint32_t userId, uint8_t elx)
 {
-    pid_t callingUid = IPCSkeleton::GetCallingUid();
-    if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER) || callingUid != ROOT_UID) {
-        LOGE("NotifyCreateBundleDataDirWithEl permission denied ! uid: %{public}d", callingUid);
+    pid_t callingAppUid = IPCSkeleton::GetCallingAppUid();
+    if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER) || callingAppUid != ROOT_UID) {
+        LOGE("NotifyCreateBundleDataDirWithEl permission denied ! uid: %{public}d", callingAppUid);
         return E_PERMISSION_DENIED;
     }
     int32_t ret = CheckUserIdRange(userId);
@@ -1907,9 +1908,9 @@ int32_t StorageManagerProvider::NotifyCreateBundleDataDirWithEl(uint32_t userId,
 
 int32_t StorageManagerProvider::QueryActiveOsAccountIds(std::vector<int32_t> &ids)
 {
-    pid_t callingUid = IPCSkeleton::GetCallingUid();
-    if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER) || callingUid != ROOT_UID) {
-        LOGE("QueryActiveOsAccountIds permission denied ! uid: %{public}d", callingUid);
+    pid_t callingAppUid = IPCSkeleton::GetCallingAppUid();
+    if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER) || callingAppUid != ROOT_UID) {
+        LOGE("QueryActiveOsAccountIds permission denied ! uid: %{public}d", callingAppUid);
         return E_PERMISSION_DENIED;
     }
     return AccountSA::OsAccountManager::QueryActiveOsAccountIds(ids);
@@ -1917,9 +1918,9 @@ int32_t StorageManagerProvider::QueryActiveOsAccountIds(std::vector<int32_t> &id
 
 int32_t StorageManagerProvider::IsOsAccountExists(unsigned int userId, bool &isOsAccountExists)
 {
-    pid_t callingUid = IPCSkeleton::GetCallingUid();
-    if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER) || callingUid != ROOT_UID) {
-        LOGE("IsOsAccountExists permission denied ! uid: %{public}d", callingUid);
+    pid_t callingAppUid = IPCSkeleton::GetCallingAppUid();
+    if (!CheckClientPermission(PERMISSION_STORAGE_MANAGER) || callingAppUid != ROOT_UID) {
+        LOGE("IsOsAccountExists permission denied ! uid: %{public}d", callingAppUid);
         return E_PERMISSION_DENIED;
     }
     int32_t ret = CheckUserIdRange(userId);
@@ -1932,19 +1933,19 @@ int32_t StorageManagerProvider::IsOsAccountExists(unsigned int userId, bool &isO
 
 bool StorageManagerProvider::IsCalledByFileMgr()
 {
-    int32_t uid = IPCSkeleton::GetCallingUid();
+    int32_t appUid = IPCSkeleton::GetCallingAppUid();
     auto bundleMgr = BundleMgrConnector::GetInstance().GetBundleMgrProxy();
     if (bundleMgr == nullptr) {
         LOGE("Connect bundle manager sa proxy failed.");
         return false;
     }
     std::string bundleName;
-    if (!bundleMgr->GetBundleNameForUid(uid, bundleName)) {
+    if (!bundleMgr->GetBundleNameForUid(appUid, bundleName)) {
         LOGE("Invoke bundleMgr interface to get bundle name failed.");
         return false;
     }
     if (bundleName != FILEMGR_BUNDLE_NAME) {
-        LOGE("permissionCheck error, caller is %{public}s(%{public}d)", bundleName.c_str(), uid);
+        LOGE("permissionCheck error, caller is %{public}s(%{public}d)", bundleName.c_str(), appUid);
         return false;
     }
     return true;

@@ -65,7 +65,7 @@ void StorageSpaceManagerProviderTest::SetUp()
 {
     // Reset provider state before each test
     g_mockCallingTokenId = MOCK_TOKEN_ID;
-    g_mockCallingUid = MOCK_UID;
+    g_mockCallingAppUid = MOCK_UID;
     g_mockVerifyAccessTokenResult = PERMISSION_GRANTED;
     g_mockTokenTypeFlag = TOKEN_TYPE_NATIVE;
 }

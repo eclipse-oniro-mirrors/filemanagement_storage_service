@@ -40,7 +40,7 @@ public:
     {
         g_mockCallingTokenId = MOCK_TOKEN_ID;
         g_mockCallingFullTokenId = 0;
-        g_mockCallingUid = MOCK_UID;
+        g_mockCallingAppUid = MOCK_UID;
         g_mockVerifyAccessTokenResult = ACCESS_TOKEN_GRANTED;
         g_mockTokenTypeFlag = TOKEN_TYPE_NATIVE;
         g_mockIsSystemApp = true;
@@ -139,7 +139,7 @@ HWTEST_F(IpcCallerAuthTest, VerifyNativeCallerMatches_Success, TestSize.Level1)
 {
     g_mockGetNativeTokenInfoResult = 0;
     g_mockNativeProcessName = "expected_process";
-    g_mockCallingUid = 2000;
+    g_mockCallingAppUid = 2000;
     EXPECT_TRUE(IpcCallerAuth::VerifyNativeCallerMatches("expected_process", 2000));
 }
 
@@ -153,7 +153,7 @@ HWTEST_F(IpcCallerAuthTest, VerifyNativeCallerMatches_ProcessMismatch, TestSize.
 {
     g_mockGetNativeTokenInfoResult = 0;
     g_mockNativeProcessName = "actual_process";
-    g_mockCallingUid = 1000;
+    g_mockCallingAppUid = 1000;
     EXPECT_FALSE(IpcCallerAuth::VerifyNativeCallerMatches("expected_process", 1000));
 }
 
@@ -161,27 +161,27 @@ HWTEST_F(IpcCallerAuthTest, VerifyNativeCallerMatches_UidMismatch, TestSize.Leve
 {
     g_mockGetNativeTokenInfoResult = 0;
     g_mockNativeProcessName = "mock_process";
-    g_mockCallingUid = 9999;
+    g_mockCallingAppUid = 9999;
     EXPECT_FALSE(IpcCallerAuth::VerifyNativeCallerMatches("mock_process", 1000));
 }
 
-/* ---------- GetCallingUid / IsCallingUid ---------- */
+/* ---------- GetCallingAppUid / IsCallingUid ---------- */
 
-HWTEST_F(IpcCallerAuthTest, GetCallingUid_Basic, TestSize.Level1)
+HWTEST_F(IpcCallerAuthTest, GetCallingAppUid_Basic, TestSize.Level1)
 {
-    g_mockCallingUid = 3000;
-    EXPECT_EQ(IpcCallerAuth::GetCallingUid(), 3000);
+    g_mockCallingAppUid = 3000;
+    EXPECT_EQ(IpcCallerAuth::GetCallingAppUid(), 3000);
 }
 
 HWTEST_F(IpcCallerAuthTest, IsCallingUid_Match, TestSize.Level1)
 {
-    g_mockCallingUid = 4000;
+    g_mockCallingAppUid = 4000;
     EXPECT_TRUE(IpcCallerAuth::IsCallingUid(4000));
 }
 
 HWTEST_F(IpcCallerAuthTest, IsCallingUid_Mismatch, TestSize.Level1)
 {
-    g_mockCallingUid = 4000;
+    g_mockCallingAppUid = 4000;
     EXPECT_FALSE(IpcCallerAuth::IsCallingUid(5000));
 }
 

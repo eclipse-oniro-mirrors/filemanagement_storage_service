@@ -60,8 +60,8 @@ public:
     /** Compares native caller process name and UID, returns true only if both match (uses GetNativeTokenInfo). */
     static bool VerifyNativeCallerMatches(const std::string &expectedProcessName, int32_t expectedUid);
 
-    /** Returns the current IPC caller UID (IPCSkeleton::GetCallingUid). */
-    static int32_t GetCallingUid();
+    /** Returns the current IPC caller app UID (IPCSkeleton::GetCallingAppUid). */
+    static int32_t GetCallingAppUid();
 
     /** Returns true if the current IPC caller UID equals expectedUid. */
     static bool IsCallingUid(int32_t expectedUid);

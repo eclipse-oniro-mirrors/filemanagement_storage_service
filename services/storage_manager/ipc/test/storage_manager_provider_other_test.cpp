@@ -47,14 +47,14 @@ namespace {
 int32_t g_getTokenTypeFlag = 0;
 int32_t g_verifyAccessToken = 0;
 int32_t g_returnBundleName = 0;
-pid_t g_testCallingUid = 1009;
-pid_t g_testUpdateServiceUid = 6666;
+pid_t g_testCallingAppUid = 1009;
+pid_t g_testUpdateServiceAppUid = 6666;
 bool g_returnUpdateService = false;
 } // namespace
 
 void SetCallingUid(int32_t uid)
 {
-    g_testCallingUid = uid;
+    g_testCallingAppUid = uid;
 }
 
 void MockGetTokenTypeFlag(int32_t typeFlag)
@@ -89,12 +89,12 @@ namespace OHOS {
 using namespace IPC_SINGLE;
 #endif
 
-pid_t OHOS::IPCSkeleton::GetCallingUid()
+pid_t OHOS::IPCSkeleton::GetCallingAppUid()
 {
     if (g_returnUpdateService) {
-        return g_testUpdateServiceUid;
+        return g_testUpdateServiceAppUid;
     }
-    return g_testCallingUid;
+    return g_testCallingAppUid;
 }
 
 uint32_t OHOS::IPCSkeleton::GetCallingTokenID()

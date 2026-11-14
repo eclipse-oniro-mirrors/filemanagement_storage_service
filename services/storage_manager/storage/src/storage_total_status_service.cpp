@@ -235,9 +235,9 @@ int32_t StorageTotalStatusService::GetUsedInodes(int64_t &usedInodes)
 int32_t StorageTotalStatusService::GetCurrentBundleInodes(int64_t &curInodes)
 {
     LOGI("StorageTotalStatusService::GetCurrentBundleInodes start");
-    int32_t uid = IPCSkeleton::GetCallingUid();
-    if (uid < 0) {
-        LOGE("GetCurrentBundleInodes: uid %{public}d out of range", uid);
+    int32_t appUid = IPCSkeleton::GetCallingAppUid();
+    if (appUid < 0) {
+        LOGE("GetCurrentBundleInodes: appUid %{public}d out of range", appUid);
         return E_GET_BUNDLE_INODES_ERROR;
     }
     auto bundleMgr = BundleMgrConnector::GetInstance().GetBundleMgrProxy();
@@ -247,7 +247,7 @@ int32_t StorageTotalStatusService::GetCurrentBundleInodes(int64_t &curInodes)
     }
     std::string bundleName;
     int32_t appIndex = DEFAULT_APP_INDEX;
-    ErrCode getIndexRet = bundleMgr->GetNameAndIndexForUid(uid, bundleName, appIndex);
+    ErrCode getIndexRet = bundleMgr->GetNameAndIndexForUid(appUid, bundleName, appIndex);
     if (getIndexRet != ERR_OK || bundleName.empty()) {
         LOGE("GetCurrentBundleInodes: GetNameAndIndexForUid failed, err=%{public}d", getIndexRet);
         appIndex = DEFAULT_APP_INDEX;

@@ -70,18 +70,18 @@ int AccessTokenKit::GetNativeTokenInfo(AccessTokenID tokenID, NativeTokenInfo& n
 }
 }
 
-pid_t g_testCallingUid = 5523;
+pid_t g_testCallingAppUid = 5523;
 const uint32_t TOP_USER_ID = 10738;
-pid_t g_testUpdateServiceUid = 6666;
+pid_t g_testUpdateServiceAppUid = 6666;
 bool g_returnUpdateService = false;
 
 namespace OHOS {
-pid_t IPCSkeleton::GetCallingUid()
+pid_t IPCSkeleton::GetCallingAppUid()
 {
     if (g_returnUpdateService) {
-        return g_testUpdateServiceUid;
+        return g_testUpdateServiceAppUid;
     }
-    return g_testCallingUid;
+    return g_testCallingAppUid;
 }
 
 uint32_t IPCSkeleton::GetCallingTokenID()
@@ -186,8 +186,8 @@ void StringVecToRawData(const std::vector<std::string> &stringVec, StorageFileRa
 
 class ScopedTestUid {
 public:
-    explicit ScopedTestUid(pid_t newUid) : oldUid(g_testCallingUid) { g_testCallingUid = newUid; }
-    ~ScopedTestUid() { g_testCallingUid = oldUid; }
+    explicit ScopedTestUid(pid_t newUid) : oldUid(g_testCallingAppUid) { g_testCallingAppUid = newUid; }
+    ~ScopedTestUid() { g_testCallingAppUid = oldUid; }
 private:
     pid_t oldUid;
 };
@@ -896,7 +896,7 @@ HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_UMountFileMgrFus
 
 /**
  * @tc.name: StorageManagerProviderTest_MountDlpFuse_002
- * @tc.desc: Verify the MountDlpFuse function with valid path but uid not DLP_UID.
+ * @tc.desc: Verify the MountDlpFuse function with valid path but appUid not DLP_UID.
  * @tc.type: FUNC
  */
 HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_MountDlpFuse_002, TestSize.Level1)
@@ -913,7 +913,7 @@ HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_MountDlpFuse_002
 
 /**
  * @tc.name: StorageManagerProviderTest_MountDlpFuse_003
- * @tc.desc: Verify the MountDlpFuse function with MockBundleMgr and uid not DLP_UID.
+ * @tc.desc: Verify the MountDlpFuse function with MockBundleMgr and appUid not DLP_UID.
  * @tc.type: FUNC
  * @tc.require: AR000H09L6
  */
@@ -934,7 +934,7 @@ HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_MountDlpFuse_003
 
 /**
  * @tc.name: StorageManagerProviderTest_UMountDlpFuse_002
- * @tc.desc: Verify the UMountDlpFuse function with valid path but uid not DLP_UID.
+ * @tc.desc: Verify the UMountDlpFuse function with valid path but appUid not DLP_UID.
  * @tc.type: FUNC
  */
 HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_UMountDlpFuse_002, TestSize.Level1)
@@ -949,7 +949,7 @@ HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_UMountDlpFuse_00
 
 /**
  * @tc.name: StorageManagerProviderTest_UMountDlpFuse_003
- * @tc.desc: Verify the UMountDlpFuse function with MockBundleMgr and uid not DLP_UID.
+ * @tc.desc: Verify the UMountDlpFuse function with MockBundleMgr and appUid not DLP_UID.
  * @tc.type: FUNC
  * @tc.require: AR000H09L6
  */
@@ -1378,7 +1378,7 @@ HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_SetExtBundleStat
     ExtBundleStats extBundleStats;
     extBundleStats.businessName_ = "businessName";
     extBundleStats.businessSize_ = 0;
-    g_testCallingUid = 7558;
+    g_testCallingAppUid = 7558;
     auto ret = storageManagerProviderTest_->SetExtBundleStats(userId, extBundleStats);
     EXPECT_EQ(ret, E_PARAMS_INVALID);
     userId = INT32_MAX;
@@ -1398,7 +1398,7 @@ HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_SetExtBundleStat
     g_accessTokenType = 0;
     ret = storageManagerProviderTest_->SetExtBundleStats(userId, extBundleStats);
     EXPECT_EQ(ret, E_SYS_APP_PERMISSION_DENIED);
-    g_testCallingUid = 5523;
+    g_testCallingAppUid = 5523;
     GTEST_LOG_(INFO) << "StorageManagerProviderTest_SetExtBundleStats_001 end";
 }
 
@@ -1415,7 +1415,7 @@ HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_GetExtBundleStat
     ExtBundleStats extBundleStats;
     extBundleStats.businessName_ = "businessName";
     extBundleStats.businessSize_ = 0;
-    g_testCallingUid = 7558;
+    g_testCallingAppUid = 7558;
     auto ret = storageManagerProviderTest_->GetExtBundleStats(userId, extBundleStats);
     EXPECT_EQ(ret, E_PARAMS_INVALID);
     userId = INT32_MAX;
@@ -1431,7 +1431,7 @@ HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_GetExtBundleStat
     g_accessTokenType = 0;
     ret = storageManagerProviderTest_->GetExtBundleStats(userId, extBundleStats);
     EXPECT_EQ(ret, E_SYS_APP_PERMISSION_DENIED);
-    g_testCallingUid = 5523;
+    g_testCallingAppUid = 5523;
     GTEST_LOG_(INFO) << "StorageManagerProviderTest_GetExtBundleStats_001 end";
 }
 
@@ -1445,7 +1445,7 @@ HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_GetAllExtBundleS
     GTEST_LOG_(INFO) << "StorageManagerProviderTest_GetAllExtBundleStats_001 start";
     ASSERT_TRUE(storageManagerProviderTest_ != nullptr);
     uint32_t userId = TOP_USER_ID + 1;
-    g_testCallingUid = 7558;
+    g_testCallingAppUid = 7558;
     std::vector<ExtBundleStats> bundleStats;
     auto ret = storageManagerProviderTest_->GetAllExtBundleStats(userId, bundleStats);
     EXPECT_EQ(ret, E_PARAMS_INVALID);
@@ -1458,7 +1458,7 @@ HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_GetAllExtBundleS
     g_accessTokenType = 0;
     ret = storageManagerProviderTest_->GetAllExtBundleStats(userId, bundleStats);
     EXPECT_EQ(ret, E_SYS_APP_PERMISSION_DENIED);
-    g_testCallingUid = 5523;
+    g_testCallingAppUid = 5523;
     GTEST_LOG_(INFO) << "StorageManagerProviderTest_GetAllExtBundleStats_001 end";
 }
 
@@ -1491,10 +1491,10 @@ HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_NotifyCreateBund
     uint32_t userId = 100;
     uint8_t elx = 1;
 
-    g_testCallingUid = 1;
+    g_testCallingAppUid = 1;
     EXPECT_EQ(storageManagerProviderTest_->NotifyCreateBundleDataDirWithEl(userId, elx), E_PERMISSION_DENIED);
 
-    g_testCallingUid = 0;
+    g_testCallingAppUid = 0;
     EXPECT_EQ(storageManagerProviderTest_->NotifyCreateBundleDataDirWithEl(userId, elx), E_ERR);
 
     elx = 2;
@@ -1513,9 +1513,9 @@ HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_QueryActiveOsAcc
     GTEST_LOG_(INFO) << "StorageManagerProviderTest_QueryActiveOsAccountIds_002 start";
     ASSERT_TRUE(storageManagerProviderTest_ != nullptr);
     std::vector<int32_t> ids;
-    g_testCallingUid = 1;
+    g_testCallingAppUid = 1;
     EXPECT_EQ(storageManagerProviderTest_->QueryActiveOsAccountIds(ids), E_PERMISSION_DENIED);
-    g_testCallingUid = 0;
+    g_testCallingAppUid = 0;
     EXPECT_NE(storageManagerProviderTest_->QueryActiveOsAccountIds(ids), E_PERMISSION_DENIED);
     GTEST_LOG_(INFO) << "StorageManagerProviderTest_QueryActiveOsAccountIds_002 end";
 }
@@ -1531,9 +1531,9 @@ HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_IsOsAccountExist
     ASSERT_TRUE(storageManagerProviderTest_ != nullptr);
     unsigned int userId = 1;
     bool isOsAccountExists = true;
-    g_testCallingUid = 1;
+    g_testCallingAppUid = 1;
     EXPECT_EQ(storageManagerProviderTest_->IsOsAccountExists(userId, isOsAccountExists), E_PERMISSION_DENIED);
-    g_testCallingUid = 0;
+    g_testCallingAppUid = 0;
     EXPECT_NE(storageManagerProviderTest_->IsOsAccountExists(userId, isOsAccountExists), E_PERMISSION_DENIED);
     GTEST_LOG_(INFO) << "StorageManagerProviderTest_IsOsAccountExists_002 end";
 }

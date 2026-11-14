@@ -36,12 +36,12 @@
 #include <vector>
 
 namespace {
-pid_t g_testCallingUid = 999;
+pid_t g_testCallingAppUid = 999;
 } // namespace
 
 void SetCallingUid(int32_t uid)
 {
-    g_testCallingUid = uid;
+    g_testCallingAppUid = uid;
 }
 
 namespace OHOS {
@@ -49,9 +49,9 @@ namespace OHOS {
 using namespace IPC_SINGLE;
 #endif
 
-pid_t OHOS::IPCSkeleton::GetCallingUid()
+pid_t OHOS::IPCSkeleton::GetCallingAppUid()
 {
-    return g_testCallingUid;
+    return g_testCallingAppUid;
 }
 } // namespace OHOS
 
@@ -2788,7 +2788,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_ValidateBlockDevic
 
 /**
  * @tc.name: StorageDaemonProviderTest_CreateDmLinear_001
- * @tc.desc: Verify CreateDmLinear returns E_PERMISSION_DENIED when calling uid is not DISK_MANAGER_UID.
+ * @tc.desc: Verify CreateDmLinear returns E_PERMISSION_DENIED when calling appUid is not DISK_MANAGER_UID.
  * @tc.type: FUNC
  */
 HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_CreateDmLinear_001, TestSize.Level1)
@@ -3249,7 +3249,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_GetBlockInfoByType
 
 /**
  * @tc.name: StorageDaemonProviderTest_MountCloudDiskFuse_001
- * @tc.desc: Verify the MountCloudDiskFuse function with valid uid and valid params.
+ * @tc.desc: Verify the MountCloudDiskFuse function with valid appUid and valid params.
  * @tc.type: FUNC
  * @tc.require: AR000H09L6
  */
@@ -3271,7 +3271,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_MountCloudDiskFuse
 
 /**
  * @tc.name: StorageDaemonProviderTest_MountCloudDiskFuse_002
- * @tc.desc: Verify the MountCloudDiskFuse function with invalid uid.
+ * @tc.desc: Verify the MountCloudDiskFuse function with invalid appUid.
  * @tc.type: FUNC
  * @tc.require: AR000H09L6
  */
@@ -3290,7 +3290,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_MountCloudDiskFuse
 
 /**
  * @tc.name: StorageDaemonProviderTest_UMountCloudDiskFuse_001
- * @tc.desc: Verify the UMountCloudDiskFuse function with valid uid and valid params.
+ * @tc.desc: Verify the UMountCloudDiskFuse function with valid appUid and valid params.
  * @tc.type: FUNC
  * @tc.require: AR000H09L6
  */
@@ -3311,7 +3311,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_UMountCloudDiskFus
 
 /**
  * @tc.name: StorageDaemonProviderTest_UMountCloudDiskFuse_002
- * @tc.desc: Verify the UMountCloudDiskFuse function with invalid uid.
+ * @tc.desc: Verify the UMountCloudDiskFuse function with invalid appUid.
  * @tc.type: FUNC
  * @tc.require: AR000H09L6
  */
@@ -3572,7 +3572,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_OpticalCreateIsoIm
 
 /**
  * @tc.name: StorageDaemonProviderTest_MountUdmfClipFuse_001
- * @tc.desc: Verify the MountUdmfClipFuse function with valid uid and valid params.
+ * @tc.desc: Verify the MountUdmfClipFuse function with valid appUid and valid params.
  * @tc.type: FUNC
  * @tc.require: 20260807938859
  */
@@ -3634,7 +3634,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_MountUdmfClipFuse_
 
 /**
  * @tc.name: StorageDaemonProviderTest_MountUdmfClipFuse_004
- * @tc.desc: Verify the MountUdmfClipFuse function with invalid uid.
+ * @tc.desc: Verify the MountUdmfClipFuse function with invalid appUid.
  * @tc.type: FUNC
  * @tc.require: 20260807938859
  */
@@ -3716,7 +3716,7 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_UMountUdmfClipFuse
 
 /**
  * @tc.name: StorageDaemonProviderTest_UMountUdmfClipFuse_003
- * @tc.desc: Verify the UMountUdmfClipFuse function with invalid uid.
+ * @tc.desc: Verify the UMountUdmfClipFuse function with invalid appUid.
  * @tc.type: FUNC
  * @tc.require: 20260807938859
  */

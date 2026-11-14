@@ -297,10 +297,10 @@ int32_t StorageStatusManager::GetCurrentBundleStats(BundleStats &bundleStats, ui
         return E_SERVICE_IS_NULLPTR;
     }
 
-    int32_t uid = IPCSkeleton::GetCallingUid();
+    int32_t appUid = IPCSkeleton::GetCallingAppUid();
     std::string bundleName;
     int32_t appIndex = DEFAULT_APP_INDEX;
-    ErrCode getIndexRet = bundleMgr->GetNameAndIndexForUid(uid, bundleName, appIndex);
+    ErrCode getIndexRet = bundleMgr->GetNameAndIndexForUid(appUid, bundleName, appIndex);
     if (getIndexRet != ERR_OK) {
         LOGE("GetNameAndIndexForUid ErrCode: %{public}d", getIndexRet);
         appIndex = DEFAULT_APP_INDEX;

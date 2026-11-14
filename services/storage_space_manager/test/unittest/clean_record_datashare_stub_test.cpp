@@ -72,7 +72,7 @@ void CleanRecordDataShareStubTest::TearDownTestCase()
 void CleanRecordDataShareStubTest::SetUp()
 {
     g_mockCallingTokenId = MOCK_TOKEN_ID;
-    g_mockCallingUid = MOCK_UID;
+    g_mockCallingAppUid = MOCK_UID;
     g_mockVerifyAccessTokenResult = PERMISSION_GRANTED;
     g_mockTokenTypeFlag = TOKEN_TYPE_NATIVE;
     ASSERT_NE(store_, nullptr);
