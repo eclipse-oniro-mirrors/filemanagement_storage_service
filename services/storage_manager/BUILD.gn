@@ -163,6 +163,13 @@ ohos_shared_library("storage_manager") {
   subsystem_name = "filemanagement"
   part_name = "storage_service"
   install_enable = true
+  cflags_cc = [
+    "-fdata-sections",
+    "-ffunction-sections",
+    "-fno-unwind-tables",
+    "-fno-asynchronous-unwind-tables",
+    "-Os",
+  ]
 }
 
 ohos_prebuilt_etc("storage_manager_config.para") {

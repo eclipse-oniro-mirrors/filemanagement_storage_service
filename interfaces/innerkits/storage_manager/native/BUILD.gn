@@ -58,6 +58,13 @@ ohos_source_set("storage_manager_ipc_native") {
   ]
   part_name = "storage_service"
   subsystem_name = "filemanagement"
+  cflags_cc = [
+    "-fdata-sections",
+    "-ffunction-sections",
+    "-fno-unwind-tables",
+    "-fno-asynchronous-unwind-tables",
+    "-Os",
+  ]
 }
 
 ohos_source_set("storage_manager_header") {
@@ -102,7 +109,6 @@ ohos_shared_library("storage_manager_sa_proxy") {
     "${storage_manager_path}/innerkits_impl/src/volume_core.cpp",
     "${storage_manager_path}/innerkits_impl/src/volume_external.cpp",
     "${storage_manager_path}/innerkits_impl/src/statistic_info.cpp",
-    "${storage_manager_path}/utils/src/storage_utils.cpp",
   ]
 
   defines = [
@@ -136,7 +142,6 @@ ohos_shared_library("storage_manager_sa_proxy") {
     "hilog:libhilog",
     "hitrace:hitrace_meter",
     "ipc:ipc_single",
-    "os_account:os_account_innerkits",
   ]
 
   deps = [
@@ -147,6 +152,13 @@ ohos_shared_library("storage_manager_sa_proxy") {
   part_name = "storage_service"
   innerapi_tags = [ "platformsdk" ]
   subsystem_name = "filemanagement"
+  cflags_cc = [
+    "-fdata-sections",
+    "-ffunction-sections",
+    "-fno-unwind-tables",
+    "-fno-asynchronous-unwind-tables",
+    "-Os",
+  ]
 
   if (storage_service_media_fuse) {
     defines += [ "STORAGE_SERVICE_MEDIA_FUSE" ]
