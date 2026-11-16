@@ -677,8 +677,7 @@
             "path": "/data/service/el2/<userId>/clouddiskservice",
             "mode": "0711",
             "uid": 6161,
-            "gid": 6161,
-            "options": "restorecon"
+            "gid": 6161
         }
       ],
       "el3": [
