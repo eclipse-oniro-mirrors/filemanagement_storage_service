@@ -57,6 +57,9 @@ constexpr const char *DEV_NODE = "/dev";
 constexpr const char *ROTATIONAL_NODE = "/queue/rotational";
 constexpr const char *MODEL_NODE = "/device/model";
 constexpr const char *VENDOR_NODE = "/device/vendor";
+constexpr const char *MMC_STRING = "mmcblk";
+constexpr const char *MMC_MANFID_NODE = "/device/manfid";
+constexpr const char *MMC_PRODUCT_NAME_NODE = "/device/name";
 constexpr const char *UEVENT_NODE = "/uevent";
 constexpr const char *REVNUM_NODE = "/device/rev";
 constexpr const char *MAJOR_KEY = "MAJOR=";
@@ -672,28 +675,28 @@ uint64_t ScanDevice::GetDiskSize(const std::string &deviceName)
     return sectorSize;
 }
 
-std::string ScanDevice::GetVendor(const std::string &deviceName)
+std::string ScanDevice::ReadDeviceNode(const std::string &deviceName, const std::string &normalNode,
+                                       const std::string &mmcNode)
 {
-    std::string vendorPath = sysBlockPath + SPLIT_STRING + deviceName + VENDOR_NODE;
+    const std::string &node = deviceName.find(MMC_STRING) == 0 ? mmcNode : normalNode;
+    std::string path = sysBlockPath + SPLIT_STRING + deviceName + node;
     std::string content;
-    if (ReadSysfsNode(vendorPath, content)) {
-        LOGI("GetVendor success: %{public}s", content.c_str());
+    if (ReadSysfsNode(path, content)) {
+        LOGI("Read %{public}s success: %{public}s", path.c_str(), content.c_str());
         return content;
     }
-    LOGE("GetVendor failed");
+    LOGE("Read %{public}s failed", path.c_str());
     return "Unknown";
+}
+
+std::string ScanDevice::GetVendor(const std::string &deviceName)
+{
+    return ReadDeviceNode(deviceName, VENDOR_NODE, MMC_MANFID_NODE);
 }
 
 std::string ScanDevice::GetModel(const std::string &deviceName)
 {
-    std::string modelPath = sysBlockPath + SPLIT_STRING + deviceName + MODEL_NODE;
-    std::string content;
-    if (ReadSysfsNode(modelPath, content)) {
-        LOGI("GetModel success: %{public}s", content.c_str());
-        return content;
-    }
-    LOGE("GetModel: read node of model failed");
-    return "Unknown";
+    return ReadDeviceNode(deviceName, MODEL_NODE, MMC_PRODUCT_NAME_NODE);
 }
 
 std::string ScanDevice::GetInterfaceType(const std::string &deviceName)

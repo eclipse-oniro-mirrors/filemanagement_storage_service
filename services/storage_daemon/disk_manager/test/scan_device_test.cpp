@@ -41,6 +41,7 @@ public:
     void CreateDirectory(const std::string &path);
     void CreateFileWithContent(const std::string &filePath, const std::string &content);
     void CreateDeviceDir(const std::string &deviceName);
+    void CreateMmcDeviceDir(const std::string &deviceName);
     void DeleteDeviceDir(const std::string &deviceName);
     void LinkDeviceAsInternalSata(const std::string &deviceName);
     void LinkDeviceAsInternalNvme(const std::string &deviceName);
@@ -100,6 +101,16 @@ void ScanDeviceTest::CreateDeviceDir(const std::string &deviceName)
     CreateFileWithContent(devicePath + "/queue/rotational", "0\n");
     CreateFileWithContent(devicePath + "/removable", "0\n");
     CreateFileWithContent(devicePath + "/dev", "8:16\n");
+}
+
+void ScanDeviceTest::CreateMmcDeviceDir(const std::string &deviceName)
+{
+    CreateDirectory(mockSysPath);
+    std::string devicePath = mockSysPath + "/" + deviceName;
+    CreateDirectory(devicePath);
+    CreateDirectory(devicePath + "/device");
+    CreateFileWithContent(devicePath + "/device/manfid", "0x000003\n");
+    CreateFileWithContent(devicePath + "/device/name", "SL64G\n");
 }
 
 void ScanDeviceTest::DeleteDeviceDir(const std::string &deviceName)
@@ -553,6 +564,76 @@ HWTEST_F(ScanDeviceTest, Storage_Service_ScanDeviceTest_GetModel_002, TestSize.L
     std::string model = scanner.GetModel("sdmock_b");
     EXPECT_EQ(model, "Unknown");
     GTEST_LOG_(INFO) << "Storage_Service_ScanDeviceTest_GetModel_002 end";
+}
+
+/**
+ * @tc.name: Storage_Service_ScanDeviceTest_GetVendor_003
+ * @tc.desc: Test getting vendor information for mmcblk device (reads manfid node)
+ * @tc.type: FUNC
+ */
+HWTEST_F(ScanDeviceTest, Storage_Service_ScanDeviceTest_GetVendor_003, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "Storage_Service_ScanDeviceTest_GetVendor_003 start";
+
+    CreateMmcDeviceDir("mmcblk0");
+
+    ScanDevice scanner(mockSysPath);
+    std::string vendor = scanner.GetVendor("mmcblk0");
+    EXPECT_EQ(vendor, "0x000003");
+
+    DeleteDeviceDir("mmcblk0");
+    GTEST_LOG_(INFO) << "Storage_Service_ScanDeviceTest_GetVendor_003 end";
+}
+
+/**
+ * @tc.name: Storage_Service_ScanDeviceTest_GetModel_003
+ * @tc.desc: Test getting model information for mmcblk device (reads name node)
+ * @tc.type: FUNC
+ */
+HWTEST_F(ScanDeviceTest, Storage_Service_ScanDeviceTest_GetModel_003, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "Storage_Service_ScanDeviceTest_GetModel_003 start";
+
+    CreateMmcDeviceDir("mmcblk0");
+
+    ScanDevice scanner(mockSysPath);
+    std::string model = scanner.GetModel("mmcblk0");
+    EXPECT_EQ(model, "SL64G");
+
+    DeleteDeviceDir("mmcblk0");
+    GTEST_LOG_(INFO) << "Storage_Service_ScanDeviceTest_GetModel_003 end";
+}
+
+/**
+ * @tc.name: Storage_Service_ScanDeviceTest_GetVendor_004
+ * @tc.desc: Test getting vendor information for mmcblk device without manfid node
+ * @tc.type: FUNC
+ */
+HWTEST_F(ScanDeviceTest, Storage_Service_ScanDeviceTest_GetVendor_004, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "Storage_Service_ScanDeviceTest_GetVendor_004 start";
+
+    ScanDevice scanner(mockSysPath);
+    std::string vendor = scanner.GetVendor("mmcblk0");
+    EXPECT_EQ(vendor, "Unknown");
+
+    GTEST_LOG_(INFO) << "Storage_Service_ScanDeviceTest_GetVendor_004 end";
+}
+
+/**
+ * @tc.name: Storage_Service_ScanDeviceTest_GetModel_004
+ * @tc.desc: Test getting model information for mmcblk device without name node
+ * @tc.type: FUNC
+ */
+HWTEST_F(ScanDeviceTest, Storage_Service_ScanDeviceTest_GetModel_004, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "Storage_Service_ScanDeviceTest_GetModel_004 start";
+
+    ScanDevice scanner(mockSysPath);
+    std::string model = scanner.GetModel("mmcblk0");
+    EXPECT_EQ(model, "Unknown");
+
+    GTEST_LOG_(INFO) << "Storage_Service_ScanDeviceTest_GetModel_004 end";
 }
 
 /**
