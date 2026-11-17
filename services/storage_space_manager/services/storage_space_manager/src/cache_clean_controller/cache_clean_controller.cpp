@@ -372,7 +372,7 @@ int32_t CacheCleanController::ExecuteCacheCleaning(const std::vector<CleanCacheI
     } else if (stats.cleanBefore - stats.cleanAfter > INT64_MAX) {
         freed_size = 0;
     } else {
-        freed_size = stats.cleanBefore - stats.cleanAfter;
+        freed_size = static_cast<int64_t>(stats.cleanBefore - stats.cleanAfter);
     }
     values.PutLong("clean_time", timeStamp);
     values.PutLong("freed_size", freed_size);
