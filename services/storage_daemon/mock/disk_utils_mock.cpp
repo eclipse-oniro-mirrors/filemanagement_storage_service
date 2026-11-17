@@ -131,12 +131,20 @@ int GetDvdPlusRwTotalCapacity(int fd, int64_t &dvdTotalCapacity)
     return IDiskUtilMoc::diskUtilMoc->GetDvdPlusRwTotalCapacity(fd, dvdTotalCapacity);
 }
 
-int GetBdTotalCapacity(int fd, int64_t &bdTotalCapacity)
+int GetReadCapacitySize(int fd, int64_t &bdCapacity)
 {
     if (IDiskUtilMoc::diskUtilMoc == nullptr) {
         return 0;
     }
-    return IDiskUtilMoc::diskUtilMoc->GetBdTotalCapacity(fd, bdTotalCapacity);
+    return IDiskUtilMoc::diskUtilMoc->GetReadCapacitySize(fd, bdCapacity);
+}
+
+int GetBdTrackCapacity(int fd, int64_t &bdTotalCapacity, int64_t &bdUsedCapacity)
+{
+    if (IDiskUtilMoc::diskUtilMoc == nullptr) {
+        return 0;
+    }
+    return IDiskUtilMoc::diskUtilMoc->GetBdTrackCapacity(fd, bdTotalCapacity, bdUsedCapacity);
 }
 
 int GetDvdConfiguration(int fd, int &dvdMedia)

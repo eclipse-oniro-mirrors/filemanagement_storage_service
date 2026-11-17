@@ -13,6 +13,7 @@
  * limitations under the License.
  */
 
+#include <algorithm>
 #include <cerrno>
 #include <cstdlib>
 #include <cstdint>
@@ -91,6 +92,22 @@ constexpr uint8_t TRACK_INFO_NWA_VALID_MASK = 0x01;
 constexpr uint8_t TRACK_INFO_NWA_OFFSET = 12;
 constexpr uint8_t TRACK_INFO_FREE_BLOCKS_OFFSET = 16;
 constexpr uint8_t TRACK_INFO_TRACK_SIZE_OFFSET = 20;
+constexpr uint8_t CDB_TRACK_NUMBER_OFFSET = 5;
+constexpr uint8_t TRACK_INFO_INVISIBLE_TRACK = 0xff;
+constexpr uint8_t CDB_LBA_BYTE_0 = 2;
+constexpr uint8_t CDB_LBA_BYTE_1 = 3;
+constexpr uint8_t CDB_LBA_BYTE_2 = 4;
+constexpr uint8_t CDB_LBA_BYTE_3 = 5;
+constexpr uint8_t DISC_INFO_DATA_LEN = 32;
+constexpr uint8_t DISC_INFO_SESSIONS_OFFSET = 4;
+constexpr uint8_t DISC_INFO_FIRST_TRACK_IN_LAST_SESSION_OFFSET = 5;
+constexpr uint8_t DISC_INFO_LAST_TRACK_IN_LAST_SESSION_OFFSET = 6;
+constexpr uint8_t DISC_INFO_FLAGS_OFFSET = 7;
+constexpr uint8_t DISC_INFO_LAST_TRACK_ALT_OFFSET = 8;
+constexpr size_t DISC_INFO_MAX_NEXT_TRACKS = 8;
+constexpr uint8_t DISC_INFO_DISC_STATUS_OFFSET = 2;
+constexpr size_t DISC_INFO_RAW_DUMP_LEN = 12;
+constexpr uint8_t HEX_BYTE_WIDTH = 2;
 constexpr int32_t READ_DISC_INFO_CMD_LEN = 10;
 
 int GetMaxVolume(dev_t device)
@@ -575,7 +592,7 @@ int GetCdTotalCapacity(int fd, int64_t &cdTotalCapacity)
         LOGE("get atip data failed, ret is %{public}d", ret);
         return E_ERR;
     }
- 
+
     total_seconds = (double)data_buf[12] * SECONDS_PER_MINUTES + data_buf[13] +
                     (double)data_buf[14] / CD_SECTORS_PER_SECOND;
     cdTotalCapacity = static_cast<int64_t>(total_seconds * CD_SECTORS_PER_SECOND * ODD_LOGICAL_SECTOR_SIZE);
@@ -704,7 +721,7 @@ int GetDiscUsedCapacity(int fd, int64_t totalSize, int64_t &discUsedCapacity)
         }
         return E_ERR;
     }
- 
+
     return ParseNextWritableAddr(dataBuf, discUsedCapacity);
 }
 
@@ -744,7 +761,7 @@ int GetDvdTotalCapacity(int fd, int64_t &dvdTotalCapacity)
         LOGE("get dvd total capacity failed, ret val is %{public}d", ret);
         return E_ERR;
     }
- 
+
     phys_start = ((unsigned long long)(data_buf[9]) << 16) |
                  ((unsigned long long)(data_buf[10]) << 8) |
                  data_buf[11];
@@ -763,11 +780,11 @@ int GetDvdTotalCapacity(int fd, int64_t &dvdTotalCapacity)
         dvdTotalCapacity = 0;
         LOGI("phys_end is less than phys_start, error data");
     }
-    
+
     LOGI("dvd dvdTotalCapacity: %{public}" PRIu64, dvdTotalCapacity);
     return E_OK;
 }
- 
+
 int GetDvdConfiguration(int fd, int &dvdMedia)
 {
     unsigned char cmd_buf[GET_CAPACITY_CMD_BUF_LEN] = {0};
@@ -803,65 +820,254 @@ int GetDvdConfiguration(int fd, int &dvdMedia)
         LOGE("get atip data len failed, ret val is %{public}d", ret);
         return E_ERR;
     }
- 
+
     dvdMedia = static_cast<int>((unsigned int)data_buf[DISC_TYPE_OFFSET_HIGH] << DISC_TYPE_OFFSET) |
         data_buf[DISC_TYPE_OFFSET_LOW];
     LOGI("dvd_media: %{public}#x", dvdMedia);
     return E_OK;
 }
 
-int GetBdTotalCapacity(int fd, int64_t &bdTotalCapacity)
+/*
+ * 使用 SCSI READ CAPACITY 指令 (0x25) 获取蓝光光盘逻辑地址空间容量。
+ * 注意：对未封盘且未预留整盘数据区的 BD-R（如第三方刻录工具顺序记录写出的盘），
+ * 返回的 Last LBA 只是已记录区末尾，不是介质总容量。
+ * 返回值同时用于定位 invisible track：未封盘 BD-R 的 invisible track 起始地址
+ * 恰为已记录区末尾（经 dvd+rw-mediainfo 对实际盘片验证）。
+ */
+int GetReadCapacitySize(int fd, int64_t &bdCapacity)
 {
     unsigned char cmd_buf[GET_CAPACITY_CMD_BUF_LEN] = {0};
     int cmd_len = GET_DVD_USED_CAPACITY_CMD_LEN;
     unsigned char data_buf[GET_CAPACITY_DATA_BUF_LEN] = {0};
     unsigned int data_len = GET_DVD_USED_CAPACITY_DATA_LEN;
-    int ret = 0;
-    unsigned int blk_cnt = 0;
-    unsigned int blk_size = 0;
-    /*
-    * 使用 SCSI READ CAPACITY 指令 (0x25) 获取蓝光光盘容量信息。
-    * 字段详解:
-    * cmd_buf[0]: 操作码 0x25 (GPCMD_READ_CDVD_CAPACITY)。
-    * cmd_buf[7-8]: 分配长度 (Allocation Length)。
-    * 返回数据:
-    * data_buf[0-3]: 最后逻辑块地址 (Last LBA)。
-    * data_buf[4-7]: 块大小 (Block Length)。
-    */
     cmd_buf[0] = GPCMD_READ_CDVD_CAPACITY;
     cmd_buf[CDB_ALLOCATION_LENGTH_HIGH] = (data_len >> BYTE_SHIFT_8) & BYTE_MASK;
     cmd_buf[CDB_ALLOCATION_LENGTH_LOW] = data_len & BYTE_MASK;
     ScsiCmdInfo cmdInfo = { cmd_buf, cmd_len, data_buf, data_len };
-    ret = SendScsiCmd(fd, cmdInfo);
+    int ret = SendScsiCmd(fd, cmdInfo);
     if (ret != 0) {
-        LOGE("get bd total capacity failed, ret val is %{public}d", ret);
+        LOGE("get bd read capacity failed, ret val is %{public}d", ret);
         return E_ERR;
     }
 
-    blk_cnt = ((unsigned int)data_buf[LAST_LBA_BYTE_0] << BYTE_SHIFT_24) |
-            ((unsigned int)data_buf[LAST_LBA_BYTE_1] << BYTE_SHIFT_16) |
-            ((unsigned int)data_buf[LAST_LBA_BYTE_2] << BYTE_SHIFT_8) |
+    unsigned int blkCnt = (static_cast<unsigned int>(data_buf[LAST_LBA_BYTE_0]) << BYTE_SHIFT_24) |
+            (static_cast<unsigned int>(data_buf[LAST_LBA_BYTE_1]) << BYTE_SHIFT_16) |
+            (static_cast<unsigned int>(data_buf[LAST_LBA_BYTE_2]) << BYTE_SHIFT_8) |
             data_buf[LAST_LBA_BYTE_3];
-    blk_size = ((unsigned int)data_buf[BLOCK_SIZE_BYTE_0] << BYTE_SHIFT_24) |
-            ((unsigned int)data_buf[BLOCK_SIZE_BYTE_1] << BYTE_SHIFT_16) |
-            ((unsigned int)data_buf[BLOCK_SIZE_BYTE_2] << BYTE_SHIFT_8) |
+    unsigned int blkSize = (static_cast<unsigned int>(data_buf[BLOCK_SIZE_BYTE_0]) << BYTE_SHIFT_24) |
+            (static_cast<unsigned int>(data_buf[BLOCK_SIZE_BYTE_1]) << BYTE_SHIFT_16) |
+            (static_cast<unsigned int>(data_buf[BLOCK_SIZE_BYTE_2]) << BYTE_SHIFT_8) |
             data_buf[BLOCK_SIZE_BYTE_3];
-    int64_t blkCnt64 = static_cast<int64_t>(blk_cnt);
-    int64_t blkSize64 = static_cast<int64_t>(blk_size);
+    int64_t blkCnt64 = static_cast<int64_t>(blkCnt);
+    int64_t blkSize64 = static_cast<int64_t>(blkSize);
     if (blkSize64 != 0 && blkCnt64 + 1 > INT64_MAX / blkSize64) {
-        LOGE("GetBdTotalCapacity: multiplication overflow");
+        LOGE("GetReadCapacitySize: multiplication overflow");
         return E_ERR;
     }
-    bdTotalCapacity = (blkCnt64 + 1) * blkSize64;
-    LOGI("bd total_capacity: %{public}u * %{public}u = %{public}" PRId64 " bytes",
-        blk_cnt + 1, blk_size, bdTotalCapacity);
+    bdCapacity = (blkCnt64 + 1) * blkSize64;
+    LOGI("bd read_capacity: %{public}u * %{public}u = %{public}" PRId64 " bytes",
+        blkCnt + 1, blkSize, bdCapacity);
     return E_OK;
+}
+
+/*
+ * 使用 SCSI READ DISC INFORMATION (0x51) 获取候选的"当前开放轨道号"（next track）。
+ * 未封盘 BD-R 的开放轨道为 invisible track，其 NWA/Free Blocks 反映真实剩余可写空间。
+ *
+ * 盘片信息块字段布局在不同固件/规范版本间不一致：实测 Verbatim 66768 对 BD-R 返回
+ * 单字节布局——byte 4 = session 数，byte 5 = 最后 session 首轨道，byte 6 = 最后 session
+ * 末轨道（即开放轨道），byte 7 = DID_V/DBC_V 等标志位（实测 0x20）。若按 MMC-5 的
+ * 双字节（LSB/MSB）解析 byte 6-7，会得到 0x2004 这类垃圾值（仅低字节恰好可用）。
+ * 因此这里给出多种候选布局，由调用方用 READ TRACK INFORMATION 逐个验证
+ * （只有开放轨道才满足 nwaValid && freeBlocks > 0），不依赖单一布局假设。
+ */
+static int GetDiscInfoNextTracks(int fd, uint8_t *nextTracks, size_t maxCount, size_t &count)
+{
+    count = 0;
+    unsigned char cmd_buf[GET_CAPACITY_CMD_BUF_LEN] = {0};
+    unsigned char data_buf[GET_CAPACITY_DATA_BUF_LEN] = {0};
+    uint8_t senseBuf[SENSE_BUFF_LEN] = {0};
+    cmd_buf[0] = GPCMD_READ_DISC_INFO;
+    cmd_buf[CDB_ALLOCATION_LENGTH_HIGH] = (DISC_INFO_DATA_LEN >> BYTE_SHIFT_8) & BYTE_MASK;
+    cmd_buf[CDB_ALLOCATION_LENGTH_LOW] = DISC_INFO_DATA_LEN & BYTE_MASK;
+    ScsiCmdInfo cmdInfo = { cmd_buf, GET_CD_USED_CAPACITY_CMD_LEN, data_buf, DISC_INFO_DATA_LEN };
+    int ret = SendScsiCmd(fd, cmdInfo, senseBuf, sizeof(senseBuf));
+    if (ret != 0) {
+        LOGI("GetDiscInfoNextTracks: read disc info failed, ret=%{public}d senseKey=0x%{public}02X asc=0x%{public}02X",
+             ret, senseBuf[SCSI_SENSE_KEY_OFFSET] & 0x0F, senseBuf[SCSI_ASC_OFFSET]);
+        return E_ERR;
+    }
+    // 只打印决策相关字段：盘状态、session 数、末轨道号、标志位
+    LOGI("GetDiscInfoNextTracks: discStatus=0x%{public}02X, sessions=%{public}u, "
+         "lastTrackInLastSession=%{public}u, flags=0x%{public}02X",
+         data_buf[DISC_INFO_DISC_STATUS_OFFSET], data_buf[DISC_INFO_SESSIONS_OFFSET],
+         data_buf[DISC_INFO_LAST_TRACK_IN_LAST_SESSION_OFFSET], data_buf[DISC_INFO_FLAGS_OFFSET]);
+
+    uint8_t lastTrack = data_buf[DISC_INFO_LAST_TRACK_IN_LAST_SESSION_OFFSET];
+    uint8_t altLastTrack = data_buf[DISC_INFO_LAST_TRACK_ALT_OFFSET];
+    uint8_t candidates[] = {
+        // 单字节布局：最后 session 末轨道（实测 Verbatim 66768）；
+        lastTrack,
+        // 单字节布局：最后 session 首轨道
+        data_buf[DISC_INFO_FIRST_TRACK_IN_LAST_SESSION_OFFSET],
+        // 末轨道位于 byte 8-9 的固件（低字节即轨道号）
+        altLastTrack,
+        // 末轨道 + 1（开放轨道紧跟在最后一条已关闭轨道之后）
+        static_cast<uint8_t>(lastTrack > 0 ? lastTrack + 1 : 0),
+        static_cast<uint8_t>(altLastTrack > 0 ? altLastTrack + 1 : 0),
+    };
+    for (size_t i = 0; i < sizeof(candidates) / sizeof(candidates[0]) && count < maxCount; ++i) {
+        uint8_t track = candidates[i];
+        if (track == 0 || track == TRACK_INFO_INVISIBLE_TRACK) {
+            continue;
+        }
+        if (std::find(nextTracks, nextTracks + count, track) == nextTracks + count) {
+            nextTracks[count++] = track;
+        }
+    }
+    if (count == 0) {
+        // 候选全部无效（固件布局未知）：打印原始字节，便于现场判断新布局
+        std::ostringstream oss;
+        for (size_t i = 0; i < DISC_INFO_RAW_DUMP_LEN; ++i) {
+            oss << std::hex << std::setw(HEX_BYTE_WIDTH) << std::setfill('0')
+                << static_cast<unsigned int>(data_buf[i]) << ' ';
+        }
+        LOGI("GetDiscInfoNextTracks: no candidate, raw=[%{public}s]", oss.str().c_str());
+    }
+    return count > 0 ? E_OK : E_ERR;
+}
+
+static uint32_t ReadBe32(const unsigned char *buf)
+{
+    uint32_t value = 0;
+    for (size_t i = 0; i < sizeof(uint32_t); ++i) {
+        value = (value << BYTE_SHIFT_8) | static_cast<uint32_t>(buf[i]);
+    }
+    return value;
+}
+
+/*
+ * 探测单个候选轨道：命中有效 NWA/Free Blocks 时输出容量。
+ * 返回 1=命中，0=未命中（继续尝试其他形式），-1=致命错误（容量溢出）。
+ */
+static int ProbeBdTrackInfo(int fd, uint8_t addrType, uint32_t addr, bool rcValid, int64_t rcCapacity,
+                            int64_t &bdTotalCapacity, int64_t &bdUsedCapacity)
+{
+    unsigned char cmd_buf[GET_CAPACITY_CMD_BUF_LEN] = {0};
+    unsigned char data_buf[GET_CAPACITY_DATA_BUF_LEN] = {0};
+    uint8_t senseBuf[SENSE_BUFF_LEN] = {0};
+    /*
+     * cmd_buf[0]: 操作码 0x52 (GPCMD_READ_TRACK_RZONE_INFO)。
+     * cmd_buf[1]: Address/Number Type，00b=按 LBA 寻址（地址在 byte 2-5），
+     *             01b=按轨道编号寻址（编号在 byte 5）。
+     * cmd_buf[7-8]: 分配长度，48 字节覆盖 BD 轨道信息块。
+     */
+    cmd_buf[0] = GPCMD_READ_TRACK_RZONE_INFO;
+    cmd_buf[1] = addrType;
+    if (addrType == 0) {
+        cmd_buf[CDB_LBA_BYTE_0] = (addr >> BYTE_SHIFT_24) & BYTE_MASK;
+        cmd_buf[CDB_LBA_BYTE_1] = (addr >> BYTE_SHIFT_16) & BYTE_MASK;
+        cmd_buf[CDB_LBA_BYTE_2] = (addr >> BYTE_SHIFT_8) & BYTE_MASK;
+        cmd_buf[CDB_LBA_BYTE_3] = addr & BYTE_MASK;
+    } else {
+        cmd_buf[CDB_TRACK_NUMBER_OFFSET] = static_cast<unsigned char>(addr);
+    }
+    cmd_buf[CDB_ALLOCATION_LENGTH_HIGH] = (GET_CAPACITY_DATA_BUF_LEN >> BYTE_SHIFT_8) & BYTE_MASK;
+    cmd_buf[CDB_ALLOCATION_LENGTH_LOW] = GET_CAPACITY_DATA_BUF_LEN & BYTE_MASK;
+    ScsiCmdInfo cmdInfo = { cmd_buf, GET_CD_USED_CAPACITY_CMD_LEN, data_buf, GET_CAPACITY_DATA_BUF_LEN };
+    int ret = SendScsiCmd(fd, cmdInfo, senseBuf, sizeof(senseBuf));
+    if (ret != 0) {
+        LOGI("GetBdTrackCapacity: read track info failed, addrType=%{public}u addr=%{public}u ret=%{public}d "
+             "senseKey=0x%{public}02X asc=0x%{public}02X ascq=0x%{public}02X", addrType, addr, ret,
+             senseBuf[SCSI_SENSE_KEY_OFFSET] & 0x0F, senseBuf[SCSI_ASC_OFFSET], senseBuf[SCSI_ASCQ_OFFSET]);
+        return 0;
+    }
+
+    bool nwaValid = (data_buf[TRACK_INFO_NWA_VALID_OFFSET] & TRACK_INFO_NWA_VALID_MASK) != 0;
+    uint32_t nwa = ReadBe32(&data_buf[TRACK_INFO_NWA_OFFSET]);
+    uint32_t freeBlocks = ReadBe32(&data_buf[TRACK_INFO_FREE_BLOCKS_OFFSET]);
+    if (!nwaValid || freeBlocks == 0) {
+        return 0;   // 未命中开放轨道：静默跳过，由调用方继续尝试下一个候选
+    }
+
+    int64_t totalBlocks = static_cast<int64_t>(nwa) + static_cast<int64_t>(freeBlocks);
+    if (totalBlocks > INT64_MAX / ODD_LOGICAL_SECTOR_SIZE) {
+        LOGE("GetBdTrackCapacity: multiplication overflow, totalBlocks=%{public}" PRId64, totalBlocks);
+        return -1;
+    }
+    bdTotalCapacity = totalBlocks * ODD_LOGICAL_SECTOR_SIZE;
+    bdUsedCapacity = static_cast<int64_t>(nwa) * ODD_LOGICAL_SECTOR_SIZE;
+    if (rcValid && bdTotalCapacity < rcCapacity) {
+        LOGW("GetBdTrackCapacity: track total %{public}" PRId64 " is less than read capacity %{public}" PRId64
+             ", use read capacity", bdTotalCapacity, rcCapacity);
+        bdTotalCapacity = rcCapacity;
+        bdUsedCapacity = -1;
+        return 1;
+    }
+    LOGI("bd track_capacity: addrType=%{public}u addr=%{public}u total=%{public}" PRId64 " used=%{public}" PRId64,
+         addrType, addr, bdTotalCapacity, bdUsedCapacity);
+    return 1;
+}
+
+/*
+ * 使用 SCSI READ TRACK INFORMATION 指令 (0x52) 查询未封盘 BD-R 的 invisible track，
+ * 通过 NWA (Next Writable Address) + Free Blocks 计算数据区总容量，NWA 即已用容量。
+ * 依次尝试三种寻址形式：
+ * - 形式一：轨道编号 0xFF（invisible track）。标准驱动器支持；部分固件对 BD 盘拒绝
+ *   该形式（ILLEGAL_REQUEST / ASC=0x24 invalid field in CDB，实测 Verbatim 66768）；
+ * - 形式二：轨道编号取 READ DISC INFORMATION 给出的候选开放轨道号（可能多个候选，
+ *   取决于固件字段布局）。追加刻录后原开放轨道被关闭、开放轨道前移时，该形式仍能
+ *   准确定位（实测验证）；每个候选都用 nwaValid && freeBlocks > 0 校验，错误候选
+ *   会因命中已关闭轨道或不存在轨道而被丢弃；
+ * - 形式三：按 LBA 寻址，LBA 取 READ CAPACITY 的已记录区末尾——未封盘 BD-R 的
+ *   invisible track 起始地址恰为该值，可命中开放轨道。
+ * 三种形式均无法取到有效 NWA/Free Blocks 时（已封盘、整盘预留 RRM 等），
+ * 回退返回 READ CAPACITY 值，bdUsedCapacity 置 -1 交由调用方处理。
+ * 形式二所需的 READ DISC INFORMATION 仅在形式一失败后才读取，避免多余 SCSI 命令。
+ */
+int GetBdTrackCapacity(int fd, int64_t &bdTotalCapacity, int64_t &bdUsedCapacity)
+{
+    bdTotalCapacity = 0;
+    bdUsedCapacity = -1;
+    int64_t rcCapacity = 0;
+    bool rcValid = (GetReadCapacitySize(fd, rcCapacity) == E_OK) && rcCapacity > 0;
+    uint32_t rcEndBlocks = rcValid ? static_cast<uint32_t>(rcCapacity / ODD_LOGICAL_SECTOR_SIZE) : 0;
+
+    int probe = ProbeBdTrackInfo(fd, 1, TRACK_INFO_INVISIBLE_TRACK, rcValid, rcCapacity,
+                                 bdTotalCapacity, bdUsedCapacity);
+    if (probe != 0) {
+        return probe > 0 ? E_OK : E_ERR;
+    }
+
+    uint8_t nextTracks[DISC_INFO_MAX_NEXT_TRACKS] = {0};
+    size_t nextTrackCount = 0;
+    if (GetDiscInfoNextTracks(fd, nextTracks, DISC_INFO_MAX_NEXT_TRACKS, nextTrackCount) == E_OK) {
+        for (size_t i = 0; i < nextTrackCount; ++i) {
+            probe = ProbeBdTrackInfo(fd, 1, nextTracks[i], rcValid, rcCapacity,
+                                     bdTotalCapacity, bdUsedCapacity);
+            if (probe != 0) {
+                return probe > 0 ? E_OK : E_ERR;
+            }
+        }
+    }
+
+    probe = ProbeBdTrackInfo(fd, 0, rcEndBlocks, rcValid, rcCapacity, bdTotalCapacity, bdUsedCapacity);
+    if (probe != 0) {
+        return probe > 0 ? E_OK : E_ERR;
+    }
+
+    if (rcValid) {
+        LOGI("GetBdTrackCapacity: no valid track info, fallback to READ CAPACITY: %{public}" PRId64, rcCapacity);
+        bdTotalCapacity = rcCapacity;
+        return E_OK;
+    }
+    return E_ERR;
 }
 
 std::string GetScsiBusNum(const std::string &sysPath)
 {
     LOGD("[L3:DiskUtils] GetScsiBusNum: >>> ENTER <<<");
-    
+
     std::string deviceLinkPath = sysPath + "/device";
     char linkTarget[PATH_MAX] = {0};
     ssize_t len = readlink(deviceLinkPath.c_str(), linkTarget, sizeof(linkTarget) - 1);
@@ -877,7 +1083,7 @@ std::string GetScsiBusNum(const std::string &sysPath)
             }
         }
     }
-    
+
     LOGD("[L3:DiskUtils] GetScsiBusNum: <<< EXIT NOT FOUND <<< (empty)");
     return "";
 }
@@ -893,7 +1099,7 @@ std::string GetOddDriverType(const std::string &sysPath)
         LOGD("[L3:DiskUtils] GetOddDriverType: ODD_DRIVER_TYPE=AHCI");
         return "AHCI";
     }
-    
+
     LOGD("[L3:DiskUtils] GetOddDriverType: <<< EXIT SUCCESS <<< (empty)");
     return "";
 }
