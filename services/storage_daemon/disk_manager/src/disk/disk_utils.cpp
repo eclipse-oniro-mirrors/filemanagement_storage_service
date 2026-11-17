@@ -770,7 +770,7 @@ int IsCDExist(const std::string &diskPath, bool &isCDExist)
     isCDExist = false;
     int ret = GetCDDiskStatus(diskPath.c_str(), status);
     if (ret != E_OK) {
-        LOGE("Unknown cd status !");
+        LOGE("Unknown cd status!");
         return E_ERR;
     }
     isCDExist = (status == CDS_DRIVE_NOT_READY || status == CDS_DISC_OK);
@@ -1275,8 +1275,9 @@ int64_t DiskUtils::GetDiscCapacity(int cmdFd, const std::string& discType)
         ret = GetDvdPlusRwTotalCapacity(cmdFd, totalSize);
     } else if (discType.find("CD") == 0) {
         ret = GetCdTotalCapacity(cmdFd, totalSize);
-    } else if (discType.find("BD") == 0) {
-        ret = GetBdTotalCapacity(cmdFd, totalSize);
+    } else if (discType == "BD-ROM") {
+        // 压制只读盘没有开放轨道，READ CAPACITY 即真实容量
+        ret = GetReadCapacitySize(cmdFd, totalSize);
     }
     if (ret != E_OK) {
         LOGI("GetDiscCapacity failed, ret=%{public}d", ret);
@@ -1356,13 +1357,27 @@ int32_t DiskUtils::GetCapacity(const std::string& devPath, int64_t &totalSize, i
     fdsan_exchange_owner_tag(cmdFd, 0, NEW_TAG);
     std::string discType = GetCDType(devPath);
     LOGI("label is %{public}s", discType.c_str());
-    totalSize = GetDiscCapacity(cmdFd, discType);
     int64_t usedSize = -1;
-    if (discType.find("CD") == 0 || discType.find("DVD") == 0) {
-        int ret = GetDiscUsedCapacity(cmdFd, totalSize, usedSize);
-        if (ret != E_OK) {
-            LOGE("GetCapacity: GetDiscUsedCapacity failed, ret=%{public}d", ret);
-            usedSize = -1;
+    // BD-ROM 是压制只读盘，READ CAPACITY 即真实容量，无需查询开放轨道
+    if (discType.find("BD") == 0 && discType != "BD-ROM") {
+        // BD 的总容量与已用容量由同一次 READ TRACK INFORMATION 计算，避免重复 SCSI 命令
+        int64_t bdTotalCapacity = 0;
+        int64_t bdUsedCapacity = -1;
+        if (GetBdTrackCapacity(cmdFd, bdTotalCapacity, bdUsedCapacity) == E_OK && bdTotalCapacity > 0) {
+            totalSize = bdTotalCapacity;
+            usedSize = bdUsedCapacity;
+        } else {
+            LOGI("GetCapacity: GetBdTrackCapacity failed, fallback to sysfs used size");
+            totalSize = 0;
+        }
+    } else {
+        totalSize = GetDiscCapacity(cmdFd, discType);
+        if (discType.find("CD") == 0 || discType.find("DVD") == 0) {
+            int ret = GetDiscUsedCapacity(cmdFd, totalSize, usedSize);
+            if (ret != E_OK) {
+                LOGE("GetCapacity: GetDiscUsedCapacity failed, ret=%{public}d", ret);
+                usedSize = -1;
+            }
         }
     }
     fdsan_close_with_tag(cmdFd, NEW_TAG);

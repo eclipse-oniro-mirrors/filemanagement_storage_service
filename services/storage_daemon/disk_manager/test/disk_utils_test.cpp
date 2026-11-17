@@ -1342,10 +1342,10 @@ HWTEST_F(ExtDiskUtilsTest, GetDiscCapacity_AllTypesSuccess, TestSize.Level1)
         .WillOnce(Invoke([](int, int64_t &cap) { cap = 737280000L; return E_OK; }));
     EXPECT_EQ(DiskUtils::GetDiscCapacity(0, "CD-ROM"), 737280000L);
 
-    // B4: BD-RE -> GetBdTotalCapacity (external linkage, mock redirect works)
-    EXPECT_CALL(*diskUtilMoc_, GetBdTotalCapacity(_, _))
+    // B4: BD-ROM -> GetReadCapacitySize (external linkage, mock redirect works)
+    EXPECT_CALL(*diskUtilMoc_, GetReadCapacitySize(_, _))
         .WillOnce(Invoke([](int, int64_t &cap) { cap = 25025314816L; return E_OK; }));
-    EXPECT_EQ(DiskUtils::GetDiscCapacity(0, "BD-RE"), 25025314816L);
+    EXPECT_EQ(DiskUtils::GetDiscCapacity(0, "BD-ROM"), 25025314816L);
 
     // B5: unknown type -> 0
     EXPECT_EQ(DiskUtils::GetDiscCapacity(0, "UNKNOWN"), 0);
@@ -1828,9 +1828,11 @@ HWTEST_F(ExtDiskUtilsTest, GetCapacity_NonCdType, TestSize.Level1)
     EXPECT_CALL(*diskUtilMoc_, GetCDType(_))
         .WillOnce(Return("BD-ROM"))
         .WillOnce(Return("BD-ROM"));
-    EXPECT_CALL(*diskUtilMoc_, GetBdTotalCapacity(_, _))
+    // BD-ROM -> GetDiscCapacity -> GetReadCapacitySize (external linkage, mock redirect works)
+    // usedSize stays -1 (BD skips GetDiscUsedCapacity) -> GetUsedSizeFromSysfs fails -> usedSize = totalSize
+    EXPECT_CALL(*diskUtilMoc_, GetReadCapacitySize(_, _))
         .WillOnce(Invoke([](int, int64_t &cap) { cap = 25025314816L; return E_OK; }));
-    // usedSize = -1 (CD branch skipped) -> GetUsedSizeFromSysfs (real impl, fails) -> usedSize = totalSize
+    // usedSize = -1 -> GetUsedSizeFromSysfs (real impl, fails) -> usedSize = totalSize
     // AdjustBlankDiscCapacity -> IsCDBlank -> ReadCDDiscInfo via ioctl
     g_ioctlRet = -1;
     EXPECT_CALL(*diskUtilMoc_, GetBlkidData(_, _)).WillOnce(Return("udf"));
@@ -1840,6 +1842,74 @@ HWTEST_F(ExtDiskUtilsTest, GetCapacity_NonCdType, TestSize.Level1)
     EXPECT_EQ(freeSize, 0); // usedSize = totalSize -> freeSize = 0
     g_ioctlRet = 0;
     GTEST_LOG_(INFO) << "GetCapacity_NonCdType end";
+}
+
+/**
+ * @tc.name: GetCapacity_BdTrackCapacityFailed
+ * @tc.desc: Verify GetCapacity sets totalSize=0 when GetBdTrackCapacity fails for BD type.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, GetCapacity_BdTrackCapacityFailed, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetCapacity_BdTrackCapacityFailed start";
+    int64_t totalSize = 0;
+    int64_t freeSize = 0;
+    // BD-RE goes through GetBdTrackCapacity directly in GetCapacity
+    // GetCDType called twice: GetCapacity + IsCDBlank (in AdjustBlankDiscCapacity)
+    EXPECT_CALL(*diskUtilMoc_, GetCDType(_))
+        .WillOnce(Return("BD-RE"))
+        .WillOnce(Return("BD-RE"));
+    // BD branch: GetBdTrackCapacity fails -> totalSize=0, usedSize stays -1
+    EXPECT_CALL(*diskUtilMoc_, GetBdTrackCapacity(_, _, _))
+        .WillOnce(Invoke([](int, int64_t &total, int64_t &used) {
+            total = 0;
+            used = -1;
+            return E_ERR;
+        }));
+    // usedSize=-1 -> GetUsedSizeFromSysfs fails -> usedSize=totalSize=0 -> freeSize=0
+    // AdjustBlankDiscCapacity -> IsCDBlank -> ReadCDDiscInfo fails (g_ioctlRet=-1) -> not blank
+    g_ioctlRet = -1;
+    EXPECT_CALL(*diskUtilMoc_, GetBlkidData(_, _)).WillOnce(Return("udf"));
+    int32_t ret = DiskUtils::GetCapacity(testDevPath_, totalSize, freeSize);
+    EXPECT_EQ(ret, E_OK);
+    EXPECT_EQ(totalSize, 0);
+    EXPECT_EQ(freeSize, 0);
+    g_ioctlRet = 0;
+    GTEST_LOG_(INFO) << "GetCapacity_BdTrackCapacityFailed end";
+}
+
+/**
+ * @tc.name: GetCapacity_BdType_Success
+ * @tc.desc: Verify GetCapacity with BD-RE type when GetBdTrackCapacity returns valid total and used size.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ExtDiskUtilsTest, GetCapacity_BdType_Success, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetCapacity_BdType_Success start";
+    int64_t totalSize = 0;
+    int64_t freeSize = 0;
+    // BD-RE goes through GetBdTrackCapacity directly in GetCapacity
+    // GetCDType called twice: GetCapacity + IsCDBlank (in AdjustBlankDiscCapacity)
+    EXPECT_CALL(*diskUtilMoc_, GetCDType(_))
+        .WillOnce(Return("BD-RE"))
+        .WillOnce(Return("BD-RE"));
+    // GetBdTrackCapacity returns valid total and used size
+    EXPECT_CALL(*diskUtilMoc_, GetBdTrackCapacity(_, _, _))
+        .WillOnce(Invoke([](int, int64_t &total, int64_t &used) {
+            total = 25025314816L;
+            used = 10000000000L;
+            return E_OK;
+        }));
+    // usedSize = 10GB (>= 0) -> skip GetUsedSizeFromSysfs
+    // AdjustBlankDiscCapacity -> IsCDBlank -> ReadCDDiscInfo fails (g_ioctlRet=-1) -> not blank
+    g_ioctlRet = -1;
+    EXPECT_CALL(*diskUtilMoc_, GetBlkidData(_, _)).WillOnce(Return("udf"));
+    int32_t ret = DiskUtils::GetCapacity(testDevPath_, totalSize, freeSize);
+    EXPECT_EQ(ret, E_OK);
+    EXPECT_EQ(totalSize, 25025314816L);
+    EXPECT_EQ(freeSize, 25025314816L - 10000000000L);
+    g_ioctlRet = 0;
+    GTEST_LOG_(INFO) << "GetCapacity_BdType_Success end";
 }
 
 /**

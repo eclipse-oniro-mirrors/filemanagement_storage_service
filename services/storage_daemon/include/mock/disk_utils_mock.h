@@ -43,7 +43,8 @@ public:
     virtual int GetDiscUsedCapacity(int fd, int64_t totalSize, int64_t &discUsedCapacity) = 0;
     virtual int GetDvdTotalCapacity(int fd, int64_t &dvdTotalCapacity) = 0;
     virtual int GetDvdPlusRwTotalCapacity(int fd, int64_t &dvdTotalCapacity) = 0;
-    virtual int GetBdTotalCapacity(int fd, int64_t &bdTotalCapacity) = 0;
+    virtual int GetReadCapacitySize(int fd, int64_t &bdCapacity) = 0;
+    virtual int GetBdTrackCapacity(int fd, int64_t &bdTotalCapacity, int64_t &bdUsedCapacity) = 0;
     virtual int GetDvdConfiguration(int fd, int &dvdMedia) = 0;
     virtual std::string GetScsiBusNum(const std::string &sysPath) = 0;
     virtual std::string GetOddDriverType(const std::string &sysPath) = 0;
@@ -92,7 +93,8 @@ public:
     MOCK_METHOD3(GetDiscUsedCapacity, int(int fd, int64_t totalSize, int64_t &discUsedCapacity));
     MOCK_METHOD2(GetDvdTotalCapacity, int(int fd, int64_t &dvdTotalCapacity));
     MOCK_METHOD2(GetDvdPlusRwTotalCapacity, int(int fd, int64_t &dvdTotalCapacity));
-    MOCK_METHOD2(GetBdTotalCapacity, int(int fd, int64_t &bdTotalCapacity));
+    MOCK_METHOD2(GetReadCapacitySize, int(int fd, int64_t &bdCapacity));
+    MOCK_METHOD3(GetBdTrackCapacity, int(int fd, int64_t &bdTotalCapacity, int64_t &bdUsedCapacity));
     MOCK_METHOD2(GetDvdConfiguration, int(int fd, int &dvdMedia));
     MOCK_METHOD1(GetScsiBusNum, std::string(const std::string &sysPath));
     MOCK_METHOD1(GetOddDriverType, std::string(const std::string &sysPath));
