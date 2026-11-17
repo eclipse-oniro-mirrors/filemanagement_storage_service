@@ -526,7 +526,7 @@ static void HandleRecoveryKeyOps(FuzzedDataProvider& provider,
         case FUNC_SET_RECOVER_KEY: {
             std::vector<uint8_t> key =
                 provider.ConsumeBytes<uint8_t>(provider.ConsumeIntegralInRange(0, MAX_TEST_COUNT));
-            providerObj->SetRecoverKey(key);
+            providerObj->SetRecoverKey(key, provider.ConsumeBool());
             break;
         }
         case FUNC_RESET_SECRET_WITH_RECOVERY_KEY: {

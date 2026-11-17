@@ -87,7 +87,7 @@ public:
                              uint32_t userType,
                              const std::vector<uint8_t> &token,
                              const std::vector<uint8_t> &secret) override;
-    int32_t SetRecoverKey(const std::vector<uint8_t> &key) override;
+    int32_t SetRecoverKey(const std::vector<uint8_t> &key, bool needMountPath) override;
     int32_t ResetSecretWithRecoveryKey(uint32_t userId, uint32_t rkType, const std::vector<uint8_t> &key) override;
 
     // app file share api

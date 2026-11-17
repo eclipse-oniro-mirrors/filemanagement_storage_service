@@ -1273,7 +1273,7 @@ int32_t StorageDaemonProvider::CreateRecoverKey(uint32_t userId,
     return ret;
 }
 
-int32_t StorageDaemonProvider::SetRecoverKey(const std::vector<uint8_t> &key)
+int32_t StorageDaemonProvider::SetRecoverKey(const std::vector<uint8_t> &key, bool needMountPath)
 {
     HiAudit::GetInstance().WriteStart("SetRecoverKey");
     LOGI("[L1:StorageDaemonProvider] SetRecoverKey: >>> ENTER <<< keySize=%{public}zu", key.size());
@@ -1282,7 +1282,7 @@ int32_t StorageDaemonProvider::SetRecoverKey(const std::vector<uint8_t> &key)
         LOGE("[L1:StorageDaemonProvider] SetRecoverKey: <<< EXIT FAILED <<< uid=%{public}d is invalid", appUid);
         return E_PERMISSION_DENIED;
     }
-    int32_t ret = StorageDaemon::GetInstance().SetRecoverKey(key);
+    int32_t ret = StorageDaemon::GetInstance().SetRecoverKey(key, needMountPath);
     if (ret == E_OK) {
         LOGI("[L1:StorageDaemonProvider] SetRecoverKey: <<< EXIT SUCCESS <<<");
     } else {

@@ -686,7 +686,7 @@ int32_t StorageDaemonClient::CreateRecoverKey(uint32_t userId,
     return ret;
 }
 
-int32_t StorageDaemonClient::SetRecoverKey(const std::vector<uint8_t> &key)
+int32_t StorageDaemonClient::SetRecoverKey(const std::vector<uint8_t> &key, bool needMountPath)
 {
     LOGI("[L1:IPC] SetRecoverKey: >>> ENTER <<< keyLen=%{public}zu", key.size());
     auto status = CheckServiceStatus(STORAGE_SERVICE_FLAG);
@@ -701,7 +701,7 @@ int32_t StorageDaemonClient::SetRecoverKey(const std::vector<uint8_t> &key)
         return E_SA_IS_NULLPTR;
     }
 
-    int32_t ret = client->SetRecoverKey(key);
+    int32_t ret = client->SetRecoverKey(key, needMountPath);
     if (ret == E_OK) {
         LOGI("[L1:IPC] SetRecoverKey: <<< EXIT SUCCESS <<<");
     } else {

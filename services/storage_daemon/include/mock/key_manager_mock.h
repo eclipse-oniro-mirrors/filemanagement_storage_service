@@ -64,7 +64,7 @@ public:
     virtual int UpdateKeyContextByKeyType(uint32_t userId, KeyType keyType) = 0;
     virtual int CreateRecoverKey(uint32_t userId, uint32_t userType, const std::vector<uint8_t> &token,
         const std::vector<uint8_t> &secret) = 0;
-    virtual int SetRecoverKey(const std::vector<uint8_t> &key) = 0;
+    virtual int SetRecoverKey(const std::vector<uint8_t> &key, bool needMountPath = false) = 0;
     virtual std::shared_ptr<BaseKey> GetUserElKey(unsigned int user, KeyType type, bool isSave) = 0;
     virtual int32_t ResetSecretWithRecoveryKey(uint32_t userId, uint32_t rkType, const std::vector<uint8_t> &key) = 0;
     virtual int UpdateUseAuthWithRecoveryKey(const std::vector<uint8_t> &authToken,
@@ -111,7 +111,7 @@ public:
     MOCK_METHOD(bool, GetSecureUid, (uint32_t, uint64_t &));
     MOCK_METHOD(int, UpdateUserAuthByKeyType, (unsigned int, struct UserTokenSecret &, KeyType, bool));
     MOCK_METHOD(int, UpdateKeyContextByKeyType, (uint32_t, KeyType));
-    MOCK_METHOD(int, SetRecoverKey, (const std::vector<uint8_t> &));
+    MOCK_METHOD(int, SetRecoverKey, (const std::vector<uint8_t> &, bool));
     MOCK_METHOD(int, CreateRecoverKey, (uint32_t, uint32_t, const std::vector<uint8_t> &,
         const std::vector<uint8_t> &));
     MOCK_METHOD(int, UnregisterUeceActivationCallback, ());

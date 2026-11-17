@@ -56,7 +56,7 @@ interface OHOS.StorageManager.IStorageManager {
                                            [in] boolean needCheckDirMoun);
     [ipccode 52] void CreateRecoverKey([in] unsigned int userId, [in] unsigned int userType,
                                        [in] unsigned char[] token, [in] unsigned char[] secret);
-    [ipccode 53] void SetRecoverKey([in] unsigned char[] key);
+    [ipccode 53] void SetRecoverKey([in] unsigned char[] key, [in] boolean needMountPath);
     [ipccode 43] int[] CreateShareFile([in] StorageFileRawData rawData,
                                        [in] unsigned int tokenId, [in] unsigned int flag);
     [oneway, ipccode 44] void DeleteShareFile([in] unsigned int  tokenId, [in] StorageFileRawData rawData);

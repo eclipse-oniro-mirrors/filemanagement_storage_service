@@ -134,7 +134,7 @@ int32_t StorageManagerProxy::CreateRecoverKey(uint32_t userId,
     return E_OK;
 }
 
-int32_t StorageManagerProxy::SetRecoverKey(const std::vector<uint8_t> &key)
+int32_t StorageManagerProxy::SetRecoverKey(const std::vector<uint8_t> &key, bool needMountPath)
 {
     return E_OK;
 }

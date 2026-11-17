@@ -1000,7 +1000,7 @@ int32_t StorageManagerProvider::CreateRecoverKey(uint32_t userId,
 #endif
 }
 
-int32_t StorageManagerProvider::SetRecoverKey(const std::vector<uint8_t> &key)
+int32_t StorageManagerProvider::SetRecoverKey(const std::vector<uint8_t> &key, bool needMountPath)
 {
     StorageRadar::ReportFucBehavior("SetRecoverKey", DEFAULT_USERID, "SetRecoverKey Begin", E_OK);
     if (!CheckClientPermissionForCrypt(PERMISSION_STORAGE_MANAGER_CRYPT)) {
@@ -1023,7 +1023,7 @@ int32_t StorageManagerProvider::SetRecoverKey(const std::vector<uint8_t> &key)
         return err;
     }
     auto& sdCommunication = StorageDaemonCommunication::GetInstance();
-    err = sdCommunication.SetRecoverKey(key);
+    err = sdCommunication.SetRecoverKey(key, needMountPath);
     StorageRadar::ReportFucBehavior("SetRecoverKey", DEFAULT_USERID, "SetRecoverKey End", err);
     return err;
 #else

@@ -50,7 +50,7 @@ bool SetRecoverKeyFuzzTest(sptr<StorageDaemon::IStorageDaemon>& proxy, const uin
     }
 
     vector<uint8_t> key(data, data + size);
-    proxy->SetRecoverKey(key);
+    proxy->SetRecoverKey(key, false);
     return true;
 }
 } // namespace OHOS

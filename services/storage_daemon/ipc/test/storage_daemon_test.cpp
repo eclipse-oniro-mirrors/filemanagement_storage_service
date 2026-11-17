@@ -1975,11 +1975,11 @@ HWTEST_F(StorageDaemonTest, StorageDaemonTest_SetRecoverKey_001, TestSize.Level1
 
     std::vector<uint8_t> key;
 
-    EXPECT_CALL(*keyManagerMock_, SetRecoverKey(_)).WillOnce(Return(E_OK));
-    EXPECT_EQ(storageDaemon_->SetRecoverKey(key), E_OK);
+    EXPECT_CALL(*keyManagerMock_, SetRecoverKey(_, _)).WillOnce(Return(E_OK));
+    EXPECT_EQ(storageDaemon_->SetRecoverKey(key, false), E_OK);
 
-    EXPECT_CALL(*keyManagerMock_, SetRecoverKey(_)).WillOnce(Return(-1));
-    EXPECT_EQ(storageDaemon_->SetRecoverKey(key), -1);
+    EXPECT_CALL(*keyManagerMock_, SetRecoverKey(_, _)).WillOnce(Return(-1));
+    EXPECT_EQ(storageDaemon_->SetRecoverKey(key, false), -1);
 }
 #endif
 #endif

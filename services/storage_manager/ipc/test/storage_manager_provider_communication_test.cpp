@@ -443,7 +443,7 @@ HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_CreateRecoverKey
 HWTEST_F(StorageManagerProviderTest, StorageManagerProviderTest_SetRecoverKey_003, TestSize.Level1)
 {
     GTEST_LOG_(INFO) << "StorageManagerProviderTest_SetRecoverKey_003 start";
-    auto ret = storageManagerProviderTest_->SetRecoverKey({});
+    auto ret = storageManagerProviderTest_->SetRecoverKey({}, false);
     EXPECT_EQ(ret, E_OK);
     GTEST_LOG_(INFO) << "StorageManagerProviderTest_SetRecoverKey_003 end";
 }

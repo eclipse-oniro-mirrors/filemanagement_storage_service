@@ -78,10 +78,21 @@ constexpr uint32_t FILE_ENCRY_ERROR_UECE_AUTH_STATUS_WRONG = 0xFBE30034;
 constexpr int32_t WAIT_THREAD_TIMEOUT_MS = 500;
 #endif
 
-#ifdef RECOVER_KEY_TEE_ENVIRONMENT
+#if defined(RECOVER_KEY_TEE_ENVIRONMENT) || defined(PC_ENCRYPTION_EXTENSION)
 constexpr const char *FILE_BASED_ENCRYPT_SRC_PATH = "/mnt/data_old/service/el1/public/sec_storage_data/fbe3";
 constexpr const char *FILE_BASED_ENCRYPT_DST_PATH = "/data/service/el1/public/sec_storage_data/fbe3";
 constexpr int32_t DEFAULT_REPAIR_USERID = 10736;
+#endif
+
+#ifdef PC_ENCRYPTION_EXTENSION
+constexpr const char *RECOVER_PIN_SRC_PATH = "/mnt/data_old/service/el1/public/sec_storage_data/pin";
+constexpr const char *RECOVER_PIN_DST_PATH = "/data/service/el1/public/sec_storage_data/pin";
+constexpr const char *RECOVER_SD_SRC_PATH = "/mnt/data_old/service/el1/public/storage_daemon";
+constexpr const char *RECOVER_SD_DST_PATH = "/data/service/el1/public/storage_daemon";
+constexpr const char *RECOVER_USERAUTH_SRC_PATH = "/mnt/data_old/service/el1/public/sec_storage_data/userauth";
+constexpr const char *RECOVER_USERAUTH_DST_PATH = "/data/service/el1/public/sec_storage_data/userauth";
+constexpr const char *RECOVER_FBE4_SRC_PATH = "/mnt/data_old/service/el1/public/sec_storage_data/fbe4";
+constexpr const char *RECOVER_FBE4_DST_PATH = "/data/service/el1/public/sec_storage_data/fbe4";
 #endif
 
 static bool IsEncryption()
@@ -2170,40 +2181,65 @@ int KeyManager::CreateRecoverKey(uint32_t userId, uint32_t userType, const std::
     return E_OK;
 }
 
-int KeyManager::SetRecoverKey(const std::vector<uint8_t> &key)
+int KeyManager::SetRecoverKey(const std::vector<uint8_t> &key, bool needMountPath)
 {
     LOGI("[L3:KeyManager] SetRecoverKey: >>> ENTER <<< [key_len=%{public}zu]", key.size());
     if (RecoveryManager::GetInstance().SetRecoverKey(key) != E_OK) {
         LOGE("[L3:KeyManager] SetRecoverKey: <<< EXIT FAILED <<< [failed to set recovery key]");
         return E_SET_RECOVERY_KEY_ERR;
     }
+#ifdef PC_ENCRYPTION_EXTENSION
+    if (!needMountPath) {
+        LOGI("[L3:KeyManager] SetRecoverKey: <<< EXIT SUCCESS <<< [retval=0]");
+        return E_OK;
+    }
+    int32_t mountRet = MountRecoverPaths();
+    if (mountRet != E_OK) {
+        LOGE("[L3:KeyManager] SetRecoverKey: MountRecoverPaths failed, ret=%{public}d, key setting not rolled back",
+            mountRet);
+        return mountRet;
+    }
+#endif
     LOGI("[L3:KeyManager] SetRecoverKey: <<< EXIT SUCCESS <<< [retval=0]");
     return E_OK;
 }
+
+#if defined(RECOVER_KEY_TEE_ENVIRONMENT) || defined(PC_ENCRYPTION_EXTENSION)
+int32_t KeyManager::BindMountPath(const std::string &srcPath, const std::string &dstPath,
+    const std::string &funcName, int32_t umountErr, int32_t mountErr)
+{
+    errno = 0;
+    int32_t ret = UMount(dstPath);
+    if (ret != E_OK && errno != ENOENT && errno != EINVAL) {
+        LOGE("[L3:KeyManager] %{public}s: <<< EXIT FAILED <<< [failed to unmount, dst=%{public}s, err=%{public}d]",
+            funcName.c_str(), dstPath.c_str(), errno);
+        std::string extraData = "srcPath=" + srcPath + ",dstPath=" + dstPath +
+            ",kernelCode=" + std::to_string(errno);
+        StorageRadar::ReportUserManager(funcName, DEFAULT_REPAIR_USERID, umountErr, extraData);
+        return umountErr;
+    }
+    errno = 0;
+    ret = Mount(srcPath, dstPath, nullptr, MS_BIND, nullptr);
+    if (ret != E_OK) {
+        LOGE("[L3:KeyManager] %{public}s: <<< EXIT FAILED <<< [failed to bind mount, src=%{public}s,"
+            " dst=%{public}s, err=%{public}d]", funcName.c_str(), srcPath.c_str(), dstPath.c_str(), errno);
+        std::string extraData = "srcPath=" + srcPath + ",dstPath=" + dstPath +
+            ",kernelCode=" + std::to_string(errno);
+        StorageRadar::ReportUserManager(funcName, DEFAULT_REPAIR_USERID, mountErr, extraData);
+        return mountErr;
+    }
+    return E_OK;
+}
+#endif
 
 #ifdef RECOVER_KEY_TEE_ENVIRONMENT
 int32_t KeyManager::FileBasedEncryptfsMount()
 {
     LOGI("[L3:KeyManager] FileBasedEncryptfsMount: >>> ENTER <<<");
-    std::string srcPath = FILE_BASED_ENCRYPT_SRC_PATH;
-    std::string dstPath = FILE_BASED_ENCRYPT_DST_PATH;
-    errno = 0;
-    int32_t ret = UMount(dstPath);
-    if (ret != E_OK && errno != ENOENT && errno != EINVAL) {
-        LOGE("[L3:KeyManager] FileBasedEncryptfsMount: <<< EXIT FAILED <<< [failed to unmount file based encrypt fs,"
-            "err=%{public}d]", errno);
-        std::string extraData = "srcPath=" + srcPath + ",dstPath=" + dstPath + ",kernelCode=" + std::to_string(errno);
-        StorageRadar::ReportUserManager("FileBasedEncryptfsMount", DEFAULT_REPAIR_USERID, E_UMOUNT_FBE, extraData);
-        return E_UMOUNT_FBE;
-    }
-    errno = 0;
-    ret = Mount(srcPath, dstPath, nullptr, MS_BIND, nullptr);
-    if (ret != E_OK && errno != EEXIST && errno != EBUSY) {
-        LOGE("[L3:KeyManager] FileBasedEncryptfsMount: <<< EXIT FAILED <<< [failed to bind mount file based encrypt"
-            "fs, err=%{public}d]", errno);
-        std::string extraData = "srcPath=" + srcPath + ",dstPath=" + dstPath + ",kernelCode=" + std::to_string(errno);
-        StorageRadar::ReportUserManager("FileBasedEncryptfsMount", DEFAULT_REPAIR_USERID, E_MOUNT_FBE, extraData);
-        return E_MOUNT_FBE;
+    int32_t ret = BindMountPath(FILE_BASED_ENCRYPT_SRC_PATH, FILE_BASED_ENCRYPT_DST_PATH,
+        "FileBasedEncryptfsMount", E_UMOUNT_FBE, E_MOUNT_FBE);
+    if (ret != E_OK) {
+        return ret;
     }
     LOGI("[L3:KeyManager] FileBasedEncryptfsMount: <<< EXIT SUCCESS <<< [retval=0]");
     return E_OK;
@@ -2253,6 +2289,29 @@ int32_t KeyManager::InstallEmptyUserKeyForRecovery(uint32_t userId)
     }
     LOGI("[L3:KeyManager] InstallEmptyUserKeyForRecovery: <<< EXIT <<< [retval=%{public}d]", ret);
     return ret;
+}
+#endif
+
+#ifdef PC_ENCRYPTION_EXTENSION
+int32_t KeyManager::MountRecoverPaths()
+{
+    LOGI("[L3:KeyManager] MountRecoverPaths: >>> ENTER <<<");
+    const std::vector<std::pair<const char *, const char *>> mountPairs = {
+        {RECOVER_PIN_SRC_PATH, RECOVER_PIN_DST_PATH},
+        {RECOVER_SD_SRC_PATH, RECOVER_SD_DST_PATH},
+        {RECOVER_USERAUTH_SRC_PATH, RECOVER_USERAUTH_DST_PATH},
+        {FILE_BASED_ENCRYPT_SRC_PATH, FILE_BASED_ENCRYPT_DST_PATH},
+        {RECOVER_FBE4_SRC_PATH, RECOVER_FBE4_DST_PATH},
+    };
+    for (const auto &[srcPath, dstPath] : mountPairs) {
+        int32_t ret = BindMountPath(srcPath, dstPath, "MountRecoverPaths",
+            E_UMOUNT_RECOVER_KEY, E_MOUNT_RECOVER_KEY);
+        if (ret != E_OK) {
+            return ret;
+        }
+    }
+    LOGI("[L3:KeyManager] MountRecoverPaths: <<< EXIT SUCCESS <<< [retval=0]");
+    return E_OK;
 }
 #endif
 

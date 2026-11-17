@@ -725,7 +725,7 @@ HWTEST_F(StorageDaemonCommunicationTest, Daemon_communication_SetRecoverKey_0000
 {
     GTEST_LOG_(INFO) << "StorageDaemonCommunicationTest-begin Daemon_communication_SetRecoverKey_0000 SUCCESS";
     auto& sdCommunication = StorageDaemonCommunication::GetInstance();
-    int32_t result = sdCommunication.SetRecoverKey({});
+    int32_t result = sdCommunication.SetRecoverKey({}, false);
     EXPECT_EQ(result, E_OK);
 
     GTEST_LOG_(INFO) << "StorageDaemonCommunicationTest-end Daemon_communication_SetRecoverKey_0000 SUCCESS";
