@@ -40,6 +40,8 @@ public:
 private:
     int GetBlockInfo(const std::string &deviceName, const bool isNvmeDevice, BlockInfo &blockInfo);
     bool ReadSysfsNode(const std::string &path, std::string &content);
+    std::string ReadDeviceNode(const std::string &deviceName, const std::string &normalNode,
+                               const std::string &mmcNode);
     bool ReadRemovableNode(const std::string &deviceName, bool &isRemovable);
     bool IsDataDisk(const std::string &deviceName, const bool isNeedCheckUfs, const bool isRemovable);
     std::string GetVendor(const std::string &deviceName);
