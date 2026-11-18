@@ -2039,7 +2039,7 @@ int32_t StorageDaemon::DoStoreAndUpdate(uint32_t userId,
         HiAudit::GetInstance().WriteEnd("DoStoreAndUpdate", ret, "UpdateUserAuth failed");
         return ret;
     }
-    FAULT_POINT("do_store_and_update_before_upate_context");
+    FAULT_POINT("do_store_and_update_before_update_context");
     ret = KeyManager::GetInstance().UpdateKeyContextByKeyType(userId, keyType);
     if (ret != E_OK) {
         LOGE("UpdateKeyContext failed, ret:%{public}d, userId:%{public}u, keyType:%{public}u", ret, userId, keyType);

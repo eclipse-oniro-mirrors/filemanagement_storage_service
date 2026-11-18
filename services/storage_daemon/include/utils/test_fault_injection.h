@@ -17,15 +17,16 @@
 
 #ifdef ENABLE_TEST_FAULT_INJECTION
 
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <csignal>
 #include <cstdlib>
 #include <random>
 #include <string>
-#include <fcntl.h>
-#include <unistd.h>
-#include <filesystem>
 #include "parameters.h"
 #include "storage_service_log.h"
+#include "utils/file_utils.h"
 
 static constexpr const char *PARAM_PROB = "persist.storagedaemon.test_fault_inject_prob";
 static constexpr const char *PARAM_TARGET = "persist.storagedaemon.test_fault_inject_target";
@@ -48,8 +49,8 @@ static inline int GetFaultIntParam(const char *key, int defaultVal)
 
 static inline bool IsProbSkipped(const char *tag)
 {
-    int prob = GetFaultParam(PARAM_PROB, 0);
-    if (pro <= 0) {
+    int prob = GetFaultIntParam(PARAM_PROB, 0);
+    if (prob <= 0) {
         return true;
     }
     std::random_device rd;
@@ -60,7 +61,7 @@ static inline bool IsProbSkipped(const char *tag)
     return skipped;
 }
 
-static inline bool IsTargetSkipped(cosnt char *tag)
+static inline bool IsTargetSkipped(const char *tag)
 {
     std::string target = GetFaultParam(PARAM_TARGET);
     if (target.empty()) {
@@ -118,12 +119,16 @@ static inline int TriggerReturn(const char *tag)
 
 static inline void DeleteFaultPath(const char *tag, const std::string &path)
 {
-    std::error_code err;
-    if (!std::filesystem::exist(path, err)) {
-        LOGE("TEST_FAULT_INJECTION: delete at %{public}s, path=%{public}s", tag, path.c_str());
+    struct stat st = {};
+    if (stat(path.c_str(), &st) != 0) {
+        LOGE("TEST_FAULT_INJECTION: delete at %{public}s, path=%{public}s not exist", tag, path.c_str());
         return;
     }
-    std::filesystem::remove_all(path, err);
+    if (S_ISDIR(st.st_mode)) {
+        (void)RmDirRecurse(path);
+        return;
+    }
+    (void)unlink(path.c_str());
 }
 
 static inline void TriggerDelete(const char *tag)
@@ -136,31 +141,29 @@ static inline void TriggerDelete(const char *tag)
     DeleteFaultPath(tag, path);
 }
 
-static inline void HandleFatalMode(const char *tag, std::string &mode)
+static inline int HandleFatalMode(const char *tag, const std::string &mode)
 {
     if (mode == "crash") {
         TriggerCrash(tag);
-    }
-    if (mode == "reboot") {
+    } else if (mode == "reboot") {
         TriggerReboot(tag);
-    }
-    if (mode == "deadlock") {
+    } else if (mode == "deadlock") {
         TriggerDeadlock(tag);
     }
+    return 0;
 }
 
 static inline int HandleSoftMode(const char *tag, const std::string &mode)
 {
     if (mode == "delay") {
         TriggerDelay(tag);
-    }
-    if (mode == "return") {
-        TriggerReturn(tag);
-    }
-    if (mode == "delete") {
+    } else if (mode == "return") {
+        return TriggerReturn(tag);
+    } else if (mode == "delete") {
         TriggerDelete(tag);
+    } else {
+        LOGE("TEST_FAULT_INJECTION: unknown soft mode=%{public}s, do nothing", mode.c_str());
     }
-    LOGE("TEST_FAULT_INJECTION: unknown soft mode=%{public}s, do nothing", mode.c_str());
     return 0;
 }
 
