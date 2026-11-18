@@ -125,7 +125,7 @@ static inline void DeleteFaultPath(const char *tag, const std::string &path)
         return;
     }
     if (S_ISDIR(st.st_mode)) {
-        (void)RmDirRecurse(path);
+        (void)OHOS::StorageDaemon::RmDirRecurse(path);
         return;
     }
     (void)unlink(path.c_str());
