@@ -2039,6 +2039,7 @@ int32_t StorageDaemon::DoStoreAndUpdate(uint32_t userId,
         HiAudit::GetInstance().WriteEnd("DoStoreAndUpdate", ret, "UpdateUserAuth failed");
         return ret;
     }
+    FAULT_POINT("do_store_and_update_before_upate_context");
     ret = KeyManager::GetInstance().UpdateKeyContextByKeyType(userId, keyType);
     if (ret != E_OK) {
         LOGE("UpdateKeyContext failed, ret:%{public}d, userId:%{public}u, keyType:%{public}u", ret, userId, keyType);
@@ -2119,7 +2120,6 @@ void StorageDaemon::UpgradeEl5AuthType(uint32_t userId, const std::vector<uint8_
                 "EL5", "Create new key failed");
             return;
         }
-        FAULT_POINT("do_store_and_update_before_upate_context");
         ret = KeyManager::GetInstance().UpdateKeyContextByKeyType(userId, EL5_KEY);
         if (ret == E_OK) {
             LOGI("[L1:StorageDaemon] Upgrade EL5 success");
