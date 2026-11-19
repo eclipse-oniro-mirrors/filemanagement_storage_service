@@ -308,6 +308,10 @@ ohos_executable("storage_daemon") {
     defines += [ "EL5_FILEKEY_MANAGER" ]
   }
 
+  if (enable_test_fault_injection) {
+    defines += [ "ENABLE_TEST_FAULT_INJECTION" ]
+  }
+
   ldflags = [
     "-Wl,--gc-sections",
     "-Wl,-O1",

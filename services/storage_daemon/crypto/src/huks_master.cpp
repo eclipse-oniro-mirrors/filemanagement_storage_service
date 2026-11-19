@@ -24,6 +24,7 @@
 #include "storage_service_log.h"
 #include "storage_service_errno.h"
 #include "utils/storage_radar.h"
+#include "utils/test_fault_injection.h"
 
 using namespace OHOS::StorageService;
 namespace OHOS {
@@ -810,6 +811,7 @@ int32_t HuksMaster::GenerateKey(const UserAuth &auth, KeyBlob &keyOut)
 {
     LOGI("[L8:HuksMaster] GenerateKey: >>> ENTER <<<");
 #ifdef HUKS_IDL_ENVIRONMENT
+    FAULT_POINT("huks_generate_key");
     HksParamSet *paramSet = nullptr;
     int ret = HKS_SUCCESS;
     do {
@@ -864,6 +866,7 @@ int32_t HuksMaster::EncryptKeyEx(const UserAuth &auth, const KeyBlob &rnd, KeyCo
 {
     LOGI("[L8:HuksMaster] EncryptKeyEx: >>> ENTER <<<");
 #ifdef HUKS_IDL_ENVIRONMENT
+    FAULT_POINT("huks_encrypt_key_ex");
     if (ctx.shield.IsEmpty()) {
         LOGE("[L8:HuksMaster] EncryptKeyEx: <<< EXIT FAILED <<< bad shield input, size %{public}d", ctx.shield.size);
         return E_KEY_CTX_ERROR;
@@ -903,6 +906,7 @@ int32_t HuksMaster::EncryptKey(KeyContext &ctx, const UserAuth &auth, const KeyI
 {
     LOGI("[L8:HuksMaster] EncryptKey: >>> ENTER <<<");
 #ifdef HUKS_IDL_ENVIRONMENT
+    FAULT_POINT("huks_encrypt_key");
     if (ctx.shield.IsEmpty()) {
         LOGE("[L8:HuksMaster] EncryptKey: <<< EXIT FAILED <<< bad shield input, size %{public}d", ctx.shield.size);
         return E_KEY_CTX_ERROR;
@@ -942,6 +946,7 @@ int32_t HuksMaster::DecryptKey(KeyContext &ctx, const UserAuth &auth, KeyInfo &k
 {
     LOGD("[L8:HuksMaster] DecryptKey: >>> ENTER <<<");
 #ifdef HUKS_IDL_ENVIRONMENT
+    FAULT_POINT("huks_decrypt_key");
     if (ctx.shield.IsEmpty()) {
         LOGE("[L8:HuksMaster] DecryptKey: <<< EXIT FAILED <<< bad shield input, size %{public}d", ctx.shield.size);
         return E_KEY_CTX_ERROR;
@@ -981,6 +986,7 @@ int32_t HuksMaster::DecryptKeyEx(KeyContext &ctx, const UserAuth &auth, KeyBlob 
 {
     LOGD("[L8:HuksMaster] DecryptKeyEx: >>> ENTER <<<");
 #ifdef HUKS_IDL_ENVIRONMENT
+    FAULT_POINT("huks_decrypt_key_ex");
     if (ctx.shield.IsEmpty()) {
         LOGE("[L8:HuksMaster] DecryptKeyEx: <<< EXIT FAILED <<< bad shield input, size %{public}d", ctx.shield.size);
         return E_KEY_CTX_ERROR;
@@ -1019,6 +1025,7 @@ int32_t HuksMaster::DecryptKeyEx(KeyContext &ctx, const UserAuth &auth, KeyBlob 
 bool HuksMaster::UpgradeKey(KeyContext &ctx)
 {
 #ifdef HUKS_IDL_ENVIRONMENT
+    FAULT_POINT("huks_upgrade_key");
     if (!CheckNeedUpgrade(ctx.shield)) {
         LOGI("[L8:HuksMaster] UpgradeKey: no need to upgrade");
         return false;

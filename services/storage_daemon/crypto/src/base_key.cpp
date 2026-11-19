@@ -32,6 +32,7 @@
 #include "utils/storage_radar.h"
 #include "utils/string_utils.h"
 #include "utils/storage_radar.h"
+#include "utils/test_fault_injection.h"
 
 namespace {
 constexpr const char *PATH_LATEST_BACKUP = "/latest_bak";
@@ -1020,6 +1021,7 @@ bool BaseKey::ClearKey(const std::string &mnt)
         StorageService::StorageRadar::ReportDuration("ClearKey ForceRemoveDirectory BackupDir", time);
         LOGI("[L4:BaseKey] ClearKey: force remove dir_, %{public}s", dir_.c_str());
         time = StorageService::StorageRadar::RecordCurrentTime();
+        FAULT_POINT("clear_key_before_remove");
         bool removeRet = OHOS::ForceRemoveDirectory(dir_);
         StorageService::StorageRadar::ReportDuration("ClearKey ForceRemoveDirectory Dir", time);
         if (!removeRet) {

@@ -22,6 +22,7 @@
 #include "utils/set_flag_utils.h"
 #include "utils/string_utils.h"
 #include "utils/file_utils.h"
+#include "utils/test_fault_injection.h"
 #include <dlfcn.h>
 #include <dirent.h>
 #include <fcntl.h>
@@ -312,6 +313,7 @@ int32_t StorageDaemon::PrepareUserDirs(int32_t userId, uint32_t flags)
         StorageRadar::ReportUserManager("PrepareUserDirs::UserManager::DestroyUserDirs", userId, destroyRet,
             extraData);
     }
+    FAULT_POINT("prepare_user_dirs_before_prepare");
     int32_t prepareRet = UserManager::GetInstance().PrepareUserDirs(userId, flags);
     if (prepareRet != E_OK) {
         LOGE("[L1:StorageDaemon] PrepareUserDirs: <<< EXIT FAILED <<< UserManager::PrepareUserDirs userId=%{public}d,"
@@ -363,7 +365,7 @@ int32_t StorageDaemon::DestroyUserDirs(int32_t userId, uint32_t flags)
         std::string extraData = "flags=" + std::to_string(flags);
         StorageRadar::ReportUserManager("DestroyUserDirs", userId, errCode, extraData);
     }
-
+    FAULT_POINT("destroy_user_dirs_before_delete_keys");
 #ifdef USER_CRYPTO_MANAGER
     HiAudit::GetInstance().WriteStart("DestroyUserDirs KeyManager", "userId: " + std::to_string(userId));
     destroyUserRet = KeyManager::GetInstance().DeleteUserKeys(userId);
@@ -498,6 +500,7 @@ int32_t StorageDaemon::InitGlobalUserKeys(void)
         LOGE("[L1:StorageDaemon] InitGlobalUserKeys: <<< EXIT FAILED <<< PrepareAllUserEl1Dirs ret=%{public}d", result);
         StorageRadar::ReportUserKeyResult("PrepareAllUserEl1Dirs", GLOBAL_USER_ID, result, "EL1", "");
     }
+    FAULT_POINT("init_global_user_keys_before_prepare_app_data");
     result = MountManager::GetInstance().PrepareAppdataDir(GLOBAL_USER_ID);
     if (result != E_OK) {
         LOGE("[L1:StorageDaemon] InitGlobalUserKeys: <<< EXIT FAILED <<< PrepareAppdataDir ret=%{public}d", result);
@@ -698,6 +701,7 @@ int32_t StorageDaemon::PrepareUserDirsAndUpdateUserAuth(uint32_t userId, KeyType
             }
         }
     }
+    FAULT_POINT("prepare_user_dirs_and_update_auth_before_create_elx_bundle");
     // for double2single update el2-4 with secret
     UserManager::GetInstance().CreateElxBundleDataDir(userId, type);
     if (ret == E_OK) {
@@ -1049,6 +1053,7 @@ int32_t StorageDaemon::ActiveUserKeyAndPrepareElX(uint32_t userId,
     LOGI("[L1:StorageDaemon] ActiveUserKeyAndPrepareElX: >>> ENTER <<< userId=%{public}u, secretEmpty=%{public}d",
         userId, secret.empty());
 #ifdef USER_CRYPTO_MANAGER
+    FAULT_POINT("active_user_key_and_prepare_el3");
     auto startTime = StorageService::StorageRadar::RecordCurrentTime();
     int ret = ActiveUserKeyAndPrepare(userId, EL3_KEY, token, secret);
     if (ret != E_OK && ret != E_ACTIVE_REPEATED) {
@@ -1063,6 +1068,7 @@ int32_t StorageDaemon::ActiveUserKeyAndPrepareElX(uint32_t userId,
         delay.c_str(), userId);
     LOGI("SD_DURATION: ACTIVE EL3: delay time = %{public}s", delay.c_str());
 
+    FAULT_POINT("active_user_key_and_prepare_el4");
     startTime = StorageService::StorageRadar::RecordCurrentTime();
     ret = ActiveUserKeyAndPrepare(userId, EL4_KEY, token, secret);
     if (ret != E_OK && ret != E_ACTIVE_REPEATED) {
@@ -1077,6 +1083,7 @@ int32_t StorageDaemon::ActiveUserKeyAndPrepareElX(uint32_t userId,
         delay.c_str(), userId);
     LOGI("SD_DURATION: ACTIVE EL4: delay time = %{public}s", delay.c_str());
 
+    FAULT_POINT("active_user_key_and_prepare_el5");
     startTime = StorageService::StorageRadar::RecordCurrentTime();
     ret = ActiveUserKeyAndPrepare(userId, EL5_KEY, token, secret);
     if (ret != E_OK && ret != E_ACTIVE_REPEATED) {
@@ -1227,6 +1234,7 @@ int32_t StorageDaemon::ActiveUserKey4Nato(uint32_t userId, const std::vector<uin
         ClearAllNatoRestoreKey(userId, true);
         return E_ACTIVE_EL2_FAILED;
     }
+    FAULT_POINT("active_user_key_4nato_el2");
     int32_t ret = PrepareUserDirsAndUpdateAuth4Nato(userId, EL2_KEY, token);
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemon] ActiveUserKey4Nato: <<< EXIT FAILED <<< el2 PrepareUserDirsAndUpdateAuth4Nato"
@@ -1237,6 +1245,7 @@ int32_t StorageDaemon::ActiveUserKey4Nato(uint32_t userId, const std::vector<uin
     }
     LOGI("[L1:StorageDaemon] ActiveUserKey4Nato: el2 success, userId=%{public}d", userId);
 
+    FAULT_POINT("active_user_key_4nato_el3");
     ret = PrepareUserDirsAndUpdateAuth4Nato(userId, EL3_KEY, token);
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemon] ActiveUserKey4Nato: <<< EXIT FAILED <<< el3 PrepareUserDirsAndUpdateAuth4Nato"
@@ -1247,6 +1256,7 @@ int32_t StorageDaemon::ActiveUserKey4Nato(uint32_t userId, const std::vector<uin
     }
     LOGI("[L1:StorageDaemon] ActiveUserKey4Nato: el3 success, userId=%{public}d", userId);
 
+    FAULT_POINT("active_user_key_4nato_el4");
     ret = PrepareUserDirsAndUpdateAuth4Nato(userId, EL4_KEY, token);
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemon] ActiveUserKey4Nato: <<< EXIT FAILED <<< el4 PrepareUserDirsAndUpdateAuth4Nato"
@@ -2029,6 +2039,7 @@ int32_t StorageDaemon::DoStoreAndUpdate(uint32_t userId,
         HiAudit::GetInstance().WriteEnd("DoStoreAndUpdate", ret, "UpdateUserAuth failed");
         return ret;
     }
+    FAULT_POINT("do_store_and_update_before_update_context");
     ret = KeyManager::GetInstance().UpdateKeyContextByKeyType(userId, keyType);
     if (ret != E_OK) {
         LOGE("UpdateKeyContext failed, ret:%{public}d, userId:%{public}u, keyType:%{public}u", ret, userId, keyType);
@@ -2109,7 +2120,6 @@ void StorageDaemon::UpgradeEl5AuthType(uint32_t userId, const std::vector<uint8_
                 "EL5", "Create new key failed");
             return;
         }
-
         ret = KeyManager::GetInstance().UpdateKeyContextByKeyType(userId, EL5_KEY);
         if (ret == E_OK) {
             LOGI("[L1:StorageDaemon] Upgrade EL5 success");
