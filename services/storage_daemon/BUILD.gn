@@ -200,30 +200,6 @@ ohos_executable("storage_daemon") {
     defines += [ "PC_ENCRYPTION_EXTENSION" ]
   }
 
-  if (enable_disk_manager) {
-    defines += [ "DISK_MANAGER" ]
-    sources += [
-      "disk_manager/src/disk/disk_utils.cpp",
-      "disk_manager/src/volume/volume_utils.cpp",
-      "disk_manager/src/disk/scan_device.cpp",
-      "disk_manager/src/disk/smart_reader.cpp",
-      "disk_manager/src/disk/dm_device.cpp",
-      "disk_manager/src/volume/udf_operator.cpp",
-      "disk_manager/src/volume/iso9660_operator.cpp",
-      "disk_manager/src/volume/exfat_operator.cpp",
-      "disk_manager/src/volume/ntfs_operator.cpp",
-      "disk_manager/src/volume/vfat_operator.cpp",
-      "disk_manager/src/volume/hmfs_operator.cpp",
-      "disk_manager/src/volume/ext4_operator.cpp",
-      "disk_manager/src/volume/volume_operator_factory.cpp",
-      "disk_manager/src/volume/ivolume_operator.cpp",
-    ]
-  }
-
-  if (storage_service_external_storage_qos_trans) {
-    defines += [ "EXTERNAL_STORAGE_QOS_TRANS" ]
-  }
-
   if (is_emulator) {
     defines += [ "ENABLE_EMULATOR" ]
   }
@@ -238,7 +214,6 @@ ohos_executable("storage_daemon") {
   ]
 
   external_deps = [
-    "ability_base:base",
     "bounds_checking_function:libsec_shared",
     "cJSON:cjson",
     "config_policy:configpolicy_util",
@@ -246,17 +221,17 @@ ohos_executable("storage_daemon") {
     "hicollie:libhicollie",
     "hilog:libhilog",
     "hisysevent:libhisysevent",
-    "hitrace:hitrace_meter",
     "init:libbegetutil",
     "ipc:ipc_single",
     "openssl:libcrypto_shared",
-    "safwk:system_ability_fwk",
     "samgr:samgr_proxy",
     "json:nlohmann_json_static",
   ]
 
   if (enable_disk_manager) {
+    defines += [ "DISK_MANAGER" ]
     external_deps += [ "disk_manager:disk_manager_innerkits" ]
+    sources += [ "disk_manager/src/disk_manager_lib_loader.cpp" ]
   }
 
   if (storage_service_user_crypto_manager) {
@@ -477,9 +452,7 @@ ohos_shared_library("storage_common_utils") {
   version_script = "libstorage_common_utils.map"
 
   sources = [
-    "utils/disk_utils.cpp",
     "utils/file_utils.cpp",
-    "disk_manager/src/disk/disk_utils.cpp",
     "utils/mount_argument_utils.cpp",
     "utils/storage_radar.cpp",
     "utils/storage_statistics_radar.cpp",
@@ -503,7 +476,7 @@ ohos_shared_library("storage_common_utils") {
     "json:nlohmann_json_static",
     "zlib:shared_libz",
     "resource_schedule_service:ressched_client",
-    "samgr:samgr_proxy"
+    "samgr:samgr_proxy",
   ]
 
   if (build_selinux) {
@@ -512,13 +485,13 @@ ohos_shared_library("storage_common_utils") {
     external_deps += [ "selinux_adapter:librestorecon" ]
   }
 
+  if (storage_service_media_fuse) {
+    defines += [ "STORAGE_SERVICE_MEDIA_FUSE" ]
+  }
+
   if (storage_service_external_storage_qos_trans) {
     defines += [ "EXTERNAL_STORAGE_QOS_TRANS" ]
     external_deps += [ "qos_manager:concurrent_task_client" ]
-  }
-
-  if (storage_service_media_fuse) {
-    defines += [ "STORAGE_SERVICE_MEDIA_FUSE" ]
   }
 
   if (enable_disk_manager) {
@@ -536,6 +509,105 @@ ohos_shared_library("storage_common_utils") {
     "-fno-asynchronous-unwind-tables",
     "-Os",
   ]
+}
+
+if (enable_disk_manager) {
+  ohos_shared_library("storage_disk_mgr_ext") {
+    branch_protector_ret = "pac_ret"
+    sanitize = {
+      integer_overflow = true
+      ubsan = true
+      boundary_sanitize = true
+      cfi = true
+      cfi_cross_dso = true
+      debug = false
+    }
+
+    include_dirs = [
+      "include",
+      "include/utils",
+      "include/disk_manager/disk",
+      "include/disk_manager/volume",
+      "${storage_service_common_path}/include",
+      "${storage_interface_path}/innerkits/storage_manager/native",
+    ]
+
+    defines = [
+      "STORAGE_LOG_TAG = \"StorageDiskMgrExt\"",
+      "LOG_DOMAIN = 0xD004301",
+      "DISK_MANAGER",
+    ]
+
+    if (storage_service_external_storage_qos_trans) {
+      defines += [ "EXTERNAL_STORAGE_QOS_TRANS" ]
+    }
+
+    cflags = [
+      "-D_FORTIFY_SOURCE=2",
+      "-fstack-protector-strong",
+      "-Oz",
+      "-ffunction-sections",
+      "-fdata-sections",
+    ]
+
+    ldflags = [
+      "-Wl,--gc-sections",
+      "-Wl,-O1",
+    ]
+
+    ldflags += [
+      "-Wl,--exclude-libs=libGL.a",
+      "-Wl,--exclude-libs=libEGL.a",
+      "-Wl,--exclude-libs=libunwind.a",
+      "-Wl,--exclude-libs=libc++_static.a"
+    ]
+
+    version_script = "libstorage_disk_mgr_ext.map"
+
+    sources = [
+      "disk_manager/src/disk/disk_common_utils.cpp",
+      "disk_manager/src/disk/disk_utils.cpp",
+      "disk_manager/src/disk/disk_mgr_api.cpp",
+      "disk_manager/src/disk/smart_reader.cpp",
+      "disk_manager/src/volume/volume_utils.cpp",
+      "disk_manager/src/disk/scan_device.cpp",
+      "disk_manager/src/disk/dm_device.cpp",
+      "disk_manager/src/volume/udf_operator.cpp",
+      "disk_manager/src/volume/iso9660_operator.cpp",
+      "disk_manager/src/volume/exfat_operator.cpp",
+      "disk_manager/src/volume/ntfs_operator.cpp",
+      "disk_manager/src/volume/vfat_operator.cpp",
+      "disk_manager/src/volume/hmfs_operator.cpp",
+      "disk_manager/src/volume/ext4_operator.cpp",
+      "disk_manager/src/volume/volume_operator_factory.cpp",
+      "disk_manager/src/volume/ivolume_operator.cpp",
+    ]
+
+    deps = [
+      ":storage_common_utils",
+    ]
+
+    external_deps = [
+      "bounds_checking_function:libsec_shared",
+      "cJSON:cjson",
+      "c_utils:utils",
+      "hilog:libhilog",
+      "hisysevent:libhisysevent",
+      "init:libbegetutil",
+      "json:nlohmann_json_static",
+      "zlib:shared_libz",
+      "samgr:samgr_proxy",
+      "openssl:libcrypto_shared",
+      "disk_manager:disk_manager_innerkits",
+    ]
+
+    subsystem_name = "filemanagement"
+    part_name = "storage_service"
+    install_enable = true
+  }
+} else {
+  group("storage_disk_mgr_ext") {
+  }
 }
 
 ohos_prebuilt_etc("usb_config.para") {

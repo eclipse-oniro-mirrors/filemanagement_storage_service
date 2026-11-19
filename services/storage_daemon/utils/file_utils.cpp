@@ -35,7 +35,6 @@
 #include "string_ex.h"
 #include "utils/storage_radar.h"
 #include "utils/string_utils.h"
-#include "utils/hi_audit.h"
 #ifdef USE_LIBRESTORECON
 #include "policycoreutils.h"
 #endif

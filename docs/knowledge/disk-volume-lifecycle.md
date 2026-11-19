@@ -16,6 +16,15 @@
 
 状态预更新原则：Mount 前先置 CHECKING，Unmount 前先置 EJECTING。操作失败时回退到操作前状态，不要停留在中间状态。`VolumeState` 状态机转换实现在 disk_manager SA（跨组件）；本仓库 `VolumeCore::SetState` 无生产调用方，对外卷操作经 `IVolumeOperator` 直接执行。
 
+## 磁盘操作按需加载约束
+
+磁盘/卷底层操作（DiskUtils/operator/ScanDevice/SmartReader/DmDevice）经 `DiskManagerLibLoader` 按需加载 `libstorage_disk_mgr_ext.z.so` 后分发（架构见 `architecture.md`）：
+
+- 首次磁盘操作引入 dlopen 时延（毫秒级）；SO 加载成功后驻留不 dlclose（BR-2），非首次调用无开销。
+- SO 缺失/损坏/dlsym 失败：接口返回 `E_NOT_SUPPORT`（进程不崩溃），1s 冷却后由下次调用自愈重试——**不要**把 `E_NOT_SUPPORT` 当作「无盘/容量 0」处理，上层须按非 `E_OK` 走失败分支。
+- `GetBlockInfoByType`/`GetDiskSize`/`GetDiskPowerCycleCount`/`GetDiskPowerOnHours` 4 处查询接口在 provider 层有 `EnsureLoaded()` 前置门控；`GetDiskSize` 取值为 0 时返回既有 `E_ERR`（保持原语义）。
+- exfat/ntfs 的 QOS 挂载分支（`ExtStorageMountForkExec`/`big_writes`）由 `EXTERNAL_STORAGE_QOS_TRANS` 宏门控，该宏在 **storage_disk_mgr_ext 目标**上生效（陷阱见 `constraints-and-traps.md`）。
+
 ## Netlink 事件约束
 
 Netlink 回调中不可执行阻塞操作（mount、fsck、格式化），必须投递到工作线程后再处理。

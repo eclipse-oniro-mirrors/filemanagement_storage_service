@@ -17,7 +17,7 @@
 
 #include "disk_manager/disk/disk_utils.h"
 #include "storage_service_errno.h"
-#include "utils/disk_utils.h"
+#include "disk_manager/disk/disk_common_utils.h"
 
 using namespace std;
 namespace OHOS {

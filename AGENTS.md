@@ -22,6 +22,7 @@
 - `services/storage_daemon/libfscrypt/src/key_control.c`（fscrypt 密钥 add/remove）。
 - `services/storage_daemon/crypto/src/key_manager.cpp`（`GenerateUserKeys`/`ActiveUserKey`/`ClearKey`）与 `crypto/src/base_key.cpp`（`ClearKey` 流程，`ForceRemoveDirectory` 调用点）。
 - `services/storage_daemon/utils/file_utils.cpp::RmDirRecurse`（递归删除，见「高危删除约束」）。
+- `services/storage_daemon/disk_manager/src/disk_manager_lib_loader.cpp` + `include/disk_manager/disk_mgr_api.h` + `disk_manager/src/disk/disk_mgr_api.cpp`（磁盘能力 dlopen 按需加载：新增磁盘函数须表字段/初始化/封装/调用点四处同步，错位即静默调错函数；`EXTERNAL_STORAGE_QOS_TRANS` 等 define 须随源文件所在目标迁移）。
 - `services/storage_manager/ipc/src/storage_manager_provider.cpp`（`StorageManagerProvider : SystemAbility, StorageManagerStub`；`CheckClientPermission`；白名单 UID；`REGISTER_SYSTEM_ABILITY_BY_ID(..., 5003)`）。
 - `interfaces/innerkits/storage_manager/native/storage_service_errno.h`（错误码唯一来源，`STORAGE_SERVICE_SYS_CAP_TAG=13600000`）。
 - IDL 文件 `services/storage_manager/IStorageManager.idl`、`services/storage_daemon/IStorageDaemon.idl`、`services/storage_space_manager/interfaces/innerkits/IStorageSpaceManager.idl`（经 `idl_gen_interface` 生成 stub/proxy）。
@@ -70,7 +71,7 @@ prebuilts/build-tools/linux-x86/bin/ninja -C out/rk3568 StorageDaemonProviderTes
 | 变量名 | 小驼峰 | `userId`、`volumeId` |
 | 成员变量 | 下划线结尾或小驼峰 | 源码中两种并存，修改时保持同文件一致 |
 | 常量 | `extern const` | `MAX_USER_ID` 类型是 `int` 不是 `int32_t`；`EL1` 类型是 `std::string` 不是 `const char*` |
-| 枚举 | 大驼峰类型 + 大写值 | `VolumeState`、`DiskInfo::DiskType`、`KeyType` 是 `enum`（非 `enum class`）；`BizStage`、`KeyEncryptType` 是 `enum class`（引用需带作用域） |
+| 枚举 | 大驼峰类型 + 大写值 | `VolumeState`、`KeyType` 是 `enum`（非 `enum class`）；`DiskInfo::DiskType` 已删除（磁盘类型经 disk_manager SA `BlockInfo`/`ScanDevice` 承载）；`BizStage`、`KeyEncryptType` 是 `enum class`（引用需带作用域） |
 
 ### 错误码选用
 

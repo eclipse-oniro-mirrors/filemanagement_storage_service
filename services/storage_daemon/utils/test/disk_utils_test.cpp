@@ -20,7 +20,7 @@
 
 #include "mock/file_utils_mock.h"
 #include "mock/disk_func_mock.h"
-#include "utils/disk_utils.h"
+#include "disk_manager/disk/disk_common_utils.h"
 #include "storage_service_errno.h"
 #include "securec.h"
 

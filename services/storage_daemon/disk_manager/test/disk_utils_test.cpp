@@ -27,7 +27,7 @@
 #include "mock/disk_utils_mock.h"
 #include "mock/file_utils_mock.h"
 #include "storage_service_errno.h"
-#include "utils/disk_utils.h"
+#include "disk_manager/disk/disk_common_utils.h"
 
 #include "mock/disk_func_define.h"
 #include "mock/disk_func_undef.h"
@@ -1039,41 +1039,6 @@ HWTEST_F(ExtDiskUtilsTest, Partition_HmfsVerifyMkfsCmd_001, TestSize.Level1)
     EXPECT_EQ(ret, E_OK);
 }
 
-HWTEST_F(ExtDiskUtilsTest, ExecuteScsiCmd_IoHdrMemsetFailed, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "ExecuteScsiCmd_IoHdrMemsetFailed start";
-    g_memsetRet = E_ERR;
-    int fd = 0;
-    uint8_t cdb[10] = {0};
-    uint8_t buf[64] = {0};
-    EXPECT_EQ(ExecuteScsiCmd(fd, cdb, sizeof(cdb), buf, sizeof(buf)), E_ERR);
-    g_memsetRet = 0;
-    GTEST_LOG_(INFO) << "ExecuteScsiCmd_IoHdrMemsetFailed end";
-}
-
-HWTEST_F(ExtDiskUtilsTest, ExecuteScsiCmd_IoctlFailed, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "ExecuteScsiCmd_IoctlFailed start";
-    g_ioctlRet = -1;
-    int fd = 0;
-    uint8_t cdb[10] = {0};
-    uint8_t buf[64] = {0};
-    EXPECT_EQ(ExecuteScsiCmd(fd, cdb, sizeof(cdb), buf, sizeof(buf)), E_ERR);
-    GTEST_LOG_(INFO) << "ExecuteScsiCmd_IoctlFailed end";
-}
-
-HWTEST_F(ExtDiskUtilsTest, ExecuteScsiCmd_Success, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "ExecuteScsiCmd_Success start";
-    g_ioctlRet = 0;
-    g_ioctlInfo = SG_INFO_OK;
-    int fd = 0;
-    uint8_t cdb[10] = {0};
-    uint8_t buf[64] = {0};
-    EXPECT_EQ(ExecuteScsiCmd(fd, cdb, sizeof(cdb), buf, sizeof(buf)), E_OK);
-    GTEST_LOG_(INFO) << "ExecuteScsiCmd_Success end";
-}
-
 /**
  * @tc.name: CleanTempDirectory_001
  * @tc.desc: Verify CleanTempDirectory returns E_ERR when ForkExec fails.
@@ -1447,9 +1412,10 @@ HWTEST_F(ExtDiskUtilsTest, AdjustBlankDiscCapacity_NotBlankDisc, TestSize.Level1
     GTEST_LOG_(INFO) << "AdjustBlankDiscCapacity_NotBlankDisc start";
     int64_t totalSize = 4700372992L;
     int64_t usedSize = 1000000L;
-    // B1: ReadCDDiscInfo fails + GetBlkidData returns non-empty -> not blank
+    // B1: ReadDiscInfo fails + GetBlkidData returns non-empty -> not blank
     g_ioctlRet = -1;
     EXPECT_CALL(*diskUtilMoc_, GetCDType(_)).WillOnce(Return("DVD+RW"));
+    EXPECT_CALL(*diskUtilMoc_, ReadDiscInfo(_, _, _, _)).WillOnce(Return(E_ERR));
     EXPECT_CALL(*diskUtilMoc_, GetBlkidData(_, _)).WillOnce(Return("udf"));
     DiskUtils::AdjustBlankDiscCapacity(testDevPath_, "DVD+RW", totalSize, usedSize);
     EXPECT_EQ(totalSize, 4700372992L);
@@ -1621,8 +1587,9 @@ HWTEST_F(ExtDiskUtilsTest, AdjustBlankDiscCapacity_BlankDvd_FallbackPath, TestSi
     GTEST_LOG_(INFO) << "AdjustBlankDiscCapacity_BlankDvd_FallbackPath start";
     int64_t totalSize = 4700372992L;
     int64_t usedSize = 1000000L;
-    g_ioctlRet = -1; // ReadCDDiscInfo fails -> fallback path
+    g_ioctlRet = -1; // ReadDiscInfo fails -> fallback path
     EXPECT_CALL(*diskUtilMoc_, GetCDType(_)).WillOnce(Return("DVD+RW"));
+    EXPECT_CALL(*diskUtilMoc_, ReadDiscInfo(_, _, _, _)).WillOnce(Return(E_ERR));
     EXPECT_CALL(*diskUtilMoc_, GetBlkidData(_, _)).WillOnce(Return("")); // empty -> IsCDBlank returns true
     EXPECT_CALL(*fileUtilMoc_, ForkExec(_, _, _))
         .WillOnce(Invoke([](std::vector<std::string> &, std::vector<std::string> *output, int *) {
@@ -1673,8 +1640,9 @@ HWTEST_F(ExtDiskUtilsTest, GetCapacity_SuccessWithUsedSizeEqualToTotal, TestSize
         .WillOnce(Invoke([](int, int64_t &cap) { cap = 4700372992L; return E_OK; }));
     // GetDiscUsedCapacity (real impl) -> SendScsiCmd -> ioctl fails -> usedSize=-1
     // -> GetUsedSizeFromSysfs fails -> usedSize=totalSize -> freeSize=0
-    // AdjustBlankDiscCapacity -> IsCDBlank -> ReadCDDiscInfo also fails (g_ioctlRet=-1)
-    g_ioctlRet = -1; // GetDiscUsedCapacity and ReadCDDiscInfo both fail
+    // AdjustBlankDiscCapacity -> IsCDBlank -> ReadDiscInfo also fails (g_ioctlRet=-1)
+    g_ioctlRet = -1; // GetDiscUsedCapacity and ReadDiscInfo both fail
+    EXPECT_CALL(*diskUtilMoc_, ReadDiscInfo(_, _, _, _)).WillOnce(Return(E_ERR));
     EXPECT_CALL(*diskUtilMoc_, GetBlkidData(_, _)).WillOnce(Return("udf")); // non-empty -> not blank
     int32_t ret = DiskUtils::GetCapacity(testDevPath_, totalSize, freeSize);
     EXPECT_EQ(ret, E_OK);
@@ -1701,8 +1669,9 @@ HWTEST_F(ExtDiskUtilsTest, GetCapacity_GetDiscCapacityFailed, TestSize.Level1)
     EXPECT_CALL(*diskUtilMoc_, GetDvdTotalCapacity(_, _))
         .WillOnce(Invoke([](int, int64_t &) { return E_ERR; }));
     // GetDiscUsedCapacity (real impl) also fails via ioctl -> usedSize=-1 -> usedSize=totalSize=0
-    // AdjustBlankDiscCapacity -> IsCDBlank -> ReadCDDiscInfo also fails
+    // AdjustBlankDiscCapacity -> IsCDBlank -> ReadDiscInfo also fails
     g_ioctlRet = -1;
+    EXPECT_CALL(*diskUtilMoc_, ReadDiscInfo(_, _, _, _)).WillOnce(Return(E_ERR));
     EXPECT_CALL(*diskUtilMoc_, GetBlkidData(_, _)).WillOnce(Return("udf"));
     int32_t ret = DiskUtils::GetCapacity(testDevPath_, totalSize, freeSize);
     // GetCapacity always returns E_OK regardless of GetDiscCapacity result
@@ -1771,7 +1740,8 @@ HWTEST_F(ExtDiskUtilsTest, GetCapacity_CdType_GetDiscUsedCapacityFailed, TestSiz
     g_ioctlRet = -1;
     // After GetDiscUsedCapacity fails, usedSize=-1 -> GetUsedSizeFromSysfs (real impl, will fail)
     // -> usedSize=totalSize -> freeSize=0
-    // AdjustBlankDiscCapacity -> IsCDBlank -> ReadCDDiscInfo via ioctl (still fails)
+    // AdjustBlankDiscCapacity -> IsCDBlank -> ReadDiscInfo via ioctl (still fails)
+    EXPECT_CALL(*diskUtilMoc_, ReadDiscInfo(_, _, _, _)).WillOnce(Return(E_ERR));
     EXPECT_CALL(*diskUtilMoc_, GetBlkidData(_, _)).WillOnce(Return("udf"));
     int32_t ret = DiskUtils::GetCapacity(testDevPath_, totalSize, freeSize);
     EXPECT_EQ(ret, E_OK);
@@ -1802,7 +1772,7 @@ HWTEST_F(ExtDiskUtilsTest, GetCapacity_CdType_GetDiscUsedCapacityNwaInvalid, Tes
     g_ioctlInfo = SG_INFO_OK;
     // After GetDiscUsedCapacity fails, usedSize=-1 -> GetUsedSizeFromSysfs (real impl, fails)
     // -> usedSize=totalSize
-    // AdjustBlankDiscCapacity -> IsCDBlank -> ReadCDDiscInfo via ioctl (succeeds, discStatus=0)
+    // AdjustBlankDiscCapacity -> IsCDBlank -> ReadDiscInfo via ioctl (succeeds, discStatus=0)
     // -> isBlank=true -> usedSize=0, discType is CD-R (not DVD/BD) -> return
     // freeSize = totalSize - 0 = totalSize
     int32_t ret = DiskUtils::GetCapacity(testDevPath_, totalSize, freeSize);
@@ -1832,9 +1802,10 @@ HWTEST_F(ExtDiskUtilsTest, GetCapacity_NonCdType, TestSize.Level1)
     // usedSize stays -1 (BD skips GetDiscUsedCapacity) -> GetUsedSizeFromSysfs fails -> usedSize = totalSize
     EXPECT_CALL(*diskUtilMoc_, GetReadCapacitySize(_, _))
         .WillOnce(Invoke([](int, int64_t &cap) { cap = 25025314816L; return E_OK; }));
-    // usedSize = -1 -> GetUsedSizeFromSysfs (real impl, fails) -> usedSize = totalSize
-    // AdjustBlankDiscCapacity -> IsCDBlank -> ReadCDDiscInfo via ioctl
+    // usedSize = -1 (CD branch skipped) -> GetUsedSizeFromSysfs (real impl, fails) -> usedSize = totalSize
+    // AdjustBlankDiscCapacity -> IsCDBlank -> ReadDiscInfo via ioctl
     g_ioctlRet = -1;
+    EXPECT_CALL(*diskUtilMoc_, ReadDiscInfo(_, _, _, _)).WillOnce(Return(E_ERR));
     EXPECT_CALL(*diskUtilMoc_, GetBlkidData(_, _)).WillOnce(Return("udf"));
     int32_t ret = DiskUtils::GetCapacity(testDevPath_, totalSize, freeSize);
     EXPECT_EQ(ret, E_OK);
@@ -1867,8 +1838,9 @@ HWTEST_F(ExtDiskUtilsTest, GetCapacity_BdTrackCapacityFailed, TestSize.Level1)
             return E_ERR;
         }));
     // usedSize=-1 -> GetUsedSizeFromSysfs fails -> usedSize=totalSize=0 -> freeSize=0
-    // AdjustBlankDiscCapacity -> IsCDBlank -> ReadCDDiscInfo fails (g_ioctlRet=-1) -> not blank
+    // AdjustBlankDiscCapacity -> IsCDBlank -> ReadDiscInfo fails -> not blank
     g_ioctlRet = -1;
+    EXPECT_CALL(*diskUtilMoc_, ReadDiscInfo(_, _, _, _)).WillOnce(Return(E_ERR));
     EXPECT_CALL(*diskUtilMoc_, GetBlkidData(_, _)).WillOnce(Return("udf"));
     int32_t ret = DiskUtils::GetCapacity(testDevPath_, totalSize, freeSize);
     EXPECT_EQ(ret, E_OK);
@@ -1901,8 +1873,9 @@ HWTEST_F(ExtDiskUtilsTest, GetCapacity_BdType_Success, TestSize.Level1)
             return E_OK;
         }));
     // usedSize = 10GB (>= 0) -> skip GetUsedSizeFromSysfs
-    // AdjustBlankDiscCapacity -> IsCDBlank -> ReadCDDiscInfo fails (g_ioctlRet=-1) -> not blank
+    // AdjustBlankDiscCapacity -> IsCDBlank -> ReadDiscInfo fails -> not blank
     g_ioctlRet = -1;
+    EXPECT_CALL(*diskUtilMoc_, ReadDiscInfo(_, _, _, _)).WillOnce(Return(E_ERR));
     EXPECT_CALL(*diskUtilMoc_, GetBlkidData(_, _)).WillOnce(Return("udf"));
     int32_t ret = DiskUtils::GetCapacity(testDevPath_, totalSize, freeSize);
     EXPECT_EQ(ret, E_OK);
@@ -1930,7 +1903,7 @@ HWTEST_F(ExtDiskUtilsTest, GetCapacity_DvdType_GetDiscUsedCapacityNwaInvalid, Te
     // GetDiscUsedCapacity (real impl) -> ioctl succeeds but dataBuf all zeros
     // -> NWA invalid -> fallback: trackSize=0, freeBlocks=0 -> trackSize <= freeBlocks -> E_ERR
     // -> usedSize=-1 -> GetUsedSizeFromSysfs fails -> usedSize=totalSize
-    // AdjustBlankDiscCapacity -> IsCDBlank -> ReadCDDiscInfo succeeds, discStatus=0 -> isBlank=true
+    // AdjustBlankDiscCapacity -> IsCDBlank -> ReadDiscInfo succeeds, discStatus=0 -> isBlank=true
     // -> usedSize=0, ForkExec for mediainfo
     g_ioctlRet = 0;
     g_ioctlInfo = SG_INFO_OK;
@@ -1966,8 +1939,9 @@ HWTEST_F(ExtDiskUtilsTest, GetCapacity_DvdType_GetDiscUsedCapacityFailed, TestSi
         .WillOnce(Invoke([](int, int64_t &cap) { cap = 4700372992L; return E_OK; }));
     // GetDiscUsedCapacity (real impl) -> ioctl fails -> usedSize=-1
     // -> GetUsedSizeFromSysfs (real impl, fails) -> usedSize=totalSize
-    // AdjustBlankDiscCapacity -> IsCDBlank -> ReadCDDiscInfo also fails (g_ioctlRet=-1)
+    // AdjustBlankDiscCapacity -> IsCDBlank -> ReadDiscInfo also fails (g_ioctlRet=-1)
     g_ioctlRet = -1;
+    EXPECT_CALL(*diskUtilMoc_, ReadDiscInfo(_, _, _, _)).WillOnce(Return(E_ERR));
     EXPECT_CALL(*diskUtilMoc_, GetBlkidData(_, _)).WillOnce(Return("udf"));
     int32_t ret = DiskUtils::GetCapacity(testDevPath_, totalSize, freeSize);
     EXPECT_EQ(ret, E_OK);

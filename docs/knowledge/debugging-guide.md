@@ -20,6 +20,15 @@ hidumper -s 5004 -a "-h"            # Daemon SA 注册（自注册，STORAGE_MAN
 ps -ef | grep storage               # 进程状态
 ```
 
+## 磁盘 SO 按需加载检查
+
+```sh
+grep disk_mgr_ext /proc/$(pidof storage_daemon)/maps   # 首次磁盘操作前无该行，操作后出现 libstorage_disk_mgr_ext.z.so
+hilog -t StorageDaemon | grep DiskManagerLibLoader     # "Init: disk_mgr_ext loaded on demand"（成功）/ "dlopen ... failed"（失败）
+```
+
+dlopen 失败场景：进程不崩溃、磁盘接口返回 `E_NOT_SUPPORT`、1s 冷却后自动重试（自愈）。持续失败排查 SO 是否安装（`ls /system/lib64/libstorage_disk_mgr_ext.z.so`）与符号导出（`readelf -s` 应含 `DiskMgrGetApi`）。
+
 ## 问题定位流程
 
 ### 服务未启动

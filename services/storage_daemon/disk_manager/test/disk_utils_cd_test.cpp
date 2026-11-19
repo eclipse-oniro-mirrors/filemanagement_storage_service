@@ -20,7 +20,7 @@
 #include "mock/disk_utils_mock.h"
 #include "mock/file_utils_mock.h"
 #include "storage_service_errno.h"
-#include "utils/disk_utils.h"
+#include "disk_manager/disk/disk_common_utils.h"
 
 namespace OHOS {
 namespace StorageDaemon {

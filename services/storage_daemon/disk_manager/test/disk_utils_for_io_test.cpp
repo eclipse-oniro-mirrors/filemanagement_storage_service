@@ -25,7 +25,7 @@
 #include "mock/disk_utils_mock.h"
 #include "mock/file_utils_mock.h"
 #include "storage_service_errno.h"
-#include "utils/disk_utils.h"
+#include "disk_manager/disk/disk_common_utils.h"
 
 #include "securec.h"
 #include <cstring>
@@ -117,55 +117,27 @@ void DiskUtilsForIOTest::TearDown(void)
     fileUtilMoc_ = nullptr;
 }
 
-HWTEST_F(DiskUtilsForIOTest, ReadCDDiscInfo_RealpathFailed, TestSize.Level1)
+HWTEST_F(DiskUtilsForIOTest, IsCDBlank_ReadDiscInfoFailed, TestSize.Level1)
 {
-    GTEST_LOG_(INFO) << "ReadCDDiscInfo_RealpathFailed start";
-    g_realpathRet = -1;
-    uint8_t buf[64] = {0};
-    EXPECT_EQ(ReadCDDiscInfo("/dev/sr0", 0x51, buf, sizeof(buf)), E_ERR);
-    g_realpathRet = 0;
-    GTEST_LOG_(INFO) << "ReadCDDiscInfo_RealpathFailed end";
-}
-
-HWTEST_F(DiskUtilsForIOTest, GetCDDiskStatus_RealpathFailed, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "GetCDDiskStatus_RealpathFailed start";
-    g_realpathRet = -1;
-    int status = 0;
-    EXPECT_EQ(GetCDDiskStatus("/dev/sr0", status), E_FILE_PATH_INVALID);
-    g_realpathRet = 0;
-    GTEST_LOG_(INFO) << "GetCDDiskStatus_RealpathFailed end";
-}
-
-HWTEST_F(DiskUtilsForIOTest, IsCDExist_GetCDDiskStatusFailed, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "IsCDExist_GetCDDiskStatusFailed start";
-    g_realpathRet = -1;
-    bool isCDExist = true;
-    EXPECT_EQ(IsCDExist("/dev/sr0", isCDExist), E_ERR);
-    g_realpathRet = 0;
-    GTEST_LOG_(INFO) << "IsCDExist_GetCDDiskStatusFailed end";
-}
-
-HWTEST_F(DiskUtilsForIOTest, IsCDBlank_ReadCDDiscInfoFailed, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "IsCDBlank_ReadCDDiscInfoFailed start";
+    GTEST_LOG_(INFO) << "IsCDBlank_ReadDiscInfoFailed start";
     g_realpathRet = -1;
     EXPECT_CALL(*diskUtilMoc_, GetCDType(_)).WillOnce(Return(""));
+    EXPECT_CALL(*diskUtilMoc_, ReadDiscInfo(_, _, _, _)).WillOnce(Return(E_ERR));
     EXPECT_CALL(*diskUtilMoc_, GetBlkidData(_, _)).WillOnce(Return(""));
     EXPECT_TRUE(IsCDBlank("/dev/sr0"));
     g_realpathRet = 0;
-    GTEST_LOG_(INFO) << "IsCDBlank_ReadCDDiscInfoFailed end";
+    GTEST_LOG_(INFO) << "IsCDBlank_ReadDiscInfoFailed end";
 }
 
-HWTEST_F(DiskUtilsForIOTest, QueryCDStatus_IsCDExistFailed, TestSize.Level1)
+HWTEST_F(DiskUtilsForIOTest, QueryCDStatus_IsExistCDFailed, TestSize.Level1)
 {
-    GTEST_LOG_(INFO) << "QueryCDStatus_IsCDExistFailed start";
+    GTEST_LOG_(INFO) << "QueryCDStatus_IsExistCDFailed start";
     g_realpathRet = -1;
     int32_t status = 0;
+    EXPECT_CALL(*diskUtilMoc_, IsExistCD(_, _)).WillOnce(Return(E_ERR));
     EXPECT_EQ(DiskUtils::QueryCDStatus("/dev/sr0", status), E_ERR);
     g_realpathRet = 0;
-    GTEST_LOG_(INFO) << "QueryCDStatus_IsCDExistFailed end";
+    GTEST_LOG_(INFO) << "QueryCDStatus_IsExistCDFailed end";
 }
 
 HWTEST_F(DiskUtilsForIOTest, EjectCD_ForkExecFailed, TestSize.Level1)

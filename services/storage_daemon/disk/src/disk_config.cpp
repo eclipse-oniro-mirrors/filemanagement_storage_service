@@ -21,10 +21,9 @@
 
 namespace OHOS {
 namespace StorageDaemon {
-DiskConfig::DiskConfig(const std::string &sysPattern, const std::string &label, int flag)
+DiskConfig::DiskConfig(const std::string &sysPattern, int flag)
 {
     sysPattern_ = sysPattern;
-    label_ = label;
     flag_ = flag;
 }
 
@@ -39,11 +38,6 @@ bool DiskConfig::IsMatch(std::string &sysPattern)
          sysPattern_.c_str(), sysPattern.c_str());
     return !fnmatch(sysPattern_.c_str(), sysPattern.c_str(), 0);
 }
-
-int DiskConfig::GetFlag() const
-{
-    return flag_;
-}
-} // namespace STORAGE_DAEMON
+} // namespace StorageDaemon
 } // namespace OHOS
 

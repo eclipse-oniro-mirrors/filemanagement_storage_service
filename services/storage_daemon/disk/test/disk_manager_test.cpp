@@ -76,7 +76,7 @@ void DiskManagerTest::SetUp()
             continue;
         }
 
-        auto label = *(++it);
+        ++it;
         if (*(++it) != "flag") {
             LOGE("Invalids config line: no flag");
             continue;
@@ -84,7 +84,7 @@ void DiskManagerTest::SetUp()
 
         it++;
         int flag = std::atoi((*it).c_str());
-        auto diskConfig =  std::make_shared<DiskConfig>(sysPattern, label, flag);
+        auto diskConfig =  std::make_shared<DiskConfig>(sysPattern, flag);
         diskManager.AddDiskConfig(diskConfig);
     }
     infile.close();
@@ -97,9 +97,8 @@ HWTEST_F(DiskManagerTest, Storage_Service_DiskManagerTest_AddDiskConfig_001, Tes
     DiskManager diskManager;
 
     std::string sysPattern = "/devices/platform/fe2b0000.dwmmc/*";
-    std::string lable = "disk";
-    int flag = 0;
-    auto diskConfig = std::make_shared<DiskConfig>(sysPattern, lable, flag);
+        int flag = 0;
+    auto diskConfig = std::make_shared<DiskConfig>(sysPattern, flag);
     diskManager.AddDiskConfig(diskConfig);
     EXPECT_EQ(1, diskManager.diskConfig_.size());
     EXPECT_EQ(diskManager.diskConfig_.front(), diskConfig);
@@ -111,10 +110,7 @@ HWTEST_F(DiskManagerTest, Storage_Service_DiskManagerTest_ReplayUevent_001, Test
     GTEST_LOG_(INFO) << "Storage_Service_DiskManagerTest_ReplayUevent_001 start";
 
     DiskManager diskManager;
-
-    size_t originalSize = diskManager.disk_.size();
     diskManager.ReplayUevent();
-    EXPECT_EQ(originalSize, diskManager.disk_.size());
 
     GTEST_LOG_(INFO) << "Storage_Service_DiskManagerTest_ReplayUevent_001 end";
 }

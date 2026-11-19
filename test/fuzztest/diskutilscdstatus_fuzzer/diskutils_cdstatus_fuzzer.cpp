@@ -22,6 +22,7 @@
 
 #include "fuzzer/FuzzedDataProvider.h"
 #include "disk_manager/disk/disk_utils.h"
+#include "disk_manager/disk/disk_common_utils.h"
 
 using namespace OHOS::StorageDaemon;
 
@@ -36,10 +37,10 @@ bool DiskUtilsCdStatusFuzzTest(const uint8_t *data, size_t size)
     FuzzedDataProvider fdp(data, size);
     std::string diskPath = fdp.ConsumeRandomLengthString(MAX_STR_LEN);
     int status = 0;
-    GetCDDiskStatus(diskPath.c_str(), status);
+    GetCDStatus(diskPath.c_str(), status);
 
     bool isCDExist = false;
-    IsCDExist(diskPath, isCDExist);
+    IsExistCD(diskPath, isCDExist);
 
     IsCDBlank(diskPath);
     return true;

@@ -1281,5 +1281,5 @@ int32_t QuotaManager::ListUserdataDirInfo(std::vector<UserdataDirInfo> &scanDirs
         scanDirs.size());
     return E_OK;
 }
-} // namespace STORAGE_DAEMON
+} // namespace StorageDaemon
 } // namespace OHOS

@@ -15,12 +15,10 @@
 
 #include <cerrno>
 #include <sys/sysmacros.h>
-#include <cinttypes>
 #include <cstdlib>
 
 #include "disk/disk_manager.h"
 #include "storage_service_log.h"
-#include "utils/disk_utils.h"
 #include "utils/file_utils.h"
 
 namespace OHOS {
@@ -44,7 +42,6 @@ std::shared_ptr<DiskInfo> DiskManager::MatchConfig(NetlinkData *data)
         LOGE("[L2:DiskManager] MatchConfig: <<< EXIT FAILED <<< data is nullptr");
         return nullptr;
     }
-    std::string sysPath = data->GetSyspath();
     std::string devPath = data->GetDevpath();
     errno = 0;
     char *endptr_major = nullptr;
@@ -67,16 +64,7 @@ std::shared_ptr<DiskInfo> DiskManager::MatchConfig(NetlinkData *data)
 
     for (auto config : diskConfig_) {
         if ((config != nullptr) && config->IsMatch(devPath)) {
-            uint32_t flag = static_cast<uint32_t>(config->GetFlag());
-            if (major == DISK_MMC_MAJOR) {
-                flag |= DiskInfo::DiskType::SD_CARD;
-            } else if (major == DISK_CD_MAJOR) {
-                flag |= DiskInfo::DiskType::CD_DVD_BD;
-            } else {
-                flag |= DiskInfo::DiskType::USB_FLASH;
-            }
-            std::string diskName = data->GetDiskName();
-            auto diskInfo =  std::make_shared<DiskInfo>(diskName, sysPath, devPath, device, static_cast<int>(flag));
+            auto diskInfo = std::make_shared<DiskInfo>(device);
             LOGI("[L2:DiskManager] MatchConfig: <<< EXIT SUCCESS <<< devPath=%{public}s, matched", devPath.c_str());
             return diskInfo;
         }
@@ -102,5 +90,5 @@ void DiskManager::ReplayUevent()
     TraverseDirUevent(sysBlockPath_, true);
     LOGI("[L2:DiskManager] ReplayUevent: <<< EXIT SUCCESS <<<");
 }
-} // namespace STORAGE_DAEMON
+} // namespace StorageDaemon
 } // namespace OHOS

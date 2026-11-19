@@ -32,7 +32,7 @@
 #include "securec.h"
 #include "storage_service_errno.h"
 #include "storage_service_log.h"
-#include "utils/disk_utils.h"
+#include "disk_manager/disk/disk_common_utils.h"
 #include "utils/file_utils.h"
 #include "utils/storage_radar.h"
 
@@ -376,7 +376,7 @@ int IsExistCD(const std::string &diskPath, bool &isExistCD)
     isExistCD = false;
     int ret = GetCDStatus(diskPath.c_str(), status);
     if (ret != E_OK) {
-        LOGE("Unknown cd status !");
+        LOGE("Unknown cd status!");
         return E_ERR;
     }
     isExistCD = (status == CDS_DRIVE_NOT_READY || status == CDS_DISC_OK);
@@ -1103,5 +1103,5 @@ std::string GetOddDriverType(const std::string &sysPath)
     LOGD("[L3:DiskUtils] GetOddDriverType: <<< EXIT SUCCESS <<< (empty)");
     return "";
 }
-} // namespace STORAGE_DAEMON
+} // namespace StorageDaemon
 } // namespace OHOS

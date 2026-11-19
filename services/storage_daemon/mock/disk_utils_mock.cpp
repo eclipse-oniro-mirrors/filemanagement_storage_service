@@ -83,12 +83,52 @@ std::string GetCDType(const std::string &diskPath)
     return IDiskUtilMoc::diskUtilMoc->GetCDType(diskPath);
 }
 
+std::string GetUdfRev(const std::string &diskPath)
+{
+    if (IDiskUtilMoc::diskUtilMoc == nullptr) {
+        return "";
+    }
+    return IDiskUtilMoc::diskUtilMoc->GetUdfRev(diskPath);
+}
+
 std::string GetOpticalDriveType(const std::string &diskPath)
 {
     if (IDiskUtilMoc::diskUtilMoc == nullptr) {
         return 0;
     }
     return IDiskUtilMoc::diskUtilMoc->GetOpticalDriveType(diskPath);
+}
+
+int GetCDStatus(const char *device, int &status)
+{
+    if (IDiskUtilMoc::diskUtilMoc == nullptr) {
+        return 0;
+    }
+    return IDiskUtilMoc::diskUtilMoc->GetCDStatus(device, status);
+}
+
+int SendScsiCmd(int fd, const ScsiCmdInfo &cmdInfo)
+{
+    if (IDiskUtilMoc::diskUtilMoc == nullptr) {
+        return 0;
+    }
+    return IDiskUtilMoc::diskUtilMoc->SendScsiCmd(fd, cmdInfo);
+}
+
+int ReadDiscInfo(const std::string &diskPath, int32_t cmdIndex, uint8_t *buf, int len)
+{
+    if (IDiskUtilMoc::diskUtilMoc == nullptr) {
+        return 0;
+    }
+    return IDiskUtilMoc::diskUtilMoc->ReadDiscInfo(diskPath, cmdIndex, buf, len);
+}
+
+int GetDiscUsedCapacity(int fd, int64_t totalSize, int64_t &discUsedCapacity)
+{
+    if (IDiskUtilMoc::diskUtilMoc == nullptr) {
+        return 0;
+    }
+    return IDiskUtilMoc::diskUtilMoc->GetDiscUsedCapacity(fd, totalSize, discUsedCapacity);
 }
 
 std::string GetScsiBusNum(const std::string &sysPath)
