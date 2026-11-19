@@ -16,19 +16,14 @@
 #ifndef DISK_INFO_TEST_MOCK_H
 #define DISK_INFO_TEST_MOCK_H
 
-#include <gmock/gmock.h>
-
 #include "disk/disk_info.h"
 
 namespace OHOS {
 namespace StorageDaemon {
 class DiskInfoTestMock : public DiskInfo {
 public:
-    DiskInfoTestMock(std::string &diskName, std::string &sysPath, std::string &devPath, dev_t device, int flags)
-        :DiskInfo(diskName, sysPath, devPath, device, flags) {};
+    explicit DiskInfoTestMock(dev_t device) : DiskInfo(device) {};
     ~DiskInfoTestMock() {};
-    MOCK_METHOD0(GetDevice, dev_t(void));
-    MOCK_METHOD0(GetDiskId, std::string(void));
 };
 }
 }

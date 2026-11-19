@@ -38,7 +38,6 @@
 #endif
 #ifdef PC_USER_MANAGER
 #include "disk/disk_manager.h"
-#include "disk_manager/volume/volume_utils.h"
 #endif
 #include "hi_audit.h"
 #include "ipc_skeleton.h"
@@ -54,13 +53,8 @@
 #include "utils/file_utils.h"
 #ifdef DISK_MANAGER
 #include <sys/sysmacros.h>
-#include "disk_manager/disk/dm_device.h"
-#include "disk_manager/disk/scan_device.h"
-#include "disk_manager/disk/smart_reader.h"
 #include "disk_manager/disk/disk_utils.h"
-#include "disk_manager/volume/volume_utils.h"
-#include "disk_manager/volume/volume_operator_factory.h"
-#include "utils/file_utils.h"
+#include "disk_manager/disk_manager_lib_loader.h"
 #include "utils/volume_op_diag.h"
 #endif
 
@@ -576,7 +570,7 @@ int32_t StorageDaemonProvider::QueryUsbIsInUse(const std::string &diskPath, bool
     }
 #ifdef DISK_MANAGER
     isInUse = true;
-    int32_t ret = DiskUtils::QueryUsbIsInUse(diskPath, isInUse);
+    int32_t ret = DiskManagerLibLoader::GetInstance().QueryUsbIsInUse(diskPath, isInUse);
     if (ret == E_OK) {
         LOGI("[L1:StorageDaemonProvider] QueryUsbIsInUse: <<< EXIT SUCCESS <<< diskPath=%{public}s, isInUse=%{public}d",
             diskPath.c_str(), isInUse);
@@ -2499,7 +2493,7 @@ int32_t StorageDaemonProvider::CreateBlockDeviceNode(const std::string &devPath,
         return E_PARAMS_INVALID;
     }
 
-    ret = DiskUtils::CreateBlockDeviceNode(verifiedPath, mode, majorId, minorId);
+    ret = DiskManagerLibLoader::GetInstance().CreateBlockDeviceNode(verifiedPath, mode, majorId, minorId);
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemonProvider] CreateBlockDeviceNode: <<< EXIT FAILED <<< ret=%{public}d", ret);
         return ret;
@@ -2529,7 +2523,7 @@ int32_t StorageDaemonProvider::DestroyBlockDeviceNode(const std::string &devPath
         return ret;
     }
 
-    ret = DiskUtils::DestroyBlockDeviceNode(verifiedPath);
+    ret = DiskManagerLibLoader::GetInstance().DestroyBlockDeviceNode(verifiedPath);
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemonProvider] DestroyBlockDeviceNode: <<< EXIT FAILED <<< ret=%{public}d", ret);
         return ret;
@@ -2562,7 +2556,7 @@ int32_t StorageDaemonProvider::ReadPartitionTable(const std::string &devPath,
         return ReturnWithOpDiag(ret);
     }
 
-    ret = DiskUtils::ReadPartitionTable(verifiedPath, output, maxVolume);
+    ret = DiskManagerLibLoader::GetInstance().ReadPartitionTable(verifiedPath, output, maxVolume);
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemonProvider] ReadPartitionTable: <<< EXIT FAILED <<< ret=%{public}d", ret);
     } else {
@@ -2598,12 +2592,8 @@ int32_t StorageDaemonProvider::Mount(const std::string &devPath,
         return ReturnWithOpDiag(ret);
     }
     VolumeOpDiagUpdateDevPath(verifiedDevPath);
-    auto op = VolumeOperatorFactory::CreateOperator(fsType);
-    if (op == nullptr) {
-        LOGE("[L1:StorageDaemonProvider] Mount: no operator for fsType=%{public}s", fsType.c_str());
-        return ReturnWithOpDiag(E_NOT_SUPPORT);
-    }
-    ret = op->Mount(verifiedDevPath, verifiedMountPath, static_cast<unsigned long>(mountFlags), mountData);
+    ret = DiskManagerLibLoader::GetInstance().MountVolume(verifiedDevPath, verifiedMountPath, fsType,
+                                                          static_cast<unsigned long>(mountFlags), mountData);
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemonProvider] Mount: <<< EXIT FAILED <<< ret=%{public}d", ret);
     } else {
@@ -2639,13 +2629,7 @@ int32_t StorageDaemonProvider::Unmount(const std::string &mountPath,
         return ReturnWithOpDiag(E_PARAMS_INVALID);
     }
 
-    auto op = VolumeOperatorFactory::GetGenericOperator();
-    if (op == nullptr) {
-        LOGE("[L1:StorageDaemonProvider] Unmount: failed to get generic operator");
-        return ReturnWithOpDiag(E_NOT_SUPPORT);
-    }
-
-    ret = op->Unmount(verifiedMountPath, fsType, force);
+    ret = DiskManagerLibLoader::GetInstance().UnmountVolume(verifiedMountPath, fsType, force);
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemonProvider] Unmount: <<< EXIT FAILED <<< ret=%{public}d", ret);
     } else {
@@ -2672,7 +2656,7 @@ int32_t StorageDaemonProvider::QueryCDStatus(const std::string &devPath, int32_t
         LOGE("[L1:StorageDaemonProvider] QueryCDStatus: <<< EXIT FAILED <<< devPath is invalid");
         return ret;
     }
-    ret = DiskUtils::QueryCDStatus(verifiedPath, status);
+    ret = DiskManagerLibLoader::GetInstance().QueryCDStatus(verifiedPath, status);
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemonProvider] QueryCDStatus: <<< EXIT FAILED <<< ret=%{public}d", ret);
         return ret;
@@ -2720,13 +2704,8 @@ int32_t StorageDaemonProvider::FormatVolume(const std::string &devPath,
         return ReturnWithOpDiag(E_PARAMS_INVALID);
     }
 
-    auto op = VolumeOperatorFactory::CreateOperator(fsType);
-    if (op == nullptr) {
-        LOGE("[L1:StorageDaemonProvider] FormatVolume: no operator for fsType=%{public}s", fsType.c_str());
-        return ReturnWithOpDiag(E_NOT_SUPPORT);
-    }
-
-    ret = op->Format(verifiedPath, verifiedDiskPath, partitionType, partitionNum);
+    ret = DiskManagerLibLoader::GetInstance().FormatVolume(verifiedPath, verifiedDiskPath,
+                                                           fsType, partitionType, partitionNum);
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemonProvider] FormatVolume: <<< EXIT FAILED <<< ret=%{public}d", ret);
     } else {
@@ -2761,13 +2740,7 @@ int32_t StorageDaemonProvider::Check(const std::string &devPath,
         return ReturnWithOpDiag(E_PARAMS_INVALID);
     }
 
-    auto op = VolumeOperatorFactory::CreateOperator(fsType);
-    if (op == nullptr) {
-        LOGE("[L1:StorageDaemonProvider] Check: no operator for fsType=%{public}s", fsType.c_str());
-        return ReturnWithOpDiag(E_NOT_SUPPORT);
-    }
-
-    ret = op->Check(verifiedPath);
+    ret = DiskManagerLibLoader::GetInstance().CheckVolume(verifiedPath, fsType);
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemonProvider] Check: <<< EXIT FAILED <<< ret=%{public}d", ret);
         return ReturnWithOpDiag(ret);
@@ -2803,13 +2776,7 @@ int32_t StorageDaemonProvider::Repair(const std::string &devPath,
         return ReturnWithOpDiag(E_PARAMS_INVALID);
     }
 
-    auto op = VolumeOperatorFactory::CreateOperator(fsType);
-    if (op == nullptr) {
-        LOGE("[L1:StorageDaemonProvider] Repair: no operator for fsType=%{public}s", fsType.c_str());
-        return ReturnWithOpDiag(E_NOT_SUPPORT);
-    }
-
-    ret = op->Repair(verifiedPath);
+    ret = DiskManagerLibLoader::GetInstance().RepairVolume(verifiedPath, fsType);
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemonProvider] Repair: <<< EXIT FAILED <<< ret=%{public}d", ret);
         return ReturnWithOpDiag(ret);
@@ -2848,13 +2815,7 @@ int32_t StorageDaemonProvider::SetLabel(const std::string &devPath,
         return ReturnWithOpDiag(E_PARAMS_INVALID);
     }
 
-    auto op = VolumeOperatorFactory::CreateOperator(fsType);
-    if (op == nullptr) {
-        LOGE("[L1:StorageDaemonProvider] SetLabel: no operator for fsType=%{public}s", fsType.c_str());
-        return ReturnWithOpDiag(E_NOT_SUPPORT);
-    }
-
-    ret = op->SetLabel(verifiedPath, label);
+    ret = DiskManagerLibLoader::GetInstance().SetVolumeLabel(verifiedPath, fsType, label);
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemonProvider] SetLabel: <<< EXIT FAILED <<< ret=%{public}d", ret);
     } else {
@@ -2885,7 +2846,7 @@ int32_t StorageDaemonProvider::ReadMetadata(const std::string &devPath,
         return ReturnWithOpDiag_optical(ret, devPath);
     }
 
-    ret = VolumeUtils::ReadMetadata(verifiedPath, uuid, type, label);
+    ret = DiskManagerLibLoader::GetInstance().ReadMetadata(verifiedPath, uuid, type, label);
     if (ret != E_OK || uuid.empty() || type.empty()) {
         if (ret == E_OK) {
             ret = E_READMETADATA;
@@ -2918,7 +2879,7 @@ int32_t StorageDaemonProvider::MountFuseDevice(const std::string &mountPath,
         return ret;
     }
 
-    ret = VolumeUtils::MountFuseDevice(verifiedMountPath, fuseFd);
+    ret = DiskManagerLibLoader::GetInstance().MountFuseDevice(verifiedMountPath, fuseFd);
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemonProvider] MountFuseDevice: <<< EXIT FAILED <<< ret=%{public}d", ret);
         return ret;
@@ -2952,7 +2913,7 @@ int32_t StorageDaemonProvider::Partition(const std::string &diskPath,
         return E_PARAMS_INVALID;
     }
 
-    ret = DiskUtils::Partition(verifiedPath, partitionType);
+    ret = DiskManagerLibLoader::GetInstance().Partition(verifiedPath, partitionType);
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemonProvider] Partition: <<< EXIT FAILED <<< ret=%{public}d", ret);
         return ret;
@@ -2989,12 +2950,16 @@ int32_t StorageDaemonProvider::GetBlockInfoByType(const std::string &type, const
         return E_PARAMS_INVALID;
     }
     std::vector<BlockInfo> disks;
-    ScanDevice scanDevice;
+    if (!DiskManagerLibLoader::GetInstance().EnsureLoaded()) {
+        LOGE("[L1:StorageDaemonProvider] GetBlockInfoByType: <<< EXIT FAILED <<< disk mgr lib not loaded");
+        HiAudit::GetInstance().WriteEnd("GetBlockInfoByType", E_NOT_SUPPORT);
+        return E_NOT_SUPPORT;
+    }
 
     if (type == "data") {
-        disks = scanDevice.GetDataDisks();
+        disks = DiskManagerLibLoader::GetInstance().GetDataDisks();
     } else {
-        disks = scanDevice.GetExternalDisks(type, diskId);
+        disks = DiskManagerLibLoader::GetInstance().GetExternalDisks(type, diskId);
     }
 
     blockInfos = BlockInfo::SerializeVector(disks);
@@ -3026,7 +2991,7 @@ int32_t StorageDaemonProvider::GetPartitionTableInfo(const std::string &devPath,
         return ReturnWithOpDiag(ret);
     }
 
-    ret = DiskUtils::GetPartitionTableInfo(verifiedPath, execRet);
+    ret = DiskManagerLibLoader::GetInstance().GetPartitionTableInfo(verifiedPath, execRet);
     if (ret == E_OK) {
         LOGI("[L1:StorageDaemonProvider] GetPartitionTableInfo: <<< EXIT SUCCESS <<<");
     } else {
@@ -3057,7 +3022,8 @@ int32_t StorageDaemonProvider::CreatePartition(const std::string &devPath, int32
     }
     LOGI("[L1:StorageDaemonProvider] CreatePartition: >>> ENTER <<< devPath=%{public}s, partitionNum=%{public}d",
          verifiedPath.c_str(), partitionNum);
-    ret = DiskUtils::CreatePartition(verifiedPath, partitionNum, startSector, endSector, typeCode);
+    ret = DiskManagerLibLoader::GetInstance().CreatePartition(verifiedPath, partitionNum, startSector, endSector,
+                                                              typeCode);
     if (ret == E_OK) {
         LOGI("[L1:StorageDaemonProvider] CreatePartition: <<< EXIT SUCCESS <<<");
     } else {
@@ -3098,7 +3064,7 @@ int32_t StorageDaemonProvider::DeletePartitionInfo(const std::string &devPath, c
 
     LOGI("[L1:StorageDaemonProvider] DeletePartitionInfo: >>> ENTER <<< devPath=%{public}s, diskId=%{public}s,"
          "partitionNum=%{public}d", verifiedPath.c_str(), diskId.c_str(), partitionNum);
-    ret = DiskUtils::DeletePartitionInfo(verifiedPath, diskId, partitionNum);
+    ret = DiskManagerLibLoader::GetInstance().DeletePartitionInfo(verifiedPath, diskId, partitionNum);
     if (ret == E_OK) {
         LOGI("[L1:StorageDaemonProvider] DeletePartitionInfo: <<< EXIT SUCCESS <<<");
     } else {
@@ -3142,7 +3108,7 @@ int32_t StorageDaemonProvider::FormatPartition(const std::string &devPath, const
     }
     LOGI("[L1:StorageDaemonProvider] FormatPartition: >>> ENTER <<< devPath=%{public}s, fsType=%{public}s"
          ", volumeName=%{public}s", verifiedPath.c_str(), fsType.c_str(), volumeName.c_str());
-    ret = DiskUtils::FormatPartition(verifiedPath, fsType, volumeName, cmd, quickFormat);
+    ret = DiskManagerLibLoader::GetInstance().FormatPartition(verifiedPath, fsType, volumeName, cmd, quickFormat);
     if (ret == E_OK) {
         LOGI("[L1:StorageDaemonProvider] FormatPartition: <<< EXIT SUCCESS <<<");
     } else {
@@ -3173,7 +3139,7 @@ int32_t StorageDaemonProvider::Erase(const std::string &devPath)
         return ReturnWithOpDiag(ret);
     }
 
-    ret = DiskUtils::Erase(verifiedPath);
+    ret = DiskManagerLibLoader::GetInstance().Erase(verifiedPath);
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemonProvider] Erase: <<< EXIT FAILED <<< ret=%{public}d", ret);
         return ReturnWithOpDiag(ret);
@@ -3205,7 +3171,7 @@ int32_t StorageDaemonProvider::Eject(const std::string &devName)
             devName.c_str());
         return ReturnWithOpDiag(E_PARAMS_INVALID);
     }
-    int32_t ret = DiskUtils::Eject(devName);
+    int32_t ret = DiskManagerLibLoader::GetInstance().Eject(devName);
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemonProvider] Eject: <<< EXIT FAILED <<< ret=%{public}d", ret);
         return ReturnWithOpDiag(ret);
@@ -3254,13 +3220,7 @@ int32_t StorageDaemonProvider::CreateIsoImage(const std::string &devPath,
         return ReturnWithOpDiag(ret);
     }
 
-    auto op = VolumeOperatorFactory::CreateOperator(fsType);
-    if (op == nullptr) {
-        LOGE("[L1:StorageDaemonProvider] CreateIsoImage: no operator for fsType=%{public}s", fsType.c_str());
-        return ReturnWithOpDiag(E_NOT_SUPPORT);
-    }
-
-    ret = op->CreateIsoImage(verifiedDevPath, filePath, verifiedMountPath);
+    ret = DiskManagerLibLoader::GetInstance().CreateIsoImage(verifiedDevPath, filePath, verifiedMountPath, fsType);
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemonProvider] CreateIsoImage: <<< EXIT FAILED <<< ret=%{public}d", ret);
         return ReturnWithOpDiag(ret);
@@ -3297,22 +3257,18 @@ int32_t StorageDaemonProvider::Burn(const std::string &devPath,
         return ReturnWithOpDiag(E_PARAMS_INVALID);
     }
     BurnOptions parsedOptions;
-    ret = ParseBurnOptions(burnOptions, parsedOptions);
+    ret = DiskManagerLibLoader::GetInstance().ParseBurnOptions(burnOptions, parsedOptions);
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemonProvider] Burn ParseBurnOptions: <<< EXIT FAILED <<< ret=%{public}d", ret);
         return ReturnWithOpDiag(ret);
     }
-    ret = ValidateBurnOptions(parsedOptions);
+    ret = DiskManagerLibLoader::GetInstance().ValidateBurnOptions(parsedOptions);
     if (ret != E_OK) {
-        LOGE("[L1:StorageDaemonProvider] Burn DiskUtils::ValidateBurnOptions: <<< EXIT FAILED <<< ret=%{public}d", ret);
+        LOGE("[L1:StorageDaemonProvider] Burn DiskManagerLibLoader::GetInstance().ValidateBurnOptions: "
+             "<<< EXIT FAILED <<< ret=%{public}d", ret);
         return ReturnWithOpDiag(ret);
     }
-    auto op = VolumeOperatorFactory::CreateOperator(parsedOptions.fsType);
-    if (op == nullptr) {
-        LOGE("[L1:StorageDaemonProvider] Burn: no operator for fsType=%{public}s", parsedOptions.fsType.c_str());
-        return ReturnWithOpDiag(E_NOT_SUPPORT);
-    }
-    ret = op->Burn(verifiedPath, parsedOptions);
+    ret = DiskManagerLibLoader::GetInstance().BurnDisk(verifiedPath, parsedOptions.fsType, parsedOptions);
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemonProvider] Burn: <<< EXIT FAILED <<< ret=%{public}d", ret);
         return ReturnWithOpDiag(ret);
@@ -3340,7 +3296,7 @@ int32_t StorageDaemonProvider::GetVolumeOpProcess(const std::string &volumeId, i
         return ret;
     }
 
-    ret = DiskUtils::GetVolumeOpProcess(volumeId, progressPct);
+    ret = DiskManagerLibLoader::GetInstance().GetVolumeOpProcess(volumeId, progressPct);
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemonProvider] GetVolumeOpProcess: <<< EXIT FAILED <<< ret=%{public}d", ret);
         return ret;
@@ -3371,7 +3327,7 @@ int32_t StorageDaemonProvider::VerifyBurnData(const std::string &devPath, int32_
         return ReturnWithOpDiag(ret);
     }
 
-    ret = DiskUtils::VerifyBurnData(verifiedPath, verifyType);
+    ret = DiskManagerLibLoader::GetInstance().VerifyBurnData(verifiedPath, verifyType);
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemonProvider] VerifyBurnData: <<< EXIT FAILED <<< ret=%{public}d", ret);
         return ReturnWithOpDiag(ret);
@@ -3400,7 +3356,7 @@ int32_t StorageDaemonProvider::GetCapacity(const std::string &devPath, int64_t &
         return ret;
     }
 
-    ret = DiskUtils::GetCapacity(verifiedPath, totalSize, freeSize);
+    ret = DiskManagerLibLoader::GetInstance().GetCapacity(verifiedPath, totalSize, freeSize);
     if (ret != E_OK) {
         LOGE("[L1:StorageDaemonProvider] GetCapacity: <<< EXIT FAILED <<< ret=%{public}d", ret);
         return ret;
@@ -3423,9 +3379,12 @@ int32_t StorageDaemonProvider::GetDiskSize(const std::string &devName, uint64_t 
         return E_PARAMS_INVALID;
     }
 
-    ScanDevice scanDevice;
+    if (!DiskManagerLibLoader::GetInstance().EnsureLoaded()) {
+        LOGE("[L1:StorageDaemonProvider] GetDiskSize: <<< EXIT FAILED <<< disk mgr lib not loaded");
+        return E_NOT_SUPPORT;
+    }
     size = 0;
-    size = scanDevice.GetDiskSize(devName);
+    size = DiskManagerLibLoader::GetInstance().GetDiskSize(devName);
     if (size == 0) {
         LOGE("[L1:StorageDaemonProvider] GetDiskSize: failed to get size for %{public}s", devName.c_str());
         return E_ERR;
@@ -3495,12 +3454,14 @@ int32_t StorageDaemonProvider::CreateDmLinear(const std::string &sourceDevPath,
         return ret;
     }
  
-    DmDevice dmDevice(verifiedPath, startSector, sectorCount);
-    if (!dmDevice.Create()) {
+    dev_t dmDeviceDev = 0;
+    int32_t dmRet = DiskManagerLibLoader::GetInstance().CreateDmDevice(verifiedPath, startSector, sectorCount,
+                                                                       dmDeviceDev);
+    if (dmRet != E_OK) {
         LOGE("[L1:StorageDaemonProvider] CreateDmLinear: Create failed");
         return E_ERR;
     }
-    dmDev = static_cast<uint64_t>(dmDevice.GetDeviceDev());
+    dmDev = static_cast<uint64_t>(dmDeviceDev);
  
     LOGI("[L1:StorageDaemonProvider] CreateDmLinear: <<< EXIT SUCCESS <<< dmDev=(%{public}u,%{public}u)",
          major(static_cast<dev_t>(dmDev)), minor(static_cast<dev_t>(dmDev)));
@@ -3569,7 +3530,11 @@ int32_t StorageDaemonProvider::GetDiskPowerCycleCount(const std::string &devName
         LOGE("[L1:StorageDaemonProvider] GetDiskPowerCycleCount: invalid devName");
         return E_PARAMS_INVALID;
     }
-    powerCycleCount = SmartReader::GetDiskPowerCycleCount(devName);
+    if (!DiskManagerLibLoader::GetInstance().EnsureLoaded()) {
+        LOGE("[L1:StorageDaemonProvider] GetDiskPowerCycleCount: <<< EXIT FAILED <<< disk mgr lib not loaded");
+        return E_NOT_SUPPORT;
+    }
+    powerCycleCount = DiskManagerLibLoader::GetInstance().GetDiskPowerCycleCount(devName);
     LOGI("[L1:StorageDaemonProvider] GetDiskPowerCycleCount: <<< EXIT SUCCESS <<< count=%{public}llu",
          (unsigned long long)powerCycleCount);
     return E_OK;
@@ -3591,7 +3556,11 @@ int32_t StorageDaemonProvider::GetDiskPowerOnHours(const std::string &devName, u
         LOGE("[L1:StorageDaemonProvider] GetDiskPowerOnHours: invalid devName");
         return E_PARAMS_INVALID;
     }
-    powerOnHours = SmartReader::GetDiskPowerOnHours(devName);
+    if (!DiskManagerLibLoader::GetInstance().EnsureLoaded()) {
+        LOGE("[L1:StorageDaemonProvider] GetDiskPowerOnHours: <<< EXIT FAILED <<< disk mgr lib not loaded");
+        return E_NOT_SUPPORT;
+    }
+    powerOnHours = DiskManagerLibLoader::GetInstance().GetDiskPowerOnHours(devName);
     LOGI("[L1:StorageDaemonProvider] GetDiskPowerOnHours: <<< EXIT SUCCESS <<< hours=%{public}llu",
          (unsigned long long)powerOnHours);
     return E_OK;

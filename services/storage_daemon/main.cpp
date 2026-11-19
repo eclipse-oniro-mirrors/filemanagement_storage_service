@@ -83,7 +83,7 @@ static bool ParasConfig(StorageDaemon::DiskManager &dm)
             continue;
         }
 
-        auto label = *(++it);
+        ++it;
         if (*(++it) != "flag") {
             LOGE("Invalids config line: no flag");
             continue;
@@ -91,7 +91,7 @@ static bool ParasConfig(StorageDaemon::DiskManager &dm)
 
         it++;
         int flag = std::atoi((*it).c_str());
-        auto diskConfig =  std::make_shared<StorageDaemon::DiskConfig>(sysPattern, label, flag);
+        auto diskConfig =  std::make_shared<StorageDaemon::DiskConfig>(sysPattern, flag);
         dm.AddDiskConfig(diskConfig);
     }
 

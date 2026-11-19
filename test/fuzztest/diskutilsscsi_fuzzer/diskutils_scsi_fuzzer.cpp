@@ -23,6 +23,7 @@ constexpr int32_t SCSI_BUF_LEN = 64;
 
 #include "fuzzer/FuzzedDataProvider.h"
 #include "disk_manager/disk/disk_utils.h"
+#include "disk_manager/disk/disk_common_utils.h"
 
 using namespace OHOS::StorageDaemon;
 
@@ -41,11 +42,12 @@ bool DiskUtilsScsiFuzzTest(const uint8_t *data, size_t size)
     int cdbLen = fdp.ConsumeIntegral<int>();
     uint8_t buf[SCSI_BUF_LEN] = {0};
     int dxferLen = fdp.ConsumeIntegral<int>();
-    ExecuteScsiCmd(fd, cdb, cdbLen, buf, dxferLen);
+    ScsiCmdInfo cmdInfo = { cdb, cdbLen, buf, dxferLen };
+    SendScsiCmd(fd, cmdInfo);
 
     std::string diskPath = fdp.ConsumeRandomLengthString(MAX_STR_LEN);
     int32_t cmdIndex = fdp.ConsumeIntegral<int32_t>();
-    ReadCDDiscInfo(diskPath, cmdIndex, buf, sizeof(buf));
+    ReadDiscInfo(diskPath, cmdIndex, buf, sizeof(buf));
     return true;
 }
 } // namespace OHOS

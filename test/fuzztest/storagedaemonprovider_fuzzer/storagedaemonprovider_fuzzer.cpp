@@ -91,13 +91,13 @@ static bool ParasConfig(StorageDaemon::DiskManager &dm)
         if (*(++it) != "label") {
             continue;
         }
-        auto label = *(++it);
+        ++it;
         if (*(++it) != "flag") {
             continue;
         }
         it++;
         int flag = std::atoi((*it).c_str());
-        auto diskConfig =  std::make_shared<StorageDaemon::DiskConfig>(sysPattern, label, flag);
+        auto diskConfig =  std::make_shared<StorageDaemon::DiskConfig>(sysPattern, flag);
         dm.AddDiskConfig(diskConfig);
     }
     infile.close();

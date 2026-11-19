@@ -14,7 +14,7 @@
  */
 
 #include "disk_manager/disk/scan_device.h"
-#include "utils/disk_utils.h"
+#include "disk_manager/disk/disk_common_utils.h"
 #include "utils/file_utils.h"
 
 #include "storage_service_log.h"

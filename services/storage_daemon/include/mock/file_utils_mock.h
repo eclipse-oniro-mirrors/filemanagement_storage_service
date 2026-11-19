@@ -42,6 +42,7 @@ public:
     virtual std::string ReadFileContent(const std::string &path) = 0;
     virtual int ForkExec(std::vector<std::string> &cmd, std::vector<std::string> *output = nullptr,
         int *exitStatus = nullptr) = 0;
+    virtual int ExtStorageMountForkExec(std::vector<std::string> &cmd, int *exitStatus = nullptr) = 0;
     virtual int ForkExecToFile(std::vector<std::string> &cmd, const std::string &outputFilePath,
         std::vector<std::string> *output = nullptr) = 0;
     virtual bool IsTempFolder(const std::string &path, const std::string &sub) = 0;
@@ -75,6 +76,7 @@ public:
     MOCK_METHOD2(ReadFile, bool(const std::string &path, std::string *str));
     MOCK_METHOD1(ReadFileContent, std::string(const std::string &path));
     MOCK_METHOD3(ForkExec, int(std::vector<std::string> &cmd, std::vector<std::string> *output, int *exitStatus));
+    MOCK_METHOD2(ExtStorageMountForkExec, int(std::vector<std::string> &cmd, int *exitStatus));
     MOCK_METHOD3(ForkExecToFile, int(std::vector<std::string> &cmd, const std::string &outputFilePath,
                 std::vector<std::string> *output));
     MOCK_METHOD2(IsTempFolder, bool(const std::string &path, const std::string &sub));

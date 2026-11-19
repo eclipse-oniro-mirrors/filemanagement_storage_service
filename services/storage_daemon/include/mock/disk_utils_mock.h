@@ -25,6 +25,8 @@
 
 namespace OHOS {
 namespace StorageDaemon {
+struct ScsiCmdInfo;
+
 class IDiskUtilMoc {
 public:
     virtual ~IDiskUtilMoc() = default;
@@ -37,8 +39,11 @@ public:
     virtual std::string GetBlkidDataByCmd(std::vector<std::string> &cmd) = 0;
     virtual std::string GetAnonyString(const std::string &value) = 0;
     virtual std::string GetCDType(const std::string &diskPath) = 0;
+    virtual std::string GetUdfRev(const std::string &diskPath) = 0;
     virtual std::string GetOpticalDriveType(const std::string &diskPath) = 0;
     virtual int GetCDStatus(const char *device, int &status) = 0;
+    virtual int SendScsiCmd(int fd, const ScsiCmdInfo &cmdInfo) = 0;
+    virtual int ReadDiscInfo(const std::string &diskPath, int32_t cmdIndex, uint8_t *buf, int len) = 0;
     virtual int GetCdTotalCapacity(int fd, int64_t &cdTotalCapacity) = 0;
     virtual int GetDiscUsedCapacity(int fd, int64_t totalSize, int64_t &discUsedCapacity) = 0;
     virtual int GetDvdTotalCapacity(int fd, int64_t &dvdTotalCapacity) = 0;
@@ -87,8 +92,11 @@ public:
     MOCK_METHOD1(GetBlkidDataByCmd, std::string(std::vector<std::string> &cmd));
     MOCK_METHOD1(GetAnonyString, std::string(const std::string &value));
     MOCK_METHOD1(GetCDType, std::string(const std::string &diskPath));
+    MOCK_METHOD1(GetUdfRev, std::string(const std::string &diskPath));
     MOCK_METHOD1(GetOpticalDriveType, std::string(const std::string &diskPath));
     MOCK_METHOD2(GetCDStatus, int(const char *device, int &status));
+    MOCK_METHOD2(SendScsiCmd, int(int fd, const ScsiCmdInfo &cmdInfo));
+    MOCK_METHOD4(ReadDiscInfo, int(const std::string &diskPath, int32_t cmdIndex, uint8_t *buf, int len));
     MOCK_METHOD2(GetCdTotalCapacity, int(int fd, int64_t &cdTotalCapacity));
     MOCK_METHOD3(GetDiscUsedCapacity, int(int fd, int64_t totalSize, int64_t &discUsedCapacity));
     MOCK_METHOD2(GetDvdTotalCapacity, int(int fd, int64_t &dvdTotalCapacity));

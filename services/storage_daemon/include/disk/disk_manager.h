@@ -37,7 +37,6 @@ private:
     DiskManager() = default;
 
     std::mutex lock_;
-    std::list<std::shared_ptr<DiskInfo>> disk_;
     std::list<std::shared_ptr<DiskConfig>> diskConfig_;
 
     DISALLOW_COPY_AND_MOVE(DiskManager);

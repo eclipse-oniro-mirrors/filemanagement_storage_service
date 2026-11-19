@@ -52,7 +52,7 @@ ohos_unittest("mtp_device_manager_test") {
     "$ROOT_DIR/storage_daemon/ipc/src/storage_manager_client.cpp",
     "$ROOT_DIR/storage_daemon/mtp/src/mtp_device_manager.cpp",
     "$ROOT_DIR/storage_daemon/mtp/test/mtp_device_manager_test.cpp",
-    "$ROOT_DIR/storage_daemon/utils/disk_utils.cpp",
+    "$ROOT_DIR/storage_daemon/disk_manager/src/disk/disk_common_utils.cpp",
   ]
 
   deps = [ "${storage_daemon_path}:storage_common_utils" ]
@@ -112,7 +112,7 @@ ohos_unittest("mtp_device_monitor_test") {
     "$ROOT_DIR/storage_daemon/mtp/src/mtp_device_monitor.cpp",
     "$ROOT_DIR/storage_daemon/mtp/src/mtp_lib_loader.cpp",
     "$ROOT_DIR/storage_daemon/mtp/test/mtp_device_monitor_test.cpp",
-    "$ROOT_DIR/storage_daemon/utils/disk_utils.cpp",
+    "$ROOT_DIR/storage_daemon/disk_manager/src/disk/disk_common_utils.cpp",
     "$ROOT_DIR/storage_daemon/utils/file_utils.cpp",
   ]
 
@@ -217,7 +217,7 @@ ohos_unittest("usb_event_subscriber_test") {
     "$ROOT_DIR/storage_daemon/mtp/src/mtp_lib_loader.cpp",
     "$ROOT_DIR/storage_daemon/mtp/src/usb_event_subscriber.cpp",
     "$ROOT_DIR/storage_daemon/mtp/test/usb_event_subscriber_test.cpp",
-    "$ROOT_DIR/storage_daemon/utils/disk_utils.cpp",
+    "$ROOT_DIR/storage_daemon/disk_manager/src/disk/disk_common_utils.cpp",
     "$ROOT_DIR/storage_daemon/utils/file_utils.cpp",
   ]
 

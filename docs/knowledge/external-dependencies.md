@@ -12,6 +12,7 @@
 | `USER_AUTH_FRAMEWORK` | IamClient | 定义时引入 `user_idm_client.h` 等 UserAuth 框架头；类名是 `IamClient`（非 IAMClient） | 未定义时缺少 UserAuth 回调类型，编译失败 |
 | `HUKS_IDL_ENVIRONMENT` | HuksMaster | HUKS 使用 HDI 1.1 接口 | 链接了错误的 HUKS 库 |
 | `SUPPORT_RECOVERY_KEY_SERVICE` | KeyManager | 恢复密钥服务支持 | 未实现恢复密钥流程 |
+| `EXTERNAL_STORAGE_QOS_TRANS` | **storage_disk_mgr_ext SO**（exfat/ntfs operator）与 storage_common_utils | exfat/ntfs `DoMount` 走 `ExtStorageMountForkExec` + ntfs `big_writes`；QOS 上报实现（file_utils.cpp 宏内） | SO/目标间迁移源文件时漏带 define → QOS 挂载静默退化为普通 ForkExec（本产品 flag=false 不暴露，QOS 产品回归） |
 
 新增代码涉及上述宏影响的功能时，必须同时考虑宏定义和未定义两种行为，不要只写一种。
 
@@ -30,8 +31,9 @@
 
 1. Daemon 启动：注册 SA → 启动 Netlink/DiskManager（受 `EXTERNAL_STORAGE_MANAGER` 宏控制） → 经 Manager IPC 调用 `InitGlobalKey()` → `InitGlobalDeviceKey()` → 加载 EL1
 2. Manager 启动：懒连接 Daemon → 启动监控 → 订阅用户事件
+3. 磁盘能力（运行时）：首次磁盘操作触发 `DiskManagerLibLoader` dlopen `libstorage_disk_mgr_ext.z.so`（RTLD_LAZY，成功后驻留）；失败 1s 冷却自愈重试，期间返回 `E_NOT_SUPPORT`。SO 的 QOS 符号（`ExtStorageMountForkExec` 等）经 DT_NEEDED 引自 libstorage_common_utils.z.so。
 
-不要假设 Manager 启动时所有依赖已就绪。
+不要假设 Manager 启动时所有依赖已就绪；不要假设磁盘 SO 在进程启动时已加载（按需）。
 
 ## 超时保护与审计（DFX）
 

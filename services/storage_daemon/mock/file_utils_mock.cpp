@@ -15,6 +15,8 @@
 
 #include "file_utils_mock.h"
 
+#include "storage_service_errno.h"
+
 using namespace std;
 namespace OHOS {
 namespace StorageDaemon {
@@ -107,6 +109,14 @@ std::string ReadFileContent(const std::string &path)
 int ForkExec(std::vector<std::string> &cmd, std::vector<std::string> *output, int *exitStatus)
 {
     return IFileUtilMoc::fileUtilMoc->ForkExec(cmd, output, exitStatus);
+}
+
+int ExtStorageMountForkExec(std::vector<std::string> &cmd, int *exitStatus)
+{
+    if (IFileUtilMoc::fileUtilMoc == nullptr) {
+        return E_ERR;
+    }
+    return IFileUtilMoc::fileUtilMoc->ExtStorageMountForkExec(cmd, exitStatus);
 }
 
 int ForkExecToFile(std::vector<std::string> &cmd, const std::string &outputFilePath,

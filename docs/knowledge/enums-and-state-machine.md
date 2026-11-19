@@ -22,8 +22,8 @@
 
 ## DiskType 注意事项
 
-- `DiskType` 是 `DiskInfo` 类的内嵌 `enum`（非 `enum class`），引用时用 `DiskInfo::SD_CARD`，不是独立 `SD_CARD`。当前取值：`SD_CARD=1`、`USB_FLASH=2`、`CD_DVD_BD=3`、`DATA_DISK_SSD=4`、`DATA_DISK_HDD=5`、`UNKNOWN_DISK_TYPE=255`（无 `MTP_PTP`）。
-- 卷状态使用命名空间作用域的 `VolumeState::MOUNTED` 等，不是 `DiskInfo::MOUNTED`（`DiskInfo` 只内嵌 `DiskType`，无 `DiskState` 枚举）。当前 `VolumeState` 取值：`UNMOUNTED`、`CHECKING`、`MOUNTED`、`EJECTING`、`REMOVED`、`BAD_REMOVAL`、`DAMAGED`、`FUSE_REMOVED`、`DAMAGED_MOUNTED`（无 `ENCRYPTING`）。
+- `DiskInfo::DiskType` 枚举**已删除**（常驻内存优化需求 20260807942835 随死代码清理移除；`DiskInfo` 仅余 `diskId_`，构造只收 `dev_t`）。磁盘类型区分经 disk_manager SA 的 `BlockInfo`（`block_info.h`，跨组件）与 `ScanDevice` 扫描层承载，本仓库不要再引用 `DiskInfo::SD_CARD` 等取值。
+- 卷状态使用命名空间作用域的 `VolumeState::MOUNTED` 等，不是 `DiskInfo::MOUNTED`（`DiskInfo` 已无任何内嵌枚举）。当前 `VolumeState` 取值：`UNMOUNTED`、`CHECKING`、`MOUNTED`、`EJECTING`、`REMOVED`、`BAD_REMOVAL`、`DAMAGED`、`FUSE_REMOVED`、`DAMAGED_MOUNTED`（无 `ENCRYPTING`）。
 
 ## 加密标志位
 

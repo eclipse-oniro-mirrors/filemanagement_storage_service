@@ -41,30 +41,11 @@ HWTEST_F(DiskConfigTest, Storage_Service_DiskManagerTest_IsMatch_001, TestSize.L
 {
     GTEST_LOG_(INFO) << "Storage_Service_DiskManagerTest_IsMatch_001 start";
     std::string sysPattern = "/devices/platform/fe2b0000.dwmmc/*";
-    std::string lable = "disk";
-    int flag = 0;
-    auto diskConfig = std::make_shared<DiskConfig>(sysPattern, lable, flag);
+        int flag = 0;
+    auto diskConfig = std::make_shared<DiskConfig>(sysPattern, flag);
     bool ret = diskConfig->IsMatch(sysPattern);
     EXPECT_TRUE(ret == true);
     GTEST_LOG_(INFO) << "Storage_Service_DiskManagerTest_IsMatch_001 end";
-}
-
-/**
- * @tc.name: Storage_Service_DiskConfigTest_GetFlag_001
- * @tc.desc: Verify the GetFlag function.
- * @tc.type: FUNC
- * @tc.require: SR000GGUOT
- */
-HWTEST_F(DiskConfigTest, Storage_Service_DiskManagerTest_GetFlag_001, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "Storage_Service_DiskManagerTest_GetFlag_001 start";
-    std::string sysPattern = "/devices/platform/fe2b0000.dwmmc/*";
-    std::string lable = "disk";
-    int flag = 0;
-    auto diskConfig = std::make_shared<DiskConfig>(sysPattern, lable, flag);
-    int ret = diskConfig->GetFlag();
-    EXPECT_TRUE(ret == flag);
-    GTEST_LOG_(INFO) << "Storage_Service_DiskManagerTest_GetFlag_001 end";
 }
 }
 }

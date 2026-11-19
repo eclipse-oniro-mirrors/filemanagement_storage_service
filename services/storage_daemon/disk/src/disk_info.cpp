@@ -21,27 +21,12 @@
 namespace OHOS {
 namespace StorageDaemon {
 
-DiskInfo::DiskInfo(std::string &diskName, std::string &sysPath, std::string &devPath, dev_t device, int diskType)
+DiskInfo::DiskInfo(dev_t device)
 {
     diskId_ = StringPrintf("disk-%d-%d", major(device), minor(device));
-    diskName_ = diskName;
-    sysPath_ = sysPath;
-    devPath_ = StringPrintf("/dev/block/%s", diskId_.c_str());
-    diskType_ = static_cast<DiskType>(diskType);
-}
-
-
-std::string DiskInfo::GetDiskId() const
-{
-    return diskId_;
-}
-
-std::string DiskInfo::GetDiskName() const
-{
-    return diskName_;
 }
 
 DiskInfo::~DiskInfo() {}
 
-} // namespace STORAGE_DAEMON
+} // namespace StorageDaemon
 } // namespace OHOS

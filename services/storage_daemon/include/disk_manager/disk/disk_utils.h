@@ -105,10 +105,6 @@ private:
     static bool IsMtpDeviceInUse(const std::string &diskPath);
 };
 
-int ExecuteScsiCmd(int fd, uint8_t *cdb, int cdbLen, uint8_t *dxferp, int dxferLen);
-int ReadCDDiscInfo(const std::string &diskPath, int32_t cmdIndex, uint8_t *buf, int len);
-int GetCDDiskStatus(const char *device, int &status);
-int IsCDExist(const std::string &diskPath, bool &isCDExist);
 bool IsCDBlank(const std::string &diskPath);
 int32_t ParseBurnOptions(const std::string &burnOptions, BurnOptions &parsedOptions);
 int32_t ValidateBurnOptions(const BurnOptions &options);

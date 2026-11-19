@@ -12,10 +12,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef STORAGE_DAEMON_UTILS_DISK_H
-#define STORAGE_DAEMON_UTILS_DISK_H
+#ifndef OHOS_STORAGE_DAEMON_DISK_COMMON_UTILS_H
+#define OHOS_STORAGE_DAEMON_DISK_COMMON_UTILS_H
 
 #include <string>
+#include <vector>
 
 #include <sys/types.h>
 
@@ -60,7 +61,7 @@ int GetBdTrackCapacity(int fd, int64_t &bdTotalCapacity, int64_t &bdUsedCapacity
 std::string GetScsiBusNum(const std::string &sysPath);
 std::string GetOddDriverType(const std::string &sysPath);
 bool CheckUuidInvalid(const std::string &uuid);
-} // namespace STORAGE_DAEMON
+} // namespace StorageDaemon
 } // namespace OHOS
 
-#endif // STORAGE_DAEMON_UTILS_DISK_H
+#endif // OHOS_STORAGE_DAEMON_DISK_COMMON_UTILS_H

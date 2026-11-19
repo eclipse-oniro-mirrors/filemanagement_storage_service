@@ -22,6 +22,13 @@
 - 卷挂载/卸载通过 `IVolumeOperator`（`VolumeOperatorFactory::CreateOperator(fsType)` 分发）执行；`VolumeState` 枚举仍定义于 `volume_core.h`，但当前生产路径不再由 `VolumeInfo` 状态机驱动（`VolumeCore::SetState` 无生产调用方）。
 - 新增卷操作继承 `IVolumeOperator` 并在 `VolumeOperatorFactory::RegisterOperators` 注册；Mount 前仍应遵循 CHECKING、Unmount 前 EJECTING 的状态语义。
 
+### 磁盘能力（libstorage_disk_mgr_ext 按需加载）
+
+- 新增/修改磁盘底层函数：`disk_mgr_api.h` 表字段 + `disk_mgr_api.cpp` 表初始化 + `disk_manager_lib_loader.h/.cpp` 封装 + provider 调用点**四处一次改齐**（错位/漏改见 constraints-and-traps 陷阱 8）。
+- 新增依赖或条件宏：核对 `storage_disk_mgr_ext` 与 `storage_common_utils` 两目标谁消费该符号/宏，define 与 external_deps **随源文件所在目标走**（陷阱 7）。
+- 失败路径统一 `E_NOT_SUPPORT`（库未加载）或既有具体错误码；`GetDiskSize` 取值失败保持 `E_ERR` 原语义。
+- 必测：Loader 门控/分发双分支（fake API 表）、DiskMgrApi 表完整性、operator Wrapper 双分支（见 testing-guide）。
+
 ### 密钥操作
 
 - 操作前：确认 fscrypt/加密已启用（`KeyCtrlHasFscryptSyspara` / `IsUeceSupport`），HUKS 通过 `HuksMaster::GenerateKey` 返回值判断失败（无 `IsHuksAvailable` 方法）。

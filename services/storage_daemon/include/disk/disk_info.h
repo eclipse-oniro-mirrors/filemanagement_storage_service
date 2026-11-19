@@ -24,28 +24,13 @@ namespace OHOS {
 namespace StorageDaemon {
 class DiskInfo {
 public:
-    enum DiskType {
-        SD_CARD = 1,
-        USB_FLASH = 2,
-        CD_DVD_BD = 3,
-        DATA_DISK_SSD = 4,
-        DATA_DISK_HDD = 5,
-        UNKNOWN_DISK_TYPE = 255,
-    };
-
-    DiskInfo(std::string &diskName, std::string &sysPath_, std::string &devPath_, dev_t device, int diskType);
+    DiskInfo(dev_t device);
     virtual ~DiskInfo();
-    std::string GetDiskId() const;
-    std::string GetDiskName() const;
 
 private:
     std::string diskId_;
-    std::string diskName_;
-    std::string sysPath_;
-    std::string devPath_;
-    DiskType diskType_;
 };
-} // STORAGE_DAEMON
+} // StorageDaemon
 } // OHOS
 
 #endif // OHOS_STORAGE_DAEMON_DISK_INFO_H

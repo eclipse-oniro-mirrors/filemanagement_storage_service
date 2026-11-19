@@ -52,6 +52,16 @@
 
 | 必测 | 参数正常/空/超长/类型错误 |
 
+### DiskManagerLibLoader / DiskMgrApi（磁盘能力按需加载）
+
+| 对象 | 必测场景 |
+|------|----------|
+| EnsureLoaded | dlopen 失败→`E_NOT_SUPPORT` 不崩溃；冷却 1s 内不热重试；冷却期满自愈重试；成功后快路径不再 dlopen |
+| Init/Deinit | dlsym 失败→dlclose 回滚；`DiskMgrGetApi` 返回空→回滚；单轮 dlopen 3 次重试（间隔 100ms） |
+| 33 个封装方法 | 门控分支（库未加载）+ 分发分支（fake API 表桩函数记录调用名/哨兵值传播）全覆盖 |
+| DiskMgrGetApi 表 | 33 项非空完整性；8 个 operator Wrapper 的 unknown-fsType→`E_NOT_SUPPORT` 与已知类型分发双分支 |
+| ScanDevice/DmDevice 封装 | GetDataDisks/GetExternalDisks/GetDiskSize/CreateDmDevice（失败分支宿主可测） |
+
 ## Mock 选择
 
 | Mock 文件 | 用途 |
@@ -67,6 +77,23 @@
 | `storage_daemon_proxy_mock.h` / `storage_daemon_communication_mock.h` | Mock Manager→Daemon IPC（`services/storage_manager/include/mock/`） |
 | `storage_status_manager_mock.h` / `bundle_mgr_interface_mock.h` / `datashare_helper_mock.h` / `disk_manager_client_mock.h` | Mock Manager 侧状态/Bundle/DataShare/Disk 客户端 |
 | `uece_activation_callback_mock.h` | Mock UECE/EL5 激活回调 |
+| `file_utils_mock.h`（含 `ExtStorageMountForkExec`） | Mock 文件操作与 QOS 挂载 fork 路径（exfat DoMount 测试必需） |
+| `disk_utils_mock.h`（含 `GetUdfRev`/`SendScsiCmd`/`ReadDiscInfo`/`IsExistCD`） | Mock disk_common_utils 自由函数 |
+
+## gmock 陷阱（E_OK==0）
+
+`E_OK` 的值是 **0**（storage_service_errno.h 枚举首项）。gmock 无期望调用默认返回 0——恰为「成功」。凡被测函数以 mock 函数返回值判断成败的用例，**必须显式 `EXPECT_CALL(...).WillOnce(Return(E_ERR))` 声明失败**，否则分支漂移（本仓已发生 9 例此类用例失败）。
+
+## 主机侧运行（x86_64_virt musl）
+
+```sh
+# 库路径（示例；测试二进制位于 out/x86_64_virt/tests/unittest/storage_service/storage_service/storage_daemon/）
+ld-musl-x86_64.so.1 --library-path "<packages/phone/system/lib64 及 innerkits 各依赖目录>" <test binary>
+```
+
+- 环境预建：`/data/local`、`/mnt/data/external`（多个 UT 的真实目录依赖）；HiLogAdapter 警告（无 hilog socket）无害。
+- `storage_daemon_provider_test`：`SetCallingUid` 仅 mock `GetCallingAppUid`，`IPCSkeleton::GetCallingUid` 为真实现 → SMART 类用例 uid 门在宿主必失败（环境限制非用例问题）；磁盘分发路径由 lib_loader/disk_mgr_api 两级 UT 分层覆盖（provider UT 只覆盖门控与参数校验）。
+- `disk_manager_lib_loader_test` 模式：`-Wl,--wrap=dlopen/dlsym/dlclose` + 测试文件内自建 fake `DiskMgrGetApi` 表（该目标不编译 disk_mgr_api.cpp，可自备符号）。
 
 ## 测试位置
 
@@ -75,7 +102,7 @@
 | 密钥管理 | `services/storage_daemon/crypto/test/`（`key_manager_test`、`fscrypt_v1_test`、`fscrypt_v2_test`、`fscrypt_key_v1_ext_test`、`base_key_test`、`fbex_test`、`huks_master_test`、`iam_client_test`、`recover_manager_test` 等） |
 | 用户管理 | `services/storage_daemon/user/test/` |
 | 磁盘管理 | `services/storage_daemon/disk/test/` |
-| 外置卷 | `services/storage_daemon/disk_manager/test/`（`ext_volume_operator_factory_test` 等） |
+| 外置卷 | `services/storage_daemon/disk_manager/test/`（`ext_volume_operator_factory_test`、`ext_disk_mgr_api_test`、`disk_manager_lib_loader_test` 等） |
 | IPC 层 | `services/storage_manager/ipc/test/`（`storage_manager_provider_test`、`storage_manager_provider_permission_test`、`storage_manager_provider_communication_test`） |
 | Manager 其他子模块 | `services/storage_manager/storage/test/`、`scan/test/`、`storage_daemon_communication/test/`、`client/test/`、`utils/test/` |
 | DFX 上报 | `services/storage_manager/dfx_report/test/`（`dfx_report_test`） |

@@ -1,6 +1,6 @@
 # 约束与陷阱
 
-本文只记录项目硬性约束和最易犯的 6 个陷阱。各场景详细约束见对应知识文档：用户时序见 `user-directory-lifecycle.md`，卷状态见 `disk-volume-lifecycle.md`，密钥见 `crypto-key-management.md`，IPC 死锁见 `ipc-interface-guide.md`。
+本文只记录项目硬性约束和最易犯的 9 个陷阱。各场景详细约束见对应知识文档：用户时序见 `user-directory-lifecycle.md`，卷状态见 `disk-volume-lifecycle.md`，密钥见 `crypto-key-management.md`，IPC 死锁见 `ipc-interface-guide.md`。
 
 ## 硬性约束
 
@@ -38,6 +38,18 @@ Daemon 重启后内存状态为空，Manager 的缓存可能过期。必须重�
 
 在持有 Manager 锁时调用 Daemon IPC → 可能双进程互锁。先释放锁再发起 IPC。
 
+### 陷阱 7：磁盘源文件迁移时漏带编译宏（已实际发生）
+
+磁盘 operator 从可执行文件迁入 `storage_disk_mgr_ext` SO 时，`EXTERNAL_STORAGE_QOS_TRANS` define 没有随迁 → QOS 产品上 exfat/ntfs 挂载静默退化为普通 ForkExec、丢失 `big_writes`。**任何把源文件移入新编译目标的改动，必须逐一核对原目标上的全部条件 defines/external_deps 是否需要随迁**（本产品 flag=false 不暴露，只在 QOS 产品回归）。
+
+### 陷阱 8：DiskMgrApi 表三处不同步
+
+新增磁盘函数只改了头文件表字段、漏改 `disk_mgr_api.cpp` 初始化列表或 Loader 封装 → 编译失败（字段数不匹配）或静默调用错函数（同类型字段错位）。表字段、初始化列表、Loader 封装、provider 调用点**四处必须一次改齐**（见 `architecture.md`）。
+
+### 陷阱 9：加载失败用 std::call_once 锁死
+
+dlopen 失败后 `call_once` 语义使 `Init()` 永不再执行 → 所有磁盘操作直至进程重启都返回 `E_NOT_SUPPORT`，重试逻辑形同虚设。加载失败必须走「冷却 1s 后下次调用自愈重试」（现实现 mutex + `lastAttemptTime_`）；同理，上层不要在收到一次 `E_NOT_SUPPORT` 后缓存「不可用」结论。
+
 ## 修改前检查
 
-对照上述 6 个陷阱，当前改动是否触犯了任何一个？
+对照上述 9 个陷阱，当前改动是否触犯了任何一个？
