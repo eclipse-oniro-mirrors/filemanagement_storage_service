@@ -117,6 +117,9 @@ void StorageDaemonProviderTest::SetUp(void)
     system("touch /dev/block/ut_test_dev /mnt/data/ut_test_mnt 2>/dev/null");
     system("mkdir -p /dev/mapper 2>/dev/null");
     system("touch /dev/mapper/ut_test_dev 2>/dev/null");
+    system("mkdir -p /mnt/data/ut_validate_mnt 2>/dev/null");
+    system("mkdir -p /data/service/el1/public/pc_encryption_extension_service"
+           "/volume/crypt/ut_validate_pcenc 2>/dev/null");
 }
 
 void StorageDaemonProviderTest::TearDown(void)
@@ -3568,6 +3571,69 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_OpticalCreateIsoIm
     EXPECT_EQ(ret, E_PARAMS_INVALID);
     SetCallingUid(999);
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_OpticalCreateIsoImageDfx_001 end";
+}
+
+/**
+ * @tc.name: StorageDaemonProviderTest_ValidateMountPath_001
+ * @tc.desc: ValidateMountPath with /mnt/data/ prefix, path exists → E_OK (Check1 A=true + Check3 A=true)
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_ValidateMountPath_001, TestSize.Level0)
+{
+    std::string verifiedPath;
+    EXPECT_EQ(StorageDaemonProvider::ValidateMountPath("/mnt/data/ut_validate_mnt", verifiedPath), E_OK);
+}
+
+/**
+ * @tc.name: StorageDaemonProviderTest_ValidateMountPath_002
+ * @tc.desc: ValidateMountPath with PC_ENC prefix, path exists → E_OK (Check1 A=false,B=true + Check3 A=false,B=true)
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_ValidateMountPath_002, TestSize.Level0)
+{
+    std::string verifiedPath;
+    std::string path = "/data/service/el1/public/pc_encryption_extension_service/volume/crypt/ut_validate_pcenc";
+    EXPECT_EQ(StorageDaemonProvider::ValidateMountPath(path, verifiedPath), E_OK);
+}
+
+/**
+ * @tc.name: StorageDaemonProviderTest_ValidateMountPath_003
+ * @tc.desc: ValidateMountPath with /mnt/data/ prefix, path not exist → E_PARAMS_INVALID
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_ValidateMountPath_003, TestSize.Level0)
+{
+    std::string verifiedPath;
+    EXPECT_EQ(StorageDaemonProvider::ValidateMountPath("/mnt/data/ut_validate_notexist", verifiedPath),
+              E_PARAMS_INVALID);
+}
+
+/**
+ * @tc.name: StorageDaemonProviderTest_ValidateMountPath_004
+ * @tc.desc: ValidateMountPath with PC_ENC prefix, path not exist → E_OK
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_ValidateMountPath_004, TestSize.Level0)
+{
+    std::string verifiedPath;
+    std::string path = "/data/service/el1/public/pc_encryption_extension_service/volume/crypt/ut_validate_notexist";
+    EXPECT_EQ(StorageDaemonProvider::ValidateMountPath(path, verifiedPath), E_OK);
+}
+
+/**
+ * @tc.name: StorageDaemonProviderTest_ValidateMountPath_005
+ * @tc.desc: ValidateMountPath with invalid prefix → E_PARAMS_INVALID (Check1 A=false,B=false)
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_ValidateMountPath_005, TestSize.Level0)
+{
+    std::string verifiedPath;
+    EXPECT_EQ(StorageDaemonProvider::ValidateMountPath("/invalid/path", verifiedPath), E_PARAMS_INVALID);
+}
+
+/**
+ * @tc.name: StorageDaemonProviderTest_ValidateMountPath_006
+ * @tc.desc: ValidateMountPath with empty string → E_PARAMS_INVALID
+ */
+HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_ValidateMountPath_006, TestSize.Level0)
+{
+    std::string verifiedPath;
+    EXPECT_EQ(StorageDaemonProvider::ValidateMountPath("", verifiedPath), E_PARAMS_INVALID);
 }
 
 /**

@@ -25,7 +25,11 @@ Daemon 崩溃后 Manager 会锁屏降级并重建连接。不要假设崩溃前�
 
 ## 权限校验
 
-Manager 入口必须校验权限（`CheckClientPermission`），Daemon 入口必须校验路径合法性（`ValidateBlockDevicePath`、`ValidateMountPath`）。两层校验不可绕过。
+Manager 入口必须校验权限（`CheckClientPermission`），Daemon 入口必须校验路径合法性（`ValidateBlockDevicePath`、`ValidateMountPath`/`ValidateMountRequest`）。两层校验不可绕过。
+
+`ValidateMountPath`/`ValidateMountRequest` 前缀白名单（新增前缀须同步两处 + 常量定义）：
+- `/mnt/data/`：卷挂载路径（USB/SD/数据盘等）
+- `/data/service/el1/public/pc_encryption_extension_service`：PC 加密扩展服务 dm 设备挂载路径（精确到服务目录级别，不放行泛化 `/data/service/`）。常量 `PC_ENC_MOUNT_PREFIX` 定义在各自文件匿名命名空间，前缀放行后仍执行 `IsFilePathInvalid` 路径穿越校验和 `realpath` 解析，纵深防御链不可删除。
 
 ## 新增 IPC 接口规则
 

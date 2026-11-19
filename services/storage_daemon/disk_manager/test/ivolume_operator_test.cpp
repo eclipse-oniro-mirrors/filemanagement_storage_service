@@ -79,6 +79,8 @@ void ExtIVolumeOperatorTest::SetUpTestCase(void)
 {
     testDir_ = "/mnt/data/external/ext_vol_op_test_" + std::to_string(getpid());
     mkdir(testDir_.c_str(), S_IRWXU | S_IRWXG | S_IXOTH);
+    system("mkdir -p /data/service/el1/public/pc_encryption_extension_service"
+           "/volume/crypt 2>/dev/null");
 }
 
 void ExtIVolumeOperatorTest::TearDownTestCase(void)
@@ -244,6 +246,16 @@ HWTEST_F(ExtIVolumeOperatorTest, Mount_Success, TestSize.Level1)
     struct stat st;
     EXPECT_EQ(stat(path.c_str(), &st), 0);
     EXPECT_TRUE(S_ISDIR(st.st_mode));
+    rmdir(path.c_str());
+}
+
+HWTEST_F(ExtIVolumeOperatorTest, Mount_PcEncPrefix_Success, TestSize.Level1)
+{
+    std::string path = "/data/service/el1/public/pc_encryption_extension_service"
+                       "/volume/crypt/pc_enc_mount_test";
+    EXPECT_CALL(*op_, DoMount(_, _, _, _)).WillOnce(Return(E_OK));
+    int32_t ret = op_->Mount("/dev/block/mock_dev", path, 0);
+    EXPECT_EQ(ret, E_OK);
     rmdir(path.c_str());
 }
 

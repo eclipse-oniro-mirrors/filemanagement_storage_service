@@ -80,6 +80,7 @@ constexpr unsigned int MAX_URI_COUNT = 200000;
 constexpr size_t MAX_IPC_RAW_DATA_SIZE = 128 * 1024 * 1024; // 128M
 constexpr pid_t STORAGE_MANAGER_UID = 1090;
 constexpr pid_t DISK_MANAGER_UID = 1091;
+constexpr const char *PC_ENC_MOUNT_PREFIX = "/data/service/el1/public/pc_encryption_extension_service";
 
 #ifdef DISK_MANAGER
 constexpr size_t MAX_TYPE_LEN = 64;
@@ -348,7 +349,7 @@ int32_t StorageDaemonProvider::ValidateMountPath(const std::string &mountPath,
         LOGE("ValidateMountPath: mountPath contains invalid path segments");
         return E_PARAMS_INVALID;
     }
-    if (mountPath.find("/mnt/data/") != 0) {
+    if (mountPath.find("/mnt/data/") != 0 && mountPath.find(PC_ENC_MOUNT_PREFIX) != 0) {
         LOGE("ValidateMountPath: invalid mountPath prefix");
         return E_PARAMS_INVALID;
     }
@@ -366,14 +367,14 @@ int32_t StorageDaemonProvider::ValidateMountPath(const std::string &mountPath,
             return E_PARAMS_INVALID;
         }
         std::string resolvedParent(realPath);
-        if (resolvedParent.find("/mnt/data/") != 0) {
-            LOGE("ValidateMountPath: resolved parent escapes /mnt/data/");
+        if (resolvedParent.find("/mnt/data/") != 0 && resolvedParent.find(PC_ENC_MOUNT_PREFIX) != 0) {
+            LOGE("ValidateMountPath: resolved parent escapes allowed prefixes");
             return E_PARAMS_INVALID;
         }
         verifiedPath = mountPath;
     } else {
         std::string resolvedPath(realPath);
-        if (resolvedPath.find("/mnt/data/") != 0) {
+        if (resolvedPath.find("/mnt/data/") != 0 && resolvedPath.find(PC_ENC_MOUNT_PREFIX) != 0) {
             LOGE("ValidateMountPath: invalid resolved path prefix");
             return E_PARAMS_INVALID;
         }
