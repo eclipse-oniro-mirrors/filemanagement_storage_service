@@ -20,6 +20,7 @@
 #include <cstdio>
 #include <cstring>
 #include <iomanip>
+#include <mutex>
 #include <linux/cdrom.h>
 #include <regex>
 #include <sstream>
@@ -155,16 +156,46 @@ bool CheckUuidInvalid(const std::string &uuid)
     return !std::regex_match(uuid, validPattern);
 }
 
-std::string GetBlkidData(const std::string &devPath, const std::string &type)
+bool HasUtilLinuxKeyword(const std::vector<std::string> &output)
 {
-    LOGD("[L8:DiskUtils] GetBlkidData: >>> ENTER <<< devPath=%{public}s, type=%{public}s",
-        devPath.c_str(), type.c_str());
-    if (!devPath.empty() && devPath[0] == '-') {
-        LOGE("[L8:DiskUtils] GetBlkidData: devPath starts with dash, possible argument injection");
-        return "";
+    for (const auto &line : output) {
+        if (line.find("util-linux") != std::string::npos) {
+            return true;
+        }
     }
-    std::vector<std::string> cmd;
-    cmd = {
+    return false;
+}
+
+static bool IsUtilLinuxBlkid()
+{
+    static bool isUtilLinux = false;
+    static std::once_flag probeOnce;
+    std::call_once(probeOnce, [&]() {
+        std::vector<std::string> probeCmd = { "blkid", "-v" };
+        std::vector<std::string> output;
+        ForkExec(probeCmd, &output);
+        isUtilLinux = HasUtilLinuxKeyword(output);
+        LOGI("[L8:DiskUtils] IsUtilLinuxBlkid: %{public}d", static_cast<int>(isUtilLinux));
+    });
+    return isUtilLinux;
+}
+
+std::vector<std::string> BuildBlkidCmd(bool isUtilLinux, const std::string &type, const std::string &devPath)
+{
+    if (isUtilLinux) {
+        return {
+            "blkid",
+            "-p",
+            "-u",
+            "noraid",
+            "-s",
+            type,
+            "-o",
+            "value",
+            devPath
+        };
+    }
+    return {
         "blkid",
         "-n",
         "mdraid",
@@ -174,6 +205,21 @@ std::string GetBlkidData(const std::string &devPath, const std::string &type)
         "value",
         devPath
     };
+}
+
+std::string GetBlkidData(const std::string &devPath, const std::string &type)
+{
+    LOGD("[L8:DiskUtils] GetBlkidData: >>> ENTER <<< devPath=%{public}s, type=%{public}s",
+        devPath.c_str(), type.c_str());
+    if (devPath.empty()) {
+        LOGE("[L8:DiskUtils] GetBlkidData: devPath is empty");
+        return "";
+    }
+    if (devPath[0] == '-') {
+        LOGE("[L8:DiskUtils] GetBlkidData: devPath starts with dash, possible argument injection");
+        return "";
+    }
+    std::vector<std::string> cmd = BuildBlkidCmd(IsUtilLinuxBlkid(), type, devPath);
     return GetBlkidDataByCmd(cmd);
 }
 
