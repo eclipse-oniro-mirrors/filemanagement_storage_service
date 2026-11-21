@@ -21,6 +21,7 @@
 #include "os_account_manager.h"
 
 #include "ipc_skeleton.h"
+#include "parameter.h"
 #include "storage_service_log.h"
 #include "storage_service_constant.h"
 #include "storage_service_constants.h"
@@ -29,6 +30,19 @@ namespace OHOS {
 namespace StorageManager {
 constexpr size_t PKG_NAME_LEN = 128;
 constexpr size_t INPUT_LIST_LEN = 50000;
+constexpr int32_t DEVICE_TYPE_BUF_LEN = 32;
+constexpr int32_t PC_MODE_BUF_LEN = 16;
+
+// Device type / scene mode parameters (aligned with file_manager_utils.cpp)
+constexpr const char *PARAM_DEVICE_ID = "const.filemanagement.device_Id";
+constexpr const char *PARAM_DEVICE_ID_PC = "0";
+constexpr const char *PARAM_DEVICE_ID_PHONE = "1";
+constexpr const char *PARAM_DEVICE_ID_PAD = "2";
+constexpr const char *PARAM_DEVICE_ID_TV = "3";
+constexpr const char *PARAM_PC_MODE = "persist.sceneboard.ispcmode";
+constexpr const char *PARAM_PC_MODE_TRUE = "true";
+constexpr const char *PARAM_PC_MODE_FALSE = "false";
+
 int64_t GetRoundSize(int64_t size)
 {
     int64_t val = 1;
@@ -237,6 +251,51 @@ bool CheckIdRange(const std::string &id)
         return false;
     }
     return true;
+}
+
+// Common device type detection, aligned with the caliber and fallbacks of
+// GetDeviceID/IsPC/IsPCMode in file_manager_utils.cpp (PC fallback on read failure;
+// split into standalone functions for reuse).
+std::string GetDeviceType()
+{
+    char deviceType[DEVICE_TYPE_BUF_LEN] = {0};
+    int32_t ret = GetParameter(PARAM_DEVICE_ID, PARAM_DEVICE_ID_PC, deviceType, sizeof(deviceType));
+    if (ret < 0) {
+        LOGE("Get device type failed, ret=%{public}d", ret);
+        return PARAM_DEVICE_ID_PC; // fallback to PC (the full-featured form)
+    }
+    return deviceType;
+}
+
+bool IsPC()
+{
+    return GetDeviceType() == PARAM_DEVICE_ID_PC;
+}
+
+bool IsPhone()
+{
+    return GetDeviceType() == PARAM_DEVICE_ID_PHONE;
+}
+
+bool IsPad()
+{
+    return GetDeviceType() == PARAM_DEVICE_ID_PAD;
+}
+
+bool IsTv()
+{
+    return GetDeviceType() == PARAM_DEVICE_ID_TV;
+}
+
+bool IsPcMode()
+{
+    char pcMode[PC_MODE_BUF_LEN] = {0};
+    int32_t ret = GetParameter(PARAM_PC_MODE, PARAM_PC_MODE_FALSE, pcMode, sizeof(pcMode));
+    if (ret < 0) {
+        LOGE("Get pc mode failed, ret=%{public}d", ret);
+        return false;
+    }
+    return std::string(pcMode) == PARAM_PC_MODE_TRUE;
 }
 } // namespace STORAGE_Manager
 } // namespace OHOS

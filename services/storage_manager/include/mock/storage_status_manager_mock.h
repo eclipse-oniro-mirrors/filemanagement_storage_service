@@ -35,7 +35,7 @@ public:
     virtual int32_t GetCurrentBundleStats(BundleStats &bundleStats, uint32_t statFlag);
     virtual int32_t GetBundleStats(const std::string &pkgName, int32_t userId, BundleStats &bundleStats,
         int32_t appIndex, uint32_t statFlag);
-    virtual int32_t GetBundleNameAndUid(int32_t userId, std::map<int32_t, std::string> &bundleNameAndUid);
+    virtual int32_t GetBundleNameAndUid(int32_t userId, std::vector<BundleUidInfo> &bundleInfos);
     virtual int32_t DelBundleExtStats(uint32_t userId, const std::string &bundleName);
     virtual int32_t SetExtBundleStats(uint32_t userId, const ExtBundleStats &stats);
     virtual int32_t GetExtBundleStats(uint32_t userId, ExtBundleStats &stats);
@@ -55,7 +55,7 @@ public:
     MOCK_METHOD(int32_t, SetExtBundleStats, (uint32_t, const ExtBundleStats &));
     MOCK_METHOD(int32_t, GetExtBundleStats, (uint32_t, ExtBundleStats &));
     MOCK_METHOD(int32_t, GetAllExtBundleStats, (uint32_t, std::vector<ExtBundleStats> &));
-    MOCK_METHOD(int32_t, GetBundleNameAndUid, (int32_t, (std::map<int32_t, std::string> &)));
+    MOCK_METHOD(int32_t, GetBundleNameAndUid, (int32_t, (std::vector<BundleUidInfo> &)));
     MOCK_METHOD(int32_t, DelBundleExtStats, (uint32_t, const std::string &));
     MOCK_METHOD(int32_t, GetSystemDataSize, (int64_t &));
 };

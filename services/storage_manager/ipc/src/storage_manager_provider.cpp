@@ -17,6 +17,7 @@
 #include <sys/syscall.h>
 #include <climits>
 #include <cstdlib>
+#include <map>
 #include <string>
 
 #include "utils/storage_radar.h"

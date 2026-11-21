@@ -78,6 +78,8 @@ private:
     DISALLOW_COPY_AND_MOVE(QuotaManager);
     void ProcessVecList(std::vector<UidSaInfo> &vec, bool isSa, const std::map<int32_t, std::string> &bundleNameAndUid);
     void GetOccupiedSpaceForUidList(AllAppVec &allVec, uint64_t &iNodes);
+    bool ClassifyUidQuotaRecord(int32_t dqUid, const KernelNextDqBlk &dq, bool isSaUid,
+        AllAppVec &allVec, std::map<int32_t, int64_t> &userAppSizeMap, uint64_t &iNodes);
     void SortAndCutSaInfoVec(std::vector<UidSaInfo> &vec, bool isSa);
     void AssembleSaInfoVec(std::vector<UidSaInfo> &vec,
         const std::map<int32_t, std::string> &bundleNameAndUid);

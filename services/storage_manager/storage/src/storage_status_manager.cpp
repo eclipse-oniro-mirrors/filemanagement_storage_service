@@ -23,6 +23,7 @@
 #include "scan/storage_manager_scan.h"
 #include "storage/bundle_manager_connector.h"
 #include "storage/storage_total_status_service.h"
+#include "storage_space_manager_client.h"
 #include "storage_daemon_communication/storage_daemon_communication.h"
 #include "storage_service_constant.h"
 #include "storage_service_errno.h"
@@ -156,6 +157,19 @@ int32_t GetFileStorageStats(int32_t userId, StorageStats &storageStats)
 {
     HITRACE_METER_NAME(HITRACE_TAG_FILEMANAGEMENT, __PRETTY_FUNCTION__);
     LOGE("GetFileStorageStats start");
+    if (IsPC() || IsPcMode()) {
+        int64_t publicDirSize = 0;
+        int32_t saRet = QueryPublicDirSizeViaSa(userId, publicDirSize);
+        if (saRet != E_OK) {
+            LOGE("QueryPublicDirSizeViaSa failed, ret=%{public}d, file stats fallback to 0", saRet);
+            storageStats.file_ = 0;
+            return E_OK;
+        }
+        storageStats.file_ = publicDirSize;
+        LOGE("GetFileStorageStats end via file data service, size=%{public}lld",
+            static_cast<long long>(publicDirSize));
+        return E_OK;
+    }
     int32_t err = E_OK;
     int64_t prjId64 = static_cast<int64_t>(userId) * USER_ID_BASE + UID_FILE_MANAGER;
     if (prjId64 > INT32_MAX || prjId64 < INT32_MIN) {
@@ -257,34 +271,48 @@ int32_t StorageStatusManager::GetMediaAndFileStorageStats(int32_t userId, Storag
     return err;
 }
 
-int32_t StorageStatusManager::GetBundleNameAndUid(int32_t userId, std::map<int32_t, std::string> &bundleNameAndUid)
+int32_t StorageStatusManager::GetBundleNameAndUid(int32_t userId, std::vector<BundleUidInfo> &bundleInfos)
 {
-    LOGI("begin getBundleNameAndUid.");
+    LOGI("begin getBundleNameAndUid with vector.");
     auto bundleMgr = BundleMgrConnector::GetInstance().GetBundleMgrProxy();
     if (bundleMgr == nullptr) {
         LOGE("Connect bundle manager sa proxy failed, userId:%{public}d.", userId);
         return E_SERVICE_IS_NULLPTR;
     }
-    std::vector<std::string> bundleNames;
-    std::vector<AccountSA::OsAccountInfo> OsAccountInfo;
-    int32_t errNo = AccountSA::OsAccountManager::QueryAllCreatedOsAccounts(OsAccountInfo);
-    if (errNo != ERR_OK || OsAccountInfo.empty()) {
+    std::vector<AccountSA::OsAccountInfo> osAccountInfo;
+    int32_t errNo = AccountSA::OsAccountManager::QueryAllCreatedOsAccounts(osAccountInfo);
+    if (errNo != ERR_OK || osAccountInfo.empty()) {
         LOGE("Query active userid failed, ret = %{public}u", errNo);
         StorageRadar::ReportOsAccountResult("GetBundleNameAndUid::QueryActiveOsAccountIds", errNo, DEFAULT_USERID);
     }
-    for (const auto &info : OsAccountInfo) {
-        std::vector<AppExecFwk::BundleInfo> bundleInfos;
-        auto ret = bundleMgr->GetBundleInfosV9(0, bundleInfos, info.GetLocalId());
+    for (const auto &info : osAccountInfo) {
+        std::vector<AppExecFwk::BundleInfo> bundleList;
+        auto ret = bundleMgr->GetBundleInfosV9(0, bundleList, info.GetLocalId());
         if (ret != E_OK) {
             LOGE("GetBundleInfosV9 failed, ret is %{public}d", ret);
             return ret;
         }
-        for (const auto &bundInfo : bundleInfos) {
-            bundleNameAndUid[bundInfo.uid] = bundInfo.name;
+        for (const auto &bundInfo : bundleList) {
+            BundleUidInfo bundleUidInfo;
+            bundleUidInfo.bundleName = bundInfo.name;
+            bundleUidInfo.uid = bundInfo.uid;
+            // Take the BMS appUid field directly; weak-sandbox apps have uid != appUid
+            bundleUidInfo.appUid = bundInfo.appUid;
+            bundleUidInfo.appIndex = bundInfo.appIndex;
+            bundleInfos.push_back(bundleUidInfo);
         }
     }
-    LOGI("end getBundleNameAndUid.");
+    LOGI("end getBundleNameAndUid with vector.");
     return E_OK;
+}
+
+int32_t QueryPublicDirSizeViaSa(int32_t userId, int64_t &size)
+{
+    LOGI("QueryPublicDirSizeViaSa begin, userId=%{public}d", userId);
+    // StorageSpaceManagerClient lives in OHOS::StorageSpaceManager while this file is in
+    // OHOS::StorageManager; explicit qualification is required.
+    return DelayedSingleton<StorageSpaceManager::StorageSpaceManagerClient>::GetInstance()->GetPublicDirSize(
+        userId, size);
 }
 
 int32_t StorageStatusManager::GetCurrentBundleStats(BundleStats &bundleStats, uint32_t statFlag)

@@ -97,6 +97,7 @@ ErrCode g_getBundleInodeCountRet = ERR_OK;
 std::string g_bundleName = "com.test.app";
 ErrCode g_getNameIndexRet = ERR_OK;
 int32_t g_appIndex = 0;
+constexpr uint64_t MOCK_BUNDLE_INODE_COUNT = 100;
 } // namespace
 
 namespace OHOS {
@@ -119,6 +120,52 @@ ErrCode BundleManagerAdapterProxy::GetBundleInodeCount(const std::string &bundle
     int32_t appIndex, int32_t userId, uint64_t &inodeCount)
 {
     return g_getBundleInodeCountRet;
+}
+
+// Link-time stub (symbol takes precedence over libstorage_manager.z.so, same pattern as
+// storage_monitor_service_test): on real devices the original implementation gets the
+// real BMS proxy via samgr and bypasses the stub above, breaking the g_* mock values.
+// The stub returns a controllable proxy so the queries go through this file's globals.
+class TestBundleMgrStub : public AppExecFwk::IBundleMgr {
+public:
+    ErrCode GetNameAndIndexForUid(const int32_t uid, std::string &bundleName, int32_t &appIndex) override
+    {
+        bundleName = g_bundleName;
+        appIndex = g_appIndex;
+        return g_getNameIndexRet;
+    }
+    ErrCode GetBundleInodeCount(const std::string &bundleName, int32_t appIndex, int32_t userId,
+        uint64_t &inodeCount) override
+    {
+        if (g_getBundleInodeCountRet != ERR_OK) {
+            return g_getBundleInodeCountRet;
+        }
+        inodeCount = MOCK_BUNDLE_INODE_COUNT;
+        return ERR_OK;
+    }
+    bool GetBundleNameForUid(const int uid, std::string &bundleName) override
+    {
+        bundleName = g_bundleName;
+        return true;
+    }
+    sptr<IRemoteObject> AsObject() override
+    {
+        return nullptr;
+    }
+};
+
+BundleMgrConnector::BundleMgrConnector() {}
+BundleMgrConnector::~BundleMgrConnector() {}
+
+sptr<AppExecFwk::IBundleMgr> BundleMgrConnector::GetBundleMgrProxy()
+{
+    static sptr<AppExecFwk::IBundleMgr> stub = new TestBundleMgrStub();
+    return stub;
+}
+
+int32_t BundleMgrConnector::ResetBundleMgrProxy()
+{
+    return E_OK;
 }
 }
 

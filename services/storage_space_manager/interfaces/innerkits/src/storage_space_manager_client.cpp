@@ -310,5 +310,17 @@ int32_t StorageSpaceManagerClient::GetDataShareService(const std::string &uri, s
     return E_FAIL;
 }
 
+// Query the public directory size: SA8650 -> storage closed-source adapter -> file data service
+int32_t StorageSpaceManagerClient::GetPublicDirSize(int32_t userId, int64_t &publicDirSize)
+{
+    LOGI("GetPublicDirSize userId=%{public}d", userId);
+    sptr<IStorageSpaceManager> proxy;
+    int32_t err = Connect(proxy);
+    if (err != E_OK) {
+        return err;
+    }
+    return proxy->GetPublicDirSize(userId, publicDirSize);
+}
+
 } // namespace StorageSpaceManager
 } // namespace OHOS

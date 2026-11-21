@@ -16,8 +16,10 @@
 #ifndef OHOS_STORAGE_MANAGER_STORAGE_STATUS_MANAGER_H
 #define OHOS_STORAGE_MANAGER_STORAGE_STATUS_MANAGER_H
 
-#include <map>
+#include <cstdint>
 #include <singleton.h>
+#include <string>
+#include <vector>
 
 #include "bundle_stats.h"
 #include "ext_bundle_stats.h"
@@ -25,6 +27,21 @@
 
 namespace OHOS {
 namespace StorageManager {
+// Bundle list entry: appUid comes from the BMS BundleInfo;
+// uid != appUid identifies a weak-sandbox app.
+struct BundleUidInfo {
+    std::string bundleName;
+    int32_t uid;
+    int32_t appUid;
+    int32_t appIndex;
+    // Weak-sandbox supplementary size: appSize + cacheSize + dataSize from BMS
+    int64_t size = 0;
+    // Weak-sandbox supplementary inode count
+    uint64_t iNodes = 0;
+};
+
+int32_t QueryPublicDirSizeViaSa(int32_t userId, int64_t &size);
+
 class StorageStatusManager : public NoCopyable  {
 public:
     static StorageStatusManager &GetInstance()
@@ -39,7 +56,7 @@ public:
     int32_t GetCurrentBundleStats(BundleStats &bundleStats, uint32_t statFlag);
     int32_t GetBundleStats(const std::string &pkgName, int32_t userId, BundleStats &bundleStats,
         int32_t appIndex, uint32_t statFlag);
-    int32_t GetBundleNameAndUid(int32_t userId, std::map<int32_t, std::string> &bundleNameAndUid);
+    int32_t GetBundleNameAndUid(int32_t userId, std::vector<BundleUidInfo> &bundleInfos);
     int32_t DelBundleExtStats(uint32_t userId, const std::string &bundleName);
     int32_t SetExtBundleStats(uint32_t userId, const ExtBundleStats &stats);
     int32_t GetExtBundleStats(uint32_t userId, ExtBundleStats &stats);

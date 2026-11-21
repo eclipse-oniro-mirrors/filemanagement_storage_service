@@ -37,6 +37,20 @@ const int32_t LIMITSIZE = 1000;
 const std::string EMPTY_STRING = "";
 const int64_t BYTES_PRE_MB = 1024 * 1024;
 
+namespace {
+// ClassifyUidQuotaRecord test helpers; constants from storage_service_constant.cpp.
+// Weak-sandbox range [100, 999]
+constexpr int32_t BASE_USER_ID = 200000;
+KernelNextDqBlk MakeDq(uint32_t uid, uint64_t space, uint64_t inodes)
+{
+    KernelNextDqBlk dq;
+    dq.dqbId = static_cast<uint32_t>(uid);
+    dq.dqbCurSpace = space;
+    dq.dqbCurInodes = inodes;
+    return dq;
+}
+} // namespace
+
 class QuotaManagerTest : public testing::Test {
 public:
     static void SetUpTestCase(void) {};
@@ -1744,6 +1758,128 @@ HWTEST_F(QuotaManagerTest, QuotaManagerTest_ScanDirectoryEntries_001, TestSize.L
     std::map<std::string, int64_t> dirSizeMap;
     int32_t result = QuotaManager::GetInstance().ScanDirectoryEntries(path, blks, uids, largeFiles, dirSizeMap);
     EXPECT_TRUE(result == E_OK || result == E_STATISTIC_OPEN_DIR_FAILED);
+}
+
+/**
+ * @tc.name: QuotaManagerTest_ClassifyUidQuotaRecord_UserApp_001
+ * @tc.desc: Test ClassifyUidQuotaRecord routes uid >= APP_UID entries into userAppVec (SR20260812026188).
+ * @tc.type: FUNC
+ * @tc.require: SR20260812026188
+ */
+HWTEST_F(QuotaManagerTest, QuotaManagerTest_ClassifyUidQuotaRecord_UserApp_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "QuotaManagerTest_ClassifyUidQuotaRecord_UserApp_001 start";
+    constexpr int32_t userAppUid = 100 * BASE_USER_ID; // 20000000 == APP_UID
+    KernelNextDqBlk dq = MakeDq(static_cast<uint32_t>(userAppUid), 1000, 10);
+    AllAppVec allVec;
+    std::map<int32_t, int64_t> userAppSizeMap;
+    uint64_t iNodes = 0;
+    bool cont = QuotaManager::GetInstance().ClassifyUidQuotaRecord(userAppUid, dq, false, allVec,
+        userAppSizeMap, iNodes);
+    EXPECT_TRUE(cont);
+    EXPECT_EQ(allVec.userAppVec.size(), static_cast<size_t>(1));
+    EXPECT_EQ(allVec.userAppVec[0].uid, userAppUid);
+    EXPECT_EQ(allVec.userAppVec[0].size, static_cast<int64_t>(1000));
+    EXPECT_EQ(userAppSizeMap[100], static_cast<int64_t>(1000));
+    EXPECT_EQ(iNodes, static_cast<uint64_t>(10));
+    GTEST_LOG_(INFO) << "QuotaManagerTest_ClassifyUidQuotaRecord_UserApp_001 end";
+}
+
+/**
+ * @tc.name: QuotaManagerTest_ClassifyUidQuotaRecord_SysApp_001
+ * @tc.desc: Test ClassifyUidQuotaRecord routes uid in sysApp range into sysApp path (SR20260812026188).
+ * @tc.type: FUNC
+ * @tc.require: SR20260812026188
+ */
+HWTEST_F(QuotaManagerTest, QuotaManagerTest_ClassifyUidQuotaRecord_SysApp_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "QuotaManagerTest_ClassifyUidQuotaRecord_SysApp_001 start";
+    constexpr int32_t sysAppUid = 20000; // ZERO_USER_MIN_UID
+    KernelNextDqBlk dq = MakeDq(static_cast<uint32_t>(sysAppUid), 500, 5);
+    AllAppVec allVec;
+    std::map<int32_t, int64_t> userAppSizeMap;
+    uint64_t iNodes = 0;
+    bool cont = QuotaManager::GetInstance().ClassifyUidQuotaRecord(sysAppUid, dq, false, allVec,
+        userAppSizeMap, iNodes);
+    EXPECT_TRUE(cont);
+    EXPECT_EQ(iNodes, static_cast<uint64_t>(5));
+    GTEST_LOG_(INFO) << "QuotaManagerTest_ClassifyUidQuotaRecord_SysApp_001 end";
+}
+
+/**
+ * @tc.name: QuotaManagerTest_ClassifyUidQuotaRecord_SaUid_001
+ * @tc.desc: Test ClassifyUidQuotaRecord skips classified SA uid without counting into otherAppVec (SR20260812026188).
+ * @tc.type: FUNC
+ * @tc.require: SR20260812026188
+ */
+HWTEST_F(QuotaManagerTest, QuotaManagerTest_ClassifyUidQuotaRecord_SaUid_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "QuotaManagerTest_ClassifyUidQuotaRecord_SaUid_001 start";
+    constexpr int32_t saUid = 5522; // SA uid outside the userApp/sysApp/weak-sandbox ranges
+    KernelNextDqBlk dq = MakeDq(static_cast<uint32_t>(saUid), 300, 3);
+    AllAppVec allVec;
+    std::map<int32_t, int64_t> userAppSizeMap;
+    uint64_t iNodes = 0;
+    bool cont = QuotaManager::GetInstance().ClassifyUidQuotaRecord(saUid, dq, true, allVec,
+        userAppSizeMap, iNodes);
+    EXPECT_TRUE(cont);
+    EXPECT_TRUE(allVec.userAppVec.empty());
+    EXPECT_TRUE(allVec.sysAppVec.empty());
+    EXPECT_TRUE(allVec.otherAppVec.empty());
+    EXPECT_EQ(iNodes, static_cast<uint64_t>(3));
+    GTEST_LOG_(INFO) << "QuotaManagerTest_ClassifyUidQuotaRecord_SaUid_001 end";
+}
+
+/**
+ * @tc.name: QuotaManagerTest_ClassifyUidQuotaRecord_WeakSandboxExcluded_001
+ * @tc.desc: Test ClassifyUidQuotaRecord excludes weak-sandbox uid in [100,999] from otherAppVec (SR20260812026188).
+ * @tc.type: FUNC
+ * @tc.require: SR20260812026188
+ */
+HWTEST_F(QuotaManagerTest, QuotaManagerTest_ClassifyUidQuotaRecord_WeakSandboxExcluded_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "QuotaManagerTest_ClassifyUidQuotaRecord_WeakSandboxExcluded_001 start";
+    // Sample three points: lower bound 100, typical weak-sandbox uid 500, upper bound 999
+    for (int32_t weakUid : {100, 500, 999}) {
+        KernelNextDqBlk dq = MakeDq(static_cast<uint32_t>(weakUid), 777, 7);
+        AllAppVec allVec;
+        std::map<int32_t, int64_t> userAppSizeMap;
+        uint64_t iNodes = 0;
+        bool cont = QuotaManager::GetInstance().ClassifyUidQuotaRecord(weakUid, dq, false, allVec,
+            userAppSizeMap, iNodes);
+        EXPECT_TRUE(cont);
+        // Exclusion branch: weak-sandbox uids must not be counted into otherAppVec
+        EXPECT_TRUE(allVec.otherAppVec.empty());
+        EXPECT_TRUE(allVec.userAppVec.empty());
+        EXPECT_TRUE(allVec.sysAppVec.empty());
+        // Inodes are still accumulated per the scan loop protocol
+        EXPECT_EQ(iNodes, static_cast<uint64_t>(7));
+    }
+    GTEST_LOG_(INFO) << "QuotaManagerTest_ClassifyUidQuotaRecord_WeakSandboxExcluded_001 end";
+}
+
+/**
+ * @tc.name: QuotaManagerTest_ClassifyUidQuotaRecord_OtherApp_001
+ * @tc.desc: Test ClassifyUidQuotaRecord keeps routing residual non-SA uid into otherAppVec (SR20260812026188).
+ * @tc.type: FUNC
+ * @tc.require: SR20260812026188
+ */
+HWTEST_F(QuotaManagerTest, QuotaManagerTest_ClassifyUidQuotaRecord_OtherApp_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "QuotaManagerTest_ClassifyUidQuotaRecord_OtherApp_001 start";
+    // 99: below the weak-sandbox lower bound, in no whitelist/exclusion range, still otherAppVec
+    constexpr int32_t otherUid = 99;
+    KernelNextDqBlk dq = MakeDq(static_cast<uint32_t>(otherUid), 400, 4);
+    AllAppVec allVec;
+    std::map<int32_t, int64_t> userAppSizeMap;
+    uint64_t iNodes = 0;
+    bool cont = QuotaManager::GetInstance().ClassifyUidQuotaRecord(otherUid, dq, false, allVec,
+        userAppSizeMap, iNodes);
+    EXPECT_TRUE(cont);
+    EXPECT_EQ(allVec.otherAppVec.size(), static_cast<size_t>(1));
+    EXPECT_EQ(allVec.otherAppVec[0].uid, otherUid);
+    EXPECT_EQ(allVec.otherAppVec[0].size, static_cast<int64_t>(400));
+    GTEST_LOG_(INFO) << "QuotaManagerTest_ClassifyUidQuotaRecord_OtherApp_001 end";
 }
 } // STORAGE_DAEMON
 } // OHOS

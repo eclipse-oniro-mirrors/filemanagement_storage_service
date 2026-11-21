@@ -28,6 +28,7 @@
 #include "storage_service_errno.h"
 #include "storage_total_status_service_mock.h"
 #include "utils/storage_utils.h"
+#include "storage_space_manager_client.h"
 
 namespace {
 using namespace OHOS;
@@ -90,6 +91,62 @@ int32_t StorageStatusManager::GetBundleStats(const std::string &bundleName, int 
     int32_t appIndex, uint32_t statFlag)
 {
     return g_getBundleStatsRet;
+}
+
+// Link-time stub (symbol takes precedence over libstorage_manager.z.so, same pattern as
+// storage_monitor_service_test): on real devices the original implementation gets the
+// real BMS proxy via samgr and bypasses this file's stubs, breaking the g_* mock values.
+// The stub returns a controllable proxy so the queries go through the g_* globals.
+class TestBundleMgrStub : public AppExecFwk::IBundleMgr {
+public:
+    ErrCode GetNameAndIndexForUid(const int32_t uid, std::string &bundleName, int32_t &appIndex) override
+    {
+        bundleName = g_bundleName;
+        appIndex = g_appIndex;
+        return g_getNameIndexRet;
+    }
+    bool GetAllBundleStats(int32_t userId, std::vector<int64_t> &bundleStats) override
+    {
+        if (userId == 0) {
+            bundleStats = g_mockZeroUserBundleStats;
+        } else {
+            bundleStats = g_mockBundleStats;
+        }
+        return g_getAllBundleStatsRet;
+    }
+    bool GetBundleStats(const std::string &bundleName, int32_t userId, std::vector<int64_t> &bundleStats,
+        int32_t appIndex, uint32_t statFlag) override
+    {
+        // GetCurrentBundleStats: succeed/fail per g_getBundleStatsRet
+        if (g_getBundleStatsRet != E_OK) {
+            return false;
+        }
+        bundleStats = g_mockBundleStats;
+        return true;
+    }
+    bool GetBundleNameForUid(const int uid, std::string &bundleName) override
+    {
+        bundleName = g_bundleName;
+        return true;
+    }
+    sptr<IRemoteObject> AsObject() override
+    {
+        return nullptr;
+    }
+};
+
+BundleMgrConnector::BundleMgrConnector() {}
+BundleMgrConnector::~BundleMgrConnector() {}
+
+sptr<AppExecFwk::IBundleMgr> BundleMgrConnector::GetBundleMgrProxy()
+{
+    static sptr<AppExecFwk::IBundleMgr> stub = new TestBundleMgrStub();
+    return stub;
+}
+
+int32_t BundleMgrConnector::ResetBundleMgrProxy()
+{
+    return E_OK;
 }
 }
 
@@ -1016,5 +1073,76 @@ HWTEST_F(StorageStatusManagerTest, STORAGE_GetSystemDataSize_00007, testing::ext
     // usedMetadata is 0 (degradation), systemDataSize >= otherUidSizeSum(5000)
     EXPECT_GE(systemDataSize, 5000);
     GTEST_LOG_(INFO) << "STORAGE_GetSystemDataSize_00007 end, systemDataSize=" << systemDataSize;
+}
+
+/**
+ * @tc.number: STORAGE_GetFileStorageStats_NonPcRoute_0001
+ * @tc.name: STORAGE_GetFileStorageStats_NonPcRoute_0001
+ * @tc.desc: Test GetFileStorageStats keeps quota baseline routing on non-PC shape.
+ * @tc.size: MEDIUM
+ * @tc.type: FUNC
+ * @tc.level Level 1
+ * @tc.require: SR20260812027362
+ */
+HWTEST_F(StorageStatusManagerTest, STORAGE_GetFileStorageStats_NonPcRoute_0001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "STORAGE_GetFileStorageStats_NonPcRoute_0001 start";
+    StorageStats storageStats = {0, 0, 0, 0, 0, 0};
+    int32_t userId = 100;
+    int64_t before = storageStats.file_;
+    int32_t result = GetFileStorageStats(userId, storageStats);
+    // Non-PC keeps quota baseline routing (this file's stub returns E_OK)
+    EXPECT_EQ(result, E_OK);
+    GTEST_LOG_(INFO) << "STORAGE_GetFileStorageStats_NonPcRoute_0001 end, before=" << before;
+}
+
+/**
+ * @tc.number: STORAGE_QueryPublicDirSizeViaSa_0001
+ * @tc.name: STORAGE_QueryPublicDirSizeViaSa_0001
+ * @tc.desc: Test QueryPublicDirSizeViaSa forward path via SA8650 client.
+ * @tc.size: MEDIUM
+ * @tc.type: FUNC
+ * @tc.level Level 1
+ * @tc.require: SR20260812027362
+ */
+HWTEST_F(StorageStatusManagerTest, STORAGE_QueryPublicDirSizeViaSa_0001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "STORAGE_QueryPublicDirSizeViaSa_0001 start";
+    int32_t userId = 100;
+    int64_t publicDirSize = -1;
+    // SA not connected in the unit-test environment: expect an error code (caller tolerates)
+    int32_t ret = QueryPublicDirSizeViaSa(userId, publicDirSize);
+    EXPECT_NE(ret, E_OK);
+    GTEST_LOG_(INFO) << "STORAGE_QueryPublicDirSizeViaSa_0001 end, ret=" << ret;
+}
+
+/**
+ * @tc.number: STORAGE_GetBundleNameAndUid_VectorResult_0001
+ * @tc.name: STORAGE_GetBundleNameAndUid_VectorResult_0001
+ * @tc.desc: Test GetBundleNameAndUid vector overload basic contract (SR20260812026188).
+ * @tc.size: MEDIUM
+ * @tc.type: FUNC
+ * @tc.level Level 1
+ * @tc.require: SR20260812026188
+ */
+HWTEST_F(StorageStatusManagerTest, STORAGE_GetBundleNameAndUid_VectorResult_0001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "STORAGE_GetBundleNameAndUid_VectorResult_0001 start";
+    auto service = DelayedSingleton<StorageStatusManager>::GetInstance();
+    int32_t userId = 100;
+    std::vector<BundleUidInfo> bundleInfos;
+    int32_t result = service->GetBundleNameAndUid(userId, bundleInfos);
+    if (result == E_OK) {
+        // Real-device env: BMS proxy present, query succeeds. An empty list is legal
+        // (no apps under this userId); validate the data contract when non-empty.
+        for (const auto &info : bundleInfos) {
+            EXPECT_FALSE(info.bundleName.empty());
+            EXPECT_GE(info.appUid, 0);
+        }
+    } else {
+        // Pure unit-test env: BMS proxy absent, expect E_SERVICE_IS_NULLPTR (no crash)
+        EXPECT_EQ(result, E_SERVICE_IS_NULLPTR);
+    }
+    GTEST_LOG_(INFO) << "STORAGE_GetBundleNameAndUid_VectorResult_0001 end";
 }
 

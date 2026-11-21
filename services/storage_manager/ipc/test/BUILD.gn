@@ -51,6 +51,8 @@ ohos_unittest("storage_manager_provider_test") {
     "${storage_manager_path}/include/utils",
     "${storage_manager_path}/include/storage",
     "${storage_interface_path}/innerkits/storage_manager/native",
+    "${storage_service_path}/services/storage_space_manager/interfaces/innerkits/include",
+    "${storage_service_path}/services/storage_space_manager/common/include",
   ]
 
   if (storage_service_storage_statistics_manager) {
@@ -71,6 +73,7 @@ ohos_unittest("storage_manager_provider_test") {
   deps = [
     "${storage_daemon_path}:storage_daemon_header",
     "${storage_interface_path}/innerkits/storage_manager/native:storage_manager_sa_proxy",
+    "${storage_service_path}/services/storage_space_manager/interfaces/innerkits:storage_space_manager_innerkits",
   ]
 
   external_deps = [
@@ -154,6 +157,8 @@ ohos_unittest("storage_manager_provider_permission_test") {
     "${storage_manager_path}/include/utils",
     "${storage_manager_path}/include/storage",
     "${storage_interface_path}/innerkits/storage_manager/native",
+    "${storage_service_path}/services/storage_space_manager/interfaces/innerkits/include",
+    "${storage_service_path}/services/storage_space_manager/common/include",
   ]
 
   if (storage_service_storage_statistics_manager) {
@@ -174,6 +179,7 @@ ohos_unittest("storage_manager_provider_permission_test") {
   deps = [
     "${storage_daemon_path}:storage_daemon_header",
     "${storage_interface_path}/innerkits/storage_manager/native:storage_manager_sa_proxy",
+    "${storage_service_path}/services/storage_space_manager/interfaces/innerkits:storage_space_manager_innerkits",
   ]
 
   external_deps = [
@@ -265,6 +271,8 @@ sources = [
     "${storage_manager_path}/include/utils",
     "${storage_manager_path}/include/storage",
     "${storage_interface_path}/innerkits/storage_manager/native",
+    "${storage_service_path}/services/storage_space_manager/interfaces/innerkits/include",
+    "${storage_service_path}/services/storage_space_manager/common/include",
   ]
 
   defines = [
@@ -284,6 +292,7 @@ sources = [
   deps = [
     "${storage_daemon_path}:storage_daemon_header",
     "${storage_interface_path}/innerkits/storage_manager/native:storage_manager_sa_proxy",
+    "${storage_service_path}/services/storage_space_manager/interfaces/innerkits:storage_space_manager_innerkits",
   ]
 
   external_deps = [
@@ -371,6 +380,8 @@ ohos_unittest("storage_manager_provider_communication_test") {
     "${storage_manager_path}/include/utils",
     "${storage_manager_path}/include/storage",
     "${storage_interface_path}/innerkits/storage_manager/native",
+    "${storage_service_path}/services/storage_space_manager/interfaces/innerkits/include",
+    "${storage_service_path}/services/storage_space_manager/common/include",
   ]
 
   defines = [
@@ -392,6 +403,7 @@ ohos_unittest("storage_manager_provider_communication_test") {
   deps = [
     "${storage_daemon_path}:storage_daemon_header",
     "${storage_interface_path}/innerkits/storage_manager/native:storage_manager_sa_proxy",
+    "${storage_service_path}/services/storage_space_manager/interfaces/innerkits:storage_space_manager_innerkits",
   ]
 
   external_deps = [
@@ -477,6 +489,8 @@ ohos_unittest("storage_manager_provider_other_test") {
     "${storage_manager_path}/include/utils",
     "${storage_manager_path}/include/storage",
     "${storage_interface_path}/innerkits/storage_manager/native",
+    "${storage_service_path}/services/storage_space_manager/interfaces/innerkits/include",
+    "${storage_service_path}/services/storage_space_manager/common/include",
   ]
 
   if (storage_service_storage_statistics_manager) {
@@ -498,6 +512,7 @@ ohos_unittest("storage_manager_provider_other_test") {
   deps = [
     "${storage_daemon_path}:storage_daemon_header",
     "${storage_interface_path}/innerkits/storage_manager/native:storage_manager_sa_proxy",
+    "${storage_service_path}/services/storage_space_manager/interfaces/innerkits:storage_space_manager_innerkits",
   ]
 
   external_deps = [

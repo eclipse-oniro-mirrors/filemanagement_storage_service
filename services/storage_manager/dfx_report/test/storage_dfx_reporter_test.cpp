@@ -658,7 +658,7 @@ HWTEST_F(StorageDfxReporterTest, Storage_Service_StorageDfxReporterTest_CollectB
     std::ostringstream extraData;
     int32_t userId = 100;
 
-    // Test case: GetBundleNameAndUid returns empty map
+    // Test case: GetBundleNameAndUid returns empty list
     EXPECT_CALL(*stss, GetUsedInodes(_)).WillOnce(DoAll(SetArgReferee<0>(1000), Return(0)));
     EXPECT_CALL(*sss, GetBundleNameAndUid(_, _)).WillOnce(Return(0));
     EXPECT_CALL(*sdc, QueryOccupiedSpaceForSa(_, _, _, _)).WillRepeatedly(Return(0));
@@ -1072,6 +1072,161 @@ HWTEST_F(StorageDfxReporterTest, Storage_Service_StorageDfxReporterTest_CloneEve
     StorageDfxReporter::GetInstance().CloneEventReportStorageStatus();
     EXPECT_EQ(StorageDfxReporter::GetInstance().eventReportTimes_.load(), 3);
     GTEST_LOG_(INFO) << "Storage_Service_StorageDfxReporterTest_CloneEventReportStorageStatus_004 end";
+}
+
+/**
+ * @tc.name: Storage_Service_StorageDfxReporterTest_CollectWeakSandboxAppStats_001
+ * @tc.desc: Verify CollectWeakSandboxAppStats with mixed uid/appUid entries (SR20260812026188).
+ * @tc.type: FUNC
+ * @tc.require: SR20260812026188
+ */
+HWTEST_F(StorageDfxReporterTest, Storage_Service_StorageDfxReporterTest_CollectWeakSandboxAppStats_001,
+    TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "Storage_Service_StorageDfxReporterTest_CollectWeakSandboxAppStats_001 start";
+    int32_t userId = 100;
+    // Two weak-sandbox entries (uid != appUid) + one normal app (uid == appUid)
+    std::vector<BundleUidInfo> bundleInfos;
+    BundleUidInfo weak1;
+    weak1.bundleName = "com.test.weak1";
+    weak1.uid = 100;      // weak-sandbox: uid == userId
+    weak1.appUid = 124500;
+    weak1.appIndex = 0;
+    bundleInfos.push_back(weak1);
+    BundleUidInfo weak2;
+    weak2.bundleName = "com.test.weak2";
+    weak2.uid = 100;
+    weak2.appUid = 124501;
+    weak2.appIndex = 0;
+    bundleInfos.push_back(weak2);
+    BundleUidInfo normal1;
+    normal1.bundleName = "com.test.normal1";
+    normal1.uid = 124502;
+    normal1.appUid = 124502; // not weak-sandbox
+    normal1.appIndex = 0;
+    bundleInfos.push_back(normal1);
+
+    BundleStats bundleStats;
+    bundleStats.appSize_ = 100;
+    bundleStats.cacheSize_ = 200;
+    bundleStats.dataSize_ = 300;
+    // GetBundleStats succeeds; normal apps trigger no supplementary query
+    EXPECT_CALL(*sss, GetBundleStats(_, _, _, _, _))
+        .WillRepeatedly(DoAll(SetArgReferee<2>(bundleStats), Return(E_OK)));
+
+    StorageDfxReporter::GetInstance().weakSandboxApps_.clear();
+    int32_t ret = StorageDfxReporter::GetInstance().CollectWeakSandboxAppStats(userId, bundleInfos);
+    EXPECT_EQ(ret, E_OK);
+    // Only the two weak-sandbox apps are collected; the normal app is skipped
+    EXPECT_EQ(StorageDfxReporter::GetInstance().weakSandboxApps_.size(), static_cast<size_t>(2));
+    // Weak-sandbox size caliber = appSize + cacheSize + dataSize = 600
+    EXPECT_EQ(StorageDfxReporter::GetInstance().weakSandboxApps_[0].size,
+        static_cast<int64_t>(100 + 200 + 300));
+    StorageDfxReporter::GetInstance().weakSandboxApps_.clear();
+    GTEST_LOG_(INFO) << "Storage_Service_StorageDfxReporterTest_CollectWeakSandboxAppStats_001 end";
+}
+
+/**
+ * @tc.name: Storage_Service_StorageDfxReporterTest_CollectWeakSandboxAppStats_002
+ * @tc.desc: Verify CollectWeakSandboxAppStats keeps zero on single-app query failure (SR20260812026188).
+ * @tc.type: FUNC
+ * @tc.require: SR20260812026188
+ */
+HWTEST_F(StorageDfxReporterTest, Storage_Service_StorageDfxReporterTest_CollectWeakSandboxAppStats_002,
+    TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "Storage_Service_StorageDfxReporterTest_CollectWeakSandboxAppStats_002 start";
+    int32_t userId = 100;
+    std::vector<BundleUidInfo> bundleInfos;
+    BundleUidInfo weak1;
+    weak1.bundleName = "com.test.weakfail";
+    weak1.uid = 100;
+    weak1.appUid = 124500;
+    weak1.appIndex = 0;
+    bundleInfos.push_back(weak1);
+
+    // Single-app failure: entry stays in place (attribution completeness), size = 0
+    EXPECT_CALL(*sss, GetBundleStats(_, _, _, _, _)).WillRepeatedly(Return(-1));
+
+    StorageDfxReporter::GetInstance().weakSandboxApps_.clear();
+    int32_t ret = StorageDfxReporter::GetInstance().CollectWeakSandboxAppStats(userId, bundleInfos);
+    EXPECT_EQ(ret, E_OK);
+    EXPECT_EQ(StorageDfxReporter::GetInstance().weakSandboxApps_.size(), static_cast<size_t>(1));
+    EXPECT_EQ(StorageDfxReporter::GetInstance().weakSandboxApps_[0].size, static_cast<int64_t>(0));
+    StorageDfxReporter::GetInstance().weakSandboxApps_.clear();
+    GTEST_LOG_(INFO) << "Storage_Service_StorageDfxReporterTest_CollectWeakSandboxAppStats_002 end";
+}
+
+/**
+ * @tc.name: Storage_Service_StorageDfxReporterTest_WriteWeakSandboxInfoToExtraData_001
+ * @tc.desc: Verify WriteWeakSandboxInfoToExtraData skips empty list, emits segment when non-empty (SR20260812026188).
+ * @tc.type: FUNC
+ * @tc.require: SR20260812026188
+ */
+HWTEST_F(StorageDfxReporterTest, Storage_Service_StorageDfxReporterTest_WriteWeakSandboxInfoToExtraData_001,
+    TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "Storage_Service_StorageDfxReporterTest_WriteWeakSandboxInfoToExtraData_001 start";
+    // Empty list: no segment output
+    std::ostringstream emptyData;
+    StorageDfxReporter::GetInstance().weakSandboxApps_.clear();
+    StorageDfxReporter::GetInstance().WriteWeakSandboxInfoToExtraData(emptyData);
+    EXPECT_TRUE(emptyData.str().find("WeakSandbox") == std::string::npos);
+
+    // Non-empty list: independent segment (attribution by appUid + bundleName)
+    StorageDfxReporter::GetInstance().weakSandboxApps_.clear();
+    BundleUidInfo app1;
+    app1.bundleName = "com.test.ws1";
+    app1.uid = 100;
+    app1.appUid = 124500;
+    app1.appIndex = 0;
+    app1.size = 500;
+    app1.iNodes = 10;
+    StorageDfxReporter::GetInstance().weakSandboxApps_.push_back(app1);
+    BundleUidInfo app2;
+    app2.bundleName = "com.test.ws2";
+    app2.uid = 100;
+    app2.appUid = 124501;
+    app2.appIndex = 0;
+    app2.size = 900;
+    app2.iNodes = 20;
+    StorageDfxReporter::GetInstance().weakSandboxApps_.push_back(app2);
+
+    std::ostringstream extraData;
+    StorageDfxReporter::GetInstance().WriteWeakSandboxInfoToExtraData(extraData);
+    std::string output = extraData.str();
+    EXPECT_NE(output.find("WeakSandbox"), std::string::npos);
+    EXPECT_NE(output.find("com.test.ws1"), std::string::npos);
+    EXPECT_NE(output.find("com.test.ws2"), std::string::npos);
+    StorageDfxReporter::GetInstance().weakSandboxApps_.clear();
+    GTEST_LOG_(INFO) << "Storage_Service_StorageDfxReporterTest_WriteWeakSandboxInfoToExtraData_001 end";
+}
+
+/**
+ * @tc.name: Storage_Service_StorageDfxReporterTest_CollectBundleStatistics_ClearWeakSandbox_001
+ * @tc.desc: Verify CollectBundleStatistics clears weakSandboxApps_ at round start (SR20260812026188).
+ * @tc.type: FUNC
+ * @tc.require: SR20260812026188
+ */
+HWTEST_F(StorageDfxReporterTest, Storage_Service_StorageDfxReporterTest_CollectBundleStatistics_ClearWeakSandbox_001,
+    TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "Storage_Service_StorageDfxReporterTest_CollectBundleStatistics_ClearWeakSandbox_001 start";
+    std::ostringstream extraData;
+    int32_t userId = 100;
+    // Preload a stale entry to verify the round-start clearing
+    BundleUidInfo stale;
+    stale.bundleName = "com.test.stale";
+    StorageDfxReporter::GetInstance().weakSandboxApps_.push_back(stale);
+
+    EXPECT_CALL(*stss, GetUsedInodes(_)).WillRepeatedly(DoAll(SetArgReferee<0>(1000), Return(0)));
+    EXPECT_CALL(*sss, GetBundleNameAndUid(_, _)).WillRepeatedly(Return(0));
+    EXPECT_CALL(*sdc, QueryOccupiedSpaceForSa(_, _, _, _)).WillRepeatedly(Return(0));
+    int32_t ret = StorageDfxReporter::GetInstance().CollectBundleStatistics(userId, extraData);
+    EXPECT_EQ(ret, 0);
+    // On non-PC form the list stays empty after the round-start clearing
+    EXPECT_EQ(StorageDfxReporter::GetInstance().weakSandboxApps_.size(), static_cast<size_t>(0));
+    GTEST_LOG_(INFO) << "Storage_Service_StorageDfxReporterTest_CollectBundleStatistics_ClearWeakSandbox_001 end";
 }
 } // namespace StorageManager
 } // namespace OHOS

@@ -25,4 +25,7 @@ interface OHOS.StorageSpaceManager.IStorageSpaceManager {
     /* ---------- Bundle Cache Management APIs ---------- */
     [ipccode 6, oneway] void CleanBundleCache([in] int userId);
     [ipccode 7] void GetDataShareService([in] String uri, [out] IRemoteObject remoteObject);
+
+    /* ---------- File Data Service Query APIs ---------- */
+    [ipccode 8] void GetPublicDirSize([in] int userId, [out] long publicDirSize);
 }

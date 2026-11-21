@@ -40,6 +40,8 @@ enum {
     E_DEATH_RECIPIENT_IS_NULLPTR = STORAGE_SPACE_MANAGER_SYS_CAP_TAG + 12,
     E_CACHEING = STORAGE_SPACE_MANAGER_SYS_CAP_TAG + 13,
     E_SERVICE_ON_IDLE = STORAGE_SPACE_MANAGER_SYS_CAP_TAG + 14,
+    // Dedicated error code for file data service query failures (= 13620015)
+    E_FILE_DATA_SERVICE_ERROR = STORAGE_SPACE_MANAGER_SYS_CAP_TAG + 15,
 };
 
 } // namespace StorageSpaceManager
