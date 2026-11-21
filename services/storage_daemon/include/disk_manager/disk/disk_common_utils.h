@@ -38,6 +38,8 @@ struct ScsiCmdInfo {
 
 bool IsAcceptableUuid(const std::string &uuid);
 int GetMaxVolume(dev_t device);
+bool HasUtilLinuxKeyword(const std::vector<std::string> &output);
+std::vector<std::string> BuildBlkidCmd(bool isUtilLinux, const std::string &type, const std::string &devPath);
 std::string GetBlkidData(const std::string &devPath, const std::string &type);
 std::string GetBlkidDataByCmd(std::vector<std::string> &cmd);
 std::string DiskType2Str(uint8_t diskType);

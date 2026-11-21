@@ -104,6 +104,48 @@ ohos_unittest("disk_utils_test") {
   ]
 }
 
+ohos_unittest("blkid_form_test") {
+  branch_protector_ret = "pac_ret"
+  sanitize = {
+    integer_overflow = true
+    cfi = true
+    cfi_cross_dso = true
+    debug = false
+  }
+  module_out_path = "storage_service/storage_service/storage_daemon"
+
+  defines = [
+    "STORAGE_LOG_TAG = \"StorageDaemon\"",
+    "LOG_DOMAIN = 0xD004301",
+  ]
+
+  include_dirs = [
+    "${storage_daemon_path}/include",
+    "${storage_service_common_path}/include",
+    "${storage_daemon_path}/include/mock",
+    "${storage_interface_path}/innerkits/storage_manager/native",
+  ]
+
+  sources = [
+    "${storage_daemon_path}/disk_manager/src/disk/disk_common_utils.cpp",
+    "${storage_daemon_path}/mock/file_utils_mock.cpp",
+    "blkid_form_test.cpp",
+  ]
+
+  deps = [
+    "${storage_daemon_path}:storage_common_utils",
+    "${storage_daemon_path}:storage_daemon_header",
+  ]
+
+  external_deps = [
+    "bounds_checking_function:libsec_shared",
+    "c_utils:utils",
+    "googletest:gmock_main",
+    "googletest:gtest_main",
+    "hilog:libhilog",
+  ]
+}
+
 ohos_unittest("storage_statistics_radar_test") {
   branch_protector_ret = "pac_ret"
   sanitize = {
@@ -352,6 +394,7 @@ group("storage_daemon_utils_test") {
   testonly = true
   deps = [
     ":file_utils_test",
+    ":blkid_form_test",
     ":storage_statistics_radar_test",
     ":fsck_diagnose_test",
     ":volume_op_diag_test",
