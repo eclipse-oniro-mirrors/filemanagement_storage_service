@@ -332,7 +332,8 @@ static void HandleBasicStorageOps(FuzzedDataProvider& provider,
         case FUNC_CHECK: {
             std::string devPath = provider.ConsumeRandomLengthString();
             std::string fsType = provider.ConsumeRandomLengthString();
-            providerObj->Check(devPath, fsType);
+            bool autoFix = provider.ConsumeBool();
+            providerObj->Check(devPath, fsType, autoFix);
             break;
         }
         default: break;
