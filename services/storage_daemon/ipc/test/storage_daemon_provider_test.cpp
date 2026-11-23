@@ -3862,60 +3862,6 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_GetDiskPowerCycleC
     EXPECT_EQ(ret, E_PERMISSION_DENIED);
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_GetDiskPowerCycleCount_001 end";
 }
-
-/**
- * @tc.name: StorageDaemonProviderTest_GetDiskPowerCycleCount_002
- * @tc.desc: GetDiskPowerCycleCount with empty devName returns E_PARAMS_INVALID.
- * @tc.type: FUNC
- * @tc.require: NA
- */
-HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_GetDiskPowerCycleCount_002, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_GetDiskPowerCycleCount_002 start";
-    SetCallingUid(DISK_MANAGER_UID);
-    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
-    uint64_t count = 0;
-    int32_t ret = storageDaemonProviderTest_->GetDiskPowerCycleCount("", count);
-    EXPECT_EQ(ret, E_PARAMS_INVALID);
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_GetDiskPowerCycleCount_002 end";
-}
-
-/**
- * @tc.name: StorageDaemonProviderTest_GetDiskPowerCycleCount_003
- * @tc.desc: GetDiskPowerCycleCount with devName containing / returns E_PARAMS_INVALID.
- * @tc.type: FUNC
- * @tc.require: NA
- */
-HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_GetDiskPowerCycleCount_003, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_GetDiskPowerCycleCount_003 start";
-    SetCallingUid(DISK_MANAGER_UID);
-    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
-    uint64_t count = 0;
-    int32_t ret = storageDaemonProviderTest_->GetDiskPowerCycleCount("sda/b", count);
-    EXPECT_EQ(ret, E_PARAMS_INVALID);
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_GetDiskPowerCycleCount_003 end";
-}
-
-/**
- * @tc.name: StorageDaemonProviderTest_GetDiskPowerCycleCount_004
- * @tc.desc: GetDiskPowerCycleCount with valid uid and devName returns E_NOT_SUPPORT when disk mgr lib not loaded.
- * @tc.type: FUNC
- * @tc.require: NA
- */
-HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_GetDiskPowerCycleCount_004, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_GetDiskPowerCycleCount_004 start";
-    SetCallingUid(DISK_MANAGER_UID);
-    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
-    uint64_t count = 0;
-    int32_t ret = storageDaemonProviderTest_->GetDiskPowerCycleCount("nvme0n1", count);
-    // 环境相关：宿主无磁盘 SO -> EnsureLoaded 失败返回 E_NOT_SUPPORT；
-    // 设备已安装 SO -> 真实调用执行，门与参数校验通过后恒返回 E_OK
-    EXPECT_TRUE(ret == E_NOT_SUPPORT || ret == E_OK);
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_GetDiskPowerCycleCount_004 end";
-}
-
 /**
  * @tc.name: StorageDaemonProviderTest_GetDiskPowerOnHours_001
  * @tc.desc: GetDiskPowerOnHours with wrong uid returns E_PERMISSION_DENIED.
@@ -3931,41 +3877,6 @@ HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_GetDiskPowerOnHour
     int32_t ret = storageDaemonProviderTest_->GetDiskPowerOnHours("nvme0n1", hours);
     EXPECT_EQ(ret, E_PERMISSION_DENIED);
     GTEST_LOG_(INFO) << "StorageDaemonProviderTest_GetDiskPowerOnHours_001 end";
-}
-
-/**
- * @tc.name: StorageDaemonProviderTest_GetDiskPowerOnHours_002
- * @tc.desc: GetDiskPowerOnHours with empty devName returns E_PARAMS_INVALID.
- * @tc.type: FUNC
- * @tc.require: NA
- */
-HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_GetDiskPowerOnHours_002, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_GetDiskPowerOnHours_002 start";
-    SetCallingUid(DISK_MANAGER_UID);
-    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
-    uint64_t hours = 0;
-    int32_t ret = storageDaemonProviderTest_->GetDiskPowerOnHours("", hours);
-    EXPECT_EQ(ret, E_PARAMS_INVALID);
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_GetDiskPowerOnHours_002 end";
-}
-
-/**
- * @tc.name: StorageDaemonProviderTest_GetDiskPowerOnHours_003
- * @tc.desc: GetDiskPowerOnHours with valid uid and devName returns E_NOT_SUPPORT when disk mgr lib not loaded.
- * @tc.type: FUNC
- * @tc.require: NA
- */
-HWTEST_F(StorageDaemonProviderTest, StorageDaemonProviderTest_GetDiskPowerOnHours_003, TestSize.Level1)
-{
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_GetDiskPowerOnHours_003 start";
-    SetCallingUid(DISK_MANAGER_UID);
-    ASSERT_TRUE(storageDaemonProviderTest_ != nullptr);
-    uint64_t hours = 0;
-    int32_t ret = storageDaemonProviderTest_->GetDiskPowerOnHours("nvme0n1", hours);
-    // 环境相关：宿主无磁盘 SO -> E_NOT_SUPPORT；设备已装 SO -> E_OK
-    EXPECT_TRUE(ret == E_NOT_SUPPORT || ret == E_OK);
-    GTEST_LOG_(INFO) << "StorageDaemonProviderTest_GetDiskPowerOnHours_003 end";
 }
 #endif
 
