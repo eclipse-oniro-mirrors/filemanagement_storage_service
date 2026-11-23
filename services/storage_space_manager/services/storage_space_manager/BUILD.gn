@@ -55,6 +55,7 @@ ohos_shared_library("storage_space_manager") {
     "src/cache_clean_controller/cache_clean_controller.cpp",
     "src/cache_clean_controller/clean_record_store.cpp",
     "src/common_event/storage_common_event_subscriber.cpp",
+    "src/file_data_service/public_dir_size_connector.cpp",
     "src/ipc/storage_space_manager_provider.cpp",
     "src/storage/storage_total_status_service.cpp",
     "../../utils/src/ipc_caller_auth.cpp",

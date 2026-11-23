@@ -62,6 +62,8 @@ constexpr int32_t LINE_MAX_LEN = 32;
 constexpr int32_t MAX_WHITE_PATH_COUNT = 10;
 constexpr int32_t MAX_WHITE_UID_COUNT = 3;
 constexpr int32_t TOP_LARGE_COUNT = 50;
+constexpr int32_t MIN_USER_OR_WEAK_SANDBOX_UID = 100;
+constexpr int32_t MAX_USER_OR_WEAK_SANDBOX_UID = 999;
 constexpr uint64_t LARGE_FILE_SIZE_THRESHOLD = 5 * 1024 * 1024;
 constexpr int64_t LARGE_DIR_SIZE_THRESHOLD = 5 * 1024 * 1024;
 static std::map<std::string, std::string> mQuotaReverseMounts;
@@ -427,6 +429,38 @@ void QuotaManager::SortAndCutSaInfoVec(std::vector<UidSaInfo> &vec, bool isSa)
     vec.insert(vec.end(), tmpVec.begin(), tmpVec.end());
 }
 
+// Classify one quota record into buckets: userApp[APP_UID,+) / sysApp[ZERO_USER_MIN,ZERO_USER_MAX] /
+// weak sandbox skip[100,999] / otherApp. Returns true to continue the uid scan loop.
+bool QuotaManager::ClassifyUidQuotaRecord(int32_t dqUid, const KernelNextDqBlk &dq, bool isSaUid,
+    AllAppVec &allVec, std::map<int32_t, int64_t> &userAppSizeMap, uint64_t &iNodes)
+{
+    iNodes += dq.dqbCurInodes;
+    if (dqUid >= StorageService::APP_UID) {
+        int32_t userId = dqUid / StorageService::USER_ID_BASE;
+        if (userAppSizeMap.find(userId) != userAppSizeMap.end()) {
+            userAppSizeMap[userId] += static_cast<int64_t>(dq.dqbCurSpace);
+        } else {
+            userAppSizeMap[userId] = static_cast<int64_t>(dq.dqbCurSpace);
+        }
+        allVec.userAppVec.push_back(UidSaInfo(dqUid, "", static_cast<int64_t>(dq.dqbCurSpace), dq.dqbCurInodes));
+        return true;
+    }
+    if (dqUid >= StorageService::ZERO_USER_MIN_UID && dqUid <= StorageService::ZERO_USER_MAX_UID) {
+        AssembleSysAppVec(dqUid, dq, userAppSizeMap, allVec.sysAppVec);
+        return true;
+    }
+    if (isSaUid) {
+        return true;
+    }
+    // Weak-sandbox uids are counted by the dfx weak-sandbox segment; skip here to avoid
+    // double counting. No mobile apps/SAs live in this range, so mobile is unaffected.
+    if (dqUid >= MIN_USER_OR_WEAK_SANDBOX_UID && dqUid <= MAX_USER_OR_WEAK_SANDBOX_UID) {
+        return true;
+    }
+    allVec.otherAppVec.push_back(UidSaInfo(dqUid, "", static_cast<int64_t>(dq.dqbCurSpace), dq.dqbCurInodes));
+    return true;
+}
+
 void QuotaManager::GetOccupiedSpaceForUidList(AllAppVec &allVec, uint64_t &iNodes)
 {
     LOGI("[L2:QuotaManager] GetOccupiedSpaceForUidList: >>> ENTER <<<");
@@ -442,7 +476,6 @@ void QuotaManager::GetOccupiedSpaceForUidList(AllAppVec &allVec, uint64_t &iNode
         }
         int32_t dqUid = static_cast<int32_t>(dq.dqbId);
         bool isSaUid = false;
-        iNodes += dq.dqbCurInodes;
         for (UidSaInfo &info : allVec.sysSaVec) {
             if (info.uid == dqUid) {
                 isSaUid = true;
@@ -451,18 +484,8 @@ void QuotaManager::GetOccupiedSpaceForUidList(AllAppVec &allVec, uint64_t &iNode
                 break;
             }
         }
-        if (dqUid >= StorageService::APP_UID) {
-            int32_t userId = dqUid / StorageService::USER_ID_BASE;
-            if (userAppSizeMap.find(userId) != userAppSizeMap.end()) {
-                userAppSizeMap[userId] += static_cast<int64_t>(dq.dqbCurSpace);
-            } else {
-                userAppSizeMap[userId] = static_cast<int64_t>(dq.dqbCurSpace);
-            }
-            allVec.userAppVec.push_back(UidSaInfo(dqUid, "", static_cast<int64_t>(dq.dqbCurSpace), dq.dqbCurInodes));
-        } else if (dqUid >= StorageService::ZERO_USER_MIN_UID && dqUid <= StorageService::ZERO_USER_MAX_UID) {
-            AssembleSysAppVec(dqUid, dq, userAppSizeMap, allVec.sysAppVec);
-        } else if (!isSaUid) {
-            allVec.otherAppVec.push_back(UidSaInfo(dqUid, "", static_cast<int64_t>(dq.dqbCurSpace), dq.dqbCurInodes));
+        if (!ClassifyUidQuotaRecord(dqUid, dq, isSaUid, allVec, userAppSizeMap, iNodes)) {
+            break;
         }
         count++;
         curUid = dqUid + 1;

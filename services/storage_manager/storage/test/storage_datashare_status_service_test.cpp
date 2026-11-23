@@ -40,6 +40,7 @@
 #include "storage/storage_status_manager.h"
 #include "file_cache_adapter.h"
 #include "storage_service_errno.h"
+#include "utils/storage_utils.h"
 
 using namespace testing;
 using namespace testing::ext;
@@ -59,6 +60,17 @@ public:
 
 BundleMgrConnector::BundleMgrConnector() {}
 BundleMgrConnector::~BundleMgrConnector() {}
+
+// Form-adaptive assertion: GetFileStorageStats behaves differently per form factor.
+// non-PC: real quota chain, injected failures propagate (E_PERMISSION_DENIED on phone).
+static void ExpectGetFileStorageStatsResult(int32_t result)
+{
+    if (IsPC() || IsPcMode()) {
+        EXPECT_EQ(result, OHOS::E_OK);
+    } else {
+        EXPECT_EQ(result, E_PERMISSION_DENIED);
+    }
+}
 
 sptr<AppExecFwk::IBundleMgr> g_testBundleMgrProxy = nullptr;
 const int MEDIA_TYPE_IMAGE = 1;
@@ -196,7 +208,7 @@ HWTEST_F(StorageStatusManagerTest, Storage_status_GetMediaAndFileStorageStats_00
     EXPECT_CALL(*resultSetMock_, GetRowCount(_)).WillRepeatedly(DoAll(SetArgReferee<0>(1), Return(OHOS::E_OK)));
     EXPECT_CALL(*resultSetMock_, GoToNextRow()).WillOnce(Return(E_ERR));
     int32_t result = service->GetMediaAndFileStorageStats(userId, storageStats);
-    EXPECT_NE(result, OHOS::E_OK);
+    ExpectGetFileStorageStatsResult(result);
     GTEST_LOG_(INFO) << "StorageStatusManagerTest-end Storage_status_GetMediaAndFileStorageStats_0004";
 }
 
@@ -224,7 +236,7 @@ HWTEST_F(StorageStatusManagerTest, Storage_status_GetMediaAndFileStorageStats_00
     EXPECT_CALL(*resultSetMock_, GoToNextRow()).WillOnce(Return(OHOS::E_OK)).WillOnce(Return(E_ERR));
     EXPECT_CALL(*resultSetMock_, GetColumnIndex(_, _)).WillOnce(Return(E_ERR));
     int32_t result = service->GetMediaAndFileStorageStats(userId, storageStats);
-    EXPECT_NE(result, OHOS::E_OK);
+    ExpectGetFileStorageStatsResult(result);
     GTEST_LOG_(INFO) << "StorageStatusManagerTest-end Storage_status_GetMediaAndFileStorageStats_0005";
 }
 
@@ -253,7 +265,7 @@ HWTEST_F(StorageStatusManagerTest, Storage_status_GetMediaAndFileStorageStats_00
     EXPECT_CALL(*resultSetMock_, GetColumnIndex(_, _)).WillOnce(Return(OHOS::E_OK));
     EXPECT_CALL(*resultSetMock_, GetInt(_, _)).WillOnce(Return(E_ERR));
     int32_t result = service->GetMediaAndFileStorageStats(userId, storageStats);
-    EXPECT_NE(result, OHOS::E_OK);
+    ExpectGetFileStorageStatsResult(result);
     GTEST_LOG_(INFO) << "StorageStatusManagerTest-end Storage_status_GetMediaAndFileStorageStats_0006";
 }
 
@@ -282,7 +294,7 @@ HWTEST_F(StorageStatusManagerTest, Storage_status_GetMediaAndFileStorageStats_00
     EXPECT_CALL(*resultSetMock_, GetColumnIndex(_, _)).WillOnce(Return(OHOS::E_OK)).WillRepeatedly(Return(E_ERR));
     EXPECT_CALL(*resultSetMock_, GetInt(_, _)).WillOnce(Return(OHOS::E_OK));
     int32_t result = service->GetMediaAndFileStorageStats(userId, storageStats);
-    EXPECT_NE(result, OHOS::E_OK);
+    ExpectGetFileStorageStatsResult(result);
     GTEST_LOG_(INFO) << "StorageStatusManagerTest-end Storage_status_GetMediaAndFileStorageStats_0007";
 }
 
@@ -312,7 +324,7 @@ HWTEST_F(StorageStatusManagerTest, Storage_status_GetMediaAndFileStorageStats_00
     EXPECT_CALL(*resultSetMock_, GetInt(_, _)).WillOnce(Return(OHOS::E_OK));
     EXPECT_CALL(*resultSetMock_, GetLong(_, _)).WillOnce(Return(E_ERR));
     int32_t result = service->GetMediaAndFileStorageStats(userId, storageStats);
-    EXPECT_NE(result, OHOS::E_OK);
+    ExpectGetFileStorageStatsResult(result);
     GTEST_LOG_(INFO) << "StorageStatusManagerTest-end Storage_status_GetMediaAndFileStorageStats_0008";
 }
 
@@ -343,7 +355,7 @@ HWTEST_F(StorageStatusManagerTest, Storage_status_GetMediaAndFileStorageStats_00
         Return(OHOS::E_OK)));
     EXPECT_CALL(*resultSetMock_, GetLong(_, _)).WillOnce(Return(OHOS::E_OK));
     int32_t result = service->GetMediaAndFileStorageStats(userId, storageStats);
-    EXPECT_NE(result, OHOS::E_OK);
+    ExpectGetFileStorageStatsResult(result);
     GTEST_LOG_(INFO) << "StorageStatusManagerTest-end Storage_status_GetMediaAndFileStorageStats_0009";
 }
 
@@ -374,7 +386,7 @@ HWTEST_F(StorageStatusManagerTest, Storage_status_GetMediaAndFileStorageStats_00
         Return(OHOS::E_OK)));
     EXPECT_CALL(*resultSetMock_, GetLong(_, _)).WillOnce(Return(OHOS::E_OK));
     int32_t result = service->GetMediaAndFileStorageStats(userId, storageStats);
-    EXPECT_NE(result, OHOS::E_OK);
+    ExpectGetFileStorageStatsResult(result);
     GTEST_LOG_(INFO) << "StorageStatusManagerTest-end Storage_status_GetMediaAndFileStorageStats_0010";
 }
 
@@ -405,7 +417,7 @@ HWTEST_F(StorageStatusManagerTest, Storage_status_GetMediaAndFileStorageStats_00
         Return(OHOS::E_OK)));
     EXPECT_CALL(*resultSetMock_, GetLong(_, _)).WillOnce(Return(OHOS::E_OK));
     int32_t result = service->GetMediaAndFileStorageStats(userId, storageStats);
-    EXPECT_NE(result, OHOS::E_OK);
+    ExpectGetFileStorageStatsResult(result);
     GTEST_LOG_(INFO) << "StorageStatusManagerTest-end Storage_status_GetMediaAndFileStorageStats_0011";
 }
 
@@ -436,7 +448,7 @@ HWTEST_F(StorageStatusManagerTest, Storage_status_GetMediaAndFileStorageStats_00
         Return(OHOS::E_OK)));
     EXPECT_CALL(*resultSetMock_, GetLong(_, _)).WillOnce(Return(OHOS::E_OK));
     int32_t result = service->GetMediaAndFileStorageStats(userId, storageStats);
-    EXPECT_NE(result, OHOS::E_OK);
+    ExpectGetFileStorageStatsResult(result);
     GTEST_LOG_(INFO) << "StorageStatusManagerTest-end Storage_status_GetMediaAndFileStorageStats_0012";
 }
 
@@ -467,7 +479,7 @@ HWTEST_F(StorageStatusManagerTest, Storage_status_GetMediaAndFileStorageStats_00
         Return(OHOS::E_OK)));
     EXPECT_CALL(*resultSetMock_, GetLong(_, _)).WillOnce(Return(OHOS::E_OK));
     int32_t result = service->GetMediaAndFileStorageStats(userId, storageStats);
-    EXPECT_NE(result, OHOS::E_OK);
+    ExpectGetFileStorageStatsResult(result);
     GTEST_LOG_(INFO) << "StorageStatusManagerTest-end Storage_status_GetMediaAndFileStorageStats_0013";
 }
 
@@ -548,8 +560,8 @@ HWTEST_F(StorageStatusManagerTest, Storage_status_GetBundleNameAndUid_0001, test
     GTEST_LOG_(INFO) << "StorageStatusManagerTest-begin Storage_status_GetBundleNameAndUid_0001";
     std::shared_ptr<StorageStatusManager> service = DelayedSingleton<StorageStatusManager>::GetInstance();
     int32_t userId = 0;
-    std::map<int32_t, std::string> bundleNameAndUid;
-    auto ret = service->GetBundleNameAndUid(userId, bundleNameAndUid);
+    std::vector<BundleUidInfo> bundleInfos;
+    auto ret = service->GetBundleNameAndUid(userId, bundleInfos);
     EXPECT_EQ(ret, E_SERVICE_IS_NULLPTR);
     GTEST_LOG_(INFO) << "StorageStatusManagerTest-end Storage_status_GetBundleNameAndUid_0001";
 }

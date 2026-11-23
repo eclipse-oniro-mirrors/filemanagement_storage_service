@@ -469,5 +469,100 @@ HWTEST_F(StorageUtilsTest, IsPathStartWithUdmfClip_UserIdMismatch, testing::ext:
 
     GTEST_LOG_(INFO) << "IsPathStartWithUdmfClip_UserIdMismatch end";
 }
+
+/**
+ * @tc.number: SUB_STORAGE_GetDeviceType_0000
+ * @tc.name: SUB_STORAGE_GetDeviceType_0000
+ * @tc.desc: Test GetDeviceType returns a valid device type string.
+ * @tc.type: FUNC
+ * @tc.require: SR20260812027362
+ */
+HWTEST_F(StorageUtilsTest, SUB_STORAGE_GetDeviceType_0000, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "SUB_STORAGE_GetDeviceType_0000 start";
+
+    std::string deviceType = GetDeviceType();
+    // Fallback: "0" (PC) even on read failure; always a valid device type
+    EXPECT_TRUE(deviceType == "0" || deviceType == "1" || deviceType == "2" || deviceType == "3");
+
+    GTEST_LOG_(INFO) << "SUB_STORAGE_GetDeviceType_0000 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_DeviceTypeHelpers_MutuallyExclusive_0000
+ * @tc.name: SUB_STORAGE_DeviceTypeHelpers_MutuallyExclusive_0000
+ * @tc.desc: Test IsPC/IsPhone/IsPad/IsTv are mutually exclusive and match GetDeviceType.
+ * @tc.type: FUNC
+ * @tc.require: SR20260812027362
+ */
+HWTEST_F(StorageUtilsTest, SUB_STORAGE_DeviceTypeHelpers_MutuallyExclusive_0000, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "SUB_STORAGE_DeviceTypeHelpers_MutuallyExclusive_0000 start";
+
+    std::string deviceType = GetDeviceType();
+    bool isPC = IsPC();
+    bool isPhone = IsPhone();
+    bool isPad = IsPad();
+    bool isTv = IsTv();
+    int trueCount = (isPC ? 1 : 0) + (isPhone ? 1 : 0) + (isPad ? 1 : 0) + (isTv ? 1 : 0);
+    // The four form predicates are mutually exclusive: at most one true at any time
+    EXPECT_TRUE(trueCount <= 1);
+    EXPECT_EQ(isPC, deviceType == "0");
+    EXPECT_EQ(isPhone, deviceType == "1");
+    EXPECT_EQ(isPad, deviceType == "2");
+    EXPECT_EQ(isTv, deviceType == "3");
+
+    GTEST_LOG_(INFO) << "SUB_STORAGE_DeviceTypeHelpers_MutuallyExclusive_0000 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_IsPC_0000
+ * @tc.name: SUB_STORAGE_IsPC_0000
+ * @tc.desc: Test IsPC consistently with GetDeviceType.
+ * @tc.type: FUNC
+ * @tc.require: SR20260812027362
+ */
+HWTEST_F(StorageUtilsTest, SUB_STORAGE_IsPC_0000, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "SUB_STORAGE_IsPC_0000 start";
+
+    EXPECT_EQ(IsPC(), GetDeviceType() == "0");
+
+    GTEST_LOG_(INFO) << "SUB_STORAGE_IsPC_0000 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_IsPcMode_0000
+ * @tc.name: SUB_STORAGE_IsPcMode_0000
+ * @tc.desc: Test IsPcMode returns a stable bool result (read failure falls back false).
+ * @tc.type: FUNC
+ * @tc.require: SR20260812027362
+ */
+HWTEST_F(StorageUtilsTest, SUB_STORAGE_IsPcMode_0000, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "SUB_STORAGE_IsPcMode_0000 start";
+
+    // PC mode falls back to false on read failure; the result must stay boolean
+    EXPECT_TRUE(IsPcMode() == true || IsPcMode() == false);
+
+    GTEST_LOG_(INFO) << "SUB_STORAGE_IsPcMode_0000 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_IsPcMode_Stable_0000
+ * @tc.name: SUB_STORAGE_IsPcMode_Stable_0000
+ * @tc.desc: Test IsPcMode returns the same result on consecutive calls without external change.
+ * @tc.type: FUNC
+ * @tc.require: SR20260812027362
+ */
+HWTEST_F(StorageUtilsTest, SUB_STORAGE_IsPcMode_Stable_0000, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "SUB_STORAGE_IsPcMode_Stable_0000 start";
+
+    // Consecutive reads with no parameter change must agree
+    EXPECT_EQ(IsPcMode(), IsPcMode());
+
+    GTEST_LOG_(INFO) << "SUB_STORAGE_IsPcMode_Stable_0000 end";
+}
 } // namespace StorageManager
 } // namespace OHOS

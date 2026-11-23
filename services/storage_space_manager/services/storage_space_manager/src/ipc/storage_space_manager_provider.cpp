@@ -21,6 +21,7 @@
 #include "cache_clean_controller.h"
 #include "clean_record_store.h"
 #include "common_event/storage_common_event_subscriber.h"
+#include "file_data_service/public_dir_size_connector.h"
 #include "ipc_caller_auth.h"
 #include "storage/storage_total_status_service.h"
 #include "storage_space_manager_errno.h"
@@ -398,6 +399,35 @@ int32_t StorageSpaceManagerProvider::GetDataShareService(const std::string &uri,
     }
     SubtractRunningIpcCount();
     return (remoteObject != nullptr) ? E_OK : E_PERMISSION_DENIED;
+}
+
+int32_t StorageSpaceManagerProvider::GetPublicDirSize(int32_t userId, int64_t &publicDirSize)
+{
+    publicDirSize = 0;
+    if (!serviceReady_.load(std::memory_order_acquire)) {
+        LOGE("Service is not ready");
+        return E_SERVICE_NOT_READY;
+    }
+    if (!IpcCallerAuth::VerifyCallerPermission(PERMISSION_STORAGE_MANAGER)) {
+        LOGE("Permission denied, need %{public}s", PERMISSION_STORAGE_MANAGER.c_str());
+        return E_PERMISSION_DENIED;
+    }
+    if (!IpcCallerAuth::IsCallingNativeToken()) {
+        LOGE("Permission denied, caller is not SA");
+        return E_PERMISSION_DENIED;
+    }
+    if (userId < 0) {
+        LOGE("GetPublicDirSize invalid userId=%{public}d", userId);
+        return E_INVALID_ARGUMENT;
+    }
+    DelayUnloadTask();
+    if (!ExitIdleState()) {
+        return E_SERVICE_ON_IDLE;
+    }
+    AddRunningIpcCount();
+    int32_t ret = PublicDirSizeConnector::GetInstance().QueryPublicDirSize(userId, publicDirSize);
+    SubtractRunningIpcCount();
+    return ret;
 }
 
 } // namespace StorageSpaceManager

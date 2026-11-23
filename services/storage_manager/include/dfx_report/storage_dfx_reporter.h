@@ -25,6 +25,7 @@
 #include <atomic>
 #include "storage_stats.h"
 #include "statistic_info.h"
+#include "storage/storage_status_manager.h"
 
 namespace OHOS {
 namespace StorageManager {
@@ -57,6 +58,8 @@ private:
     int32_t CollectStorageStats(int32_t userId, std::ostringstream &extraData);
     void CollectMetadataAndAnco(std::ostringstream &extraData);
     int32_t CollectBundleStatistics(int32_t userId, std::ostringstream &extraData);
+    int32_t CollectWeakSandboxAppStats(int32_t userId, const std::vector<BundleUidInfo> &bundleInfos);
+    void WriteWeakSandboxInfoToExtraData(std::ostringstream &extraData);
     void WriteExtraData(const std::vector<UidSaInfo> &vec, std::ostringstream &extraData);
     void WriteUidInfoListToExtraData(AllAppVec &allVec, std::ostringstream &extraData);
     double ConvertBytesToMB(int64_t bytes, int32_t decimalPlaces);
@@ -95,6 +98,9 @@ private:
     std::atomic<bool> isScanRunning_{false};
     std::mutex scanMutex_;
     std::mutex cloneEventMutex_;
+
+    // Weak-sandbox supplementary results; accessed only by the single-threaded dfx periodic task
+    std::vector<BundleUidInfo> weakSandboxApps_;
 };
 } // namespace StorageManager
 } // namespace OHOS

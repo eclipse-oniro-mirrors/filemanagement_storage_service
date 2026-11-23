@@ -65,9 +65,9 @@ int32_t StorageStatusManager::GetAllExtBundleStats(uint32_t userId, std::vector<
     return IStorageStatusManagerMock::storageStatusManager->GetAllExtBundleStats(userId, statsVec);
 }
 
-int32_t StorageStatusManager::GetBundleNameAndUid(int32_t userId, std::map<int32_t, std::string> &bundleNameAndUid)
+int32_t StorageStatusManager::GetBundleNameAndUid(int32_t userId, std::vector<BundleUidInfo> &bundleInfos)
 {
-    return IStorageStatusManagerMock::storageStatusManager->GetBundleNameAndUid(userId, bundleNameAndUid);
+    return IStorageStatusManagerMock::storageStatusManager->GetBundleNameAndUid(userId, bundleInfos);
 }
 
 int32_t StorageStatusManager::DelBundleExtStats(uint32_t userId, const std::string &bundleName)

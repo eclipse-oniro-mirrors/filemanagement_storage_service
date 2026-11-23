@@ -47,6 +47,7 @@ group("storage_space_manager_ut") {
     ":bundle_manager_adapter_proxy_unittest",
     ":clean_record_store_unittest",
     ":clean_record_datashare_stub_unittest",
+    ":public_dir_size_connector_unittest",
   ]
 }
 
@@ -327,7 +328,26 @@ ohos_unittest("clean_record_store_unittest") {
   ]
 }
 
-# CleanRecordDataShareStub Unit Test
+# PublicDirSizeConnector Unit Test
+ohos_unittest("public_dir_size_connector_unittest") {
+  module_out_path = "storage_service/storage_service/storage_space_manager"
+
+  configs = [
+    ":storage_space_manager_unittest_common",
+  ]
+
+  sources = [
+    "public_dir_size_connector_test.cpp",
+    "../../services/storage_space_manager/src/file_data_service/public_dir_size_connector.cpp",
+  ]
+
+  external_deps = [
+    "c_utils:utils",
+    "googletest:gmock_main",
+    "googletest:gtest_main",
+    "hilog:libhilog",
+  ]
+}
 ohos_unittest("clean_record_datashare_stub_unittest") {
   module_out_path = "storage_service/storage_service/storage_space_manager"
 

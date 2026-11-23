@@ -15,8 +15,10 @@
 
 #include "dfx_report/storage_dfx_reporter.h"
 
+#include <algorithm>
 #include <chrono>
 #include <ctime>
+#include <map>
 #include <iomanip>
 #include <sstream>
 #include <cmath>
@@ -32,13 +34,14 @@
 #include "storage/bundle_manager_connector.h"
 #include "scan/storage_manager_scan.h"
 #include "os_account_manager.h"
+#include "utils/storage_utils.h"
 
 namespace OHOS {
 namespace StorageManager {
 constexpr double DIVISOR = 1000.0 * 1000.0;
 constexpr double BASE_NUMBER = 10.0;
 constexpr int32_t ACCURACY_NUM = 2;
-constexpr int32_t TOP_COUNT = 20; // Top N directories to report
+constexpr int32_t TOP_COUNT = 20; // Top N entries to report
 constexpr int64_t TIME_INTERVAL_HOURS = 24;
 constexpr int32_t EVENT_REPORT_TIMES_MAX = 2;
 
@@ -249,9 +252,25 @@ int32_t StorageDfxReporter::CollectBundleStatistics(int32_t userId, std::ostring
         ConvertBytesToMB(usedInodes * FOUR_K, ACCURACY_NUM) <<"MB}" << std::endl;
 
     std::map<int32_t, std::string> bundleNameAndUid;
-    ret = StorageStatusManager::GetInstance().GetBundleNameAndUid(userId, bundleNameAndUid);
+    // Clear weak-sandbox results at round start to avoid stale entries across rounds
+    weakSandboxApps_.clear();
+    // Query the full bundle list only once (BMS traversal is expensive); the same vector
+    // feeds the weak-sandbox filter and derives the map for the quota queries.
+    std::vector<BundleUidInfo> bundleInfos;
+    ret = StorageStatusManager::GetInstance().GetBundleNameAndUid(userId, bundleInfos);
     if (ret != E_OK) {
         LOGE("GetBundleNameAndUid failed, ret=%{public}d", ret);
+    }
+    for (const auto &info : bundleInfos) {
+        bundleNameAndUid[info.uid] = info.bundleName;
+    }
+    // Collect weak-sandbox apps (uid != appUid) with per-app BMS queries;
+    // otherwise keep weakSandboxApps_ empty.
+    if (IsPC() || IsPcMode()) {
+        ret = CollectWeakSandboxAppStats(userId, bundleInfos);
+        if (ret != E_OK) {
+            LOGE("CollectWeakSandboxAppStats failed, ret=%{public}d", ret);
+        }
     }
     AllAppVec allVec;
     int64_t saTotalSize = 0;
@@ -295,6 +314,70 @@ void StorageDfxReporter::CorrectSaFromWhiteList(std::vector<UidSaInfo> &vec)
     }
 }
 
+int32_t StorageDfxReporter::CollectWeakSandboxAppStats(int32_t userId,
+    const std::vector<BundleUidInfo> &bundleInfos)
+{
+    auto bundleMgr = BundleMgrConnector::GetInstance().GetBundleMgrProxy();
+    if (bundleMgr == nullptr) {
+        LOGE("WeakSandbox connect bundle manager sa proxy failed.");
+        return E_SERVICE_IS_NULLPTR;
+    }
+    for (auto info : bundleInfos) {
+        if (info.uid == info.appUid) {
+            continue; // not weak-sandbox: covered by the quota path
+        }
+        BundleStats bundleStats;
+        // Record 0 on failure so the entry stays in place (attribution completeness)
+        int32_t ret = StorageStatusManager::GetInstance().GetBundleStats(info.bundleName, userId,
+            bundleStats, info.appIndex, 0);
+        if (ret != E_OK) {
+            LOGE("WeakSandbox GetBundleStats failed, bundleName=%{public}s, ret=%{public}d",
+                info.bundleName.c_str(), ret);
+            info.size = 0;
+        } else {
+            info.size = bundleStats.appSize_ + bundleStats.cacheSize_ + bundleStats.dataSize_;
+        }
+        // Inode query follows the same failure-tolerant semantics
+        if (ret == E_OK) {
+            ret = bundleMgr->GetBundleInodeCount(info.bundleName, info.appIndex, userId, info.iNodes);
+            if (ret != E_OK) {
+                LOGE("WeakSandbox GetBundleInodeCount failed, bundleName=%{public}s, ret=%{public}d",
+                    info.bundleName.c_str(), ret);
+                info.iNodes = 0;
+            }
+        }
+        weakSandboxApps_.push_back(info);
+    }
+    LOGI("CollectWeakSandboxAppStats done, weakSandboxCount=%{public}zu", weakSandboxApps_.size());
+    return E_OK;
+}
+
+// Dfx output: independent weak-sandbox segment, TOP_COUNT entries sorted by size desc;
+// skipped when the list is empty.
+void StorageDfxReporter::WriteWeakSandboxInfoToExtraData(std::ostringstream &extraData)
+{
+    if (weakSandboxApps_.empty()) {
+        return;
+    }
+    // Size and inodes were filled by CollectWeakSandboxAppStats; assemble output entries here
+    std::vector<UidSaInfo> sorted;
+    for (const auto &app : weakSandboxApps_) {
+        UidSaInfo info;
+        info.uid = app.appUid;
+        info.saName = app.bundleName;
+        info.size = app.size;
+        info.iNodes = app.iNodes;
+        sorted.push_back(info);
+    }
+    std::stable_sort(sorted.begin(), sorted.end(),
+        [](const UidSaInfo &a, const UidSaInfo &b) { return a.size > b.size; });
+    if (sorted.size() > static_cast<size_t>(TOP_COUNT)) {
+        sorted.resize(static_cast<size_t>(TOP_COUNT));
+    }
+    extraData << "{WeakSandbox data is:}" << std::endl;
+    WriteExtraData(sorted, extraData);
+}
+
 void StorageDfxReporter::WriteExtraData(const std::vector<UidSaInfo> &vec, std::ostringstream &extraData)
 {
     for (const auto& info : vec) {
@@ -319,6 +402,8 @@ void StorageDfxReporter::WriteUidInfoListToExtraData(AllAppVec &allVec, std::ost
     } else {
         extraData << "{otherAppVec data is null}" << std::endl;
     }
+    // Weak-sandbox segment: emitted only when non-empty
+    WriteWeakSandboxInfoToExtraData(extraData);
 }
 
 double StorageDfxReporter::ConvertBytesToMB(int64_t bytes, int32_t decimalPlaces)

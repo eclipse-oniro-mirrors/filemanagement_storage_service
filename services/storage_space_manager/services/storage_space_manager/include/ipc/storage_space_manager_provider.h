@@ -62,6 +62,7 @@ public:
     int32_t GetFreeInodes(int64_t &freeInodes) override;
     int32_t CleanBundleCache(int32_t userId) override;
     int32_t GetDataShareService(const std::string &uri, sptr<IRemoteObject> &remoteObject) override;
+    int32_t GetPublicDirSize(int32_t userId, int64_t &publicDirSize) override;
 
     void AddRunningIpcCount();
     void SubtractRunningIpcCount();

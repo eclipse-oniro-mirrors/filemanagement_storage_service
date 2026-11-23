@@ -46,6 +46,9 @@ public:
 
     int32_t CleanBundleCache(int32_t userId);
     int32_t GetDataShareService(const std::string &uri, sptr<IRemoteObject> &remoteObject);
+    // Query the public directory size (via the file data service); the caller decides
+    // the tolerance caliber for reporting/interaction
+    int32_t GetPublicDirSize(int32_t userId, int64_t &publicDirSize);
 
     void LoadSystemAbilitySuccess(const sptr<IRemoteObject> &remoteObject);
     void LoadSystemAbilityFail();

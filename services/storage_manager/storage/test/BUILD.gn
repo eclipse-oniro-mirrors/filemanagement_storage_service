@@ -154,6 +154,8 @@ ohos_unittest("storage_status_manager_test") {
     "${storage_manager_path}/include/utils/",
     "${storage_service_path}/utils/include",
     "${storage_service_path}/test/unittest/mock/include",
+    "${storage_service_path}/services/storage_space_manager/interfaces/innerkits/include",
+    "${storage_service_path}/services/storage_space_manager/common/include",
   ]
 
   defines = [
@@ -167,6 +169,7 @@ ohos_unittest("storage_status_manager_test") {
     "${storage_daemon_path}:storage_daemon_ipc",
     "${storage_interface_path}/innerkits/storage_manager/native:storage_manager_sa_proxy",
     "${storage_service_path}/services/storage_manager:storage_manager",
+    "${storage_service_path}/services/storage_space_manager/interfaces/innerkits:storage_space_manager_innerkits",
   ]
 
   external_deps = [
@@ -263,6 +266,9 @@ ohos_unittest("storage_datashare_status_service_test") {
     "${storage_manager_path}/include/mock",
     "${storage_service_path}/utils/include",
     "${storage_manager_path}/include/utils/",
+    # storage_status_manager.cpp calls SA8650 via storage_space_manager_client.h
+    "${storage_service_path}/services/storage_space_manager/interfaces/innerkits/include",
+    "${storage_service_path}/services/storage_space_manager/common/include",
   ]
 
   defines = [
@@ -277,6 +283,7 @@ ohos_unittest("storage_datashare_status_service_test") {
     "${storage_daemon_path}:storage_daemon_ipc",
     "${storage_interface_path}/innerkits/storage_manager/native:storage_manager_sa_proxy",
     "${storage_service_path}/services/storage_manager:storage_manager",
+    "${storage_service_path}/services/storage_space_manager/interfaces/innerkits:storage_space_manager_innerkits",
   ]
 
   external_deps = [
