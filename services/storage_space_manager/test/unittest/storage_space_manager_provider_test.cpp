@@ -13,12 +13,14 @@
  * limitations under the License.
  */
 
+#include <dlfcn.h>
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include "storage_space_manager_provider.h"
 #include "storage_space_manager_errno.h"
 #include "storage/storage_total_status_service.h"
 #include "cache_clean_controller.h"
+#include "file_data_service/public_dir_size_connector.h"
 #include "ipc_caller_auth_mock.h"
 
 namespace OHOS {
@@ -32,6 +34,46 @@ namespace {
     constexpr uint32_t TOKEN_TYPE_NATIVE = 1;
     constexpr int32_t PERMISSION_GRANTED = 0;
     constexpr int32_t PERMISSION_DENIED = -1;
+    constexpr const char *EXT_ADAPTER_LIBRARY_NAME = "libstorage_service_ext_adapter.z.so";
+
+bool IsExtAdapterAvailable()
+{
+    void *handle = dlopen(EXT_ADAPTER_LIBRARY_NAME, RTLD_NOW | RTLD_NODELETE | RTLD_NOLOAD);
+    if (handle == nullptr) {
+        handle = dlopen(EXT_ADAPTER_LIBRARY_NAME, RTLD_NOW | RTLD_NODELETE);
+    }
+    if (handle == nullptr) {
+        return false;
+    }
+    if (dlsym(handle, "QueryPublicDirSizeViaAdapter") == nullptr) {
+        dlclose(handle);
+        return false;
+    }
+    dlclose(handle);
+    return true;
+}
+
+class ProviderStateGuard {
+public:
+    explicit ProviderStateGuard(StorageSpaceManagerProvider *provider)
+        : provider_(provider), serviceReady_(provider->serviceReady_.load())
+    {
+        std::lock_guard<std::mutex> lock(provider_->depSaIdsMtx_);
+        depSaIds_ = provider_->depSaIds_;
+    }
+
+    ~ProviderStateGuard()
+    {
+        provider_->serviceReady_.store(serviceReady_);
+        std::lock_guard<std::mutex> lock(provider_->depSaIdsMtx_);
+        provider_->depSaIds_ = depSaIds_;
+    }
+
+private:
+    StorageSpaceManagerProvider *provider_;
+    bool serviceReady_;
+    std::unordered_set<int32_t> depSaIds_;
+};
 }
 
 class StorageSpaceManagerProviderTest : public testing::Test {
@@ -955,11 +997,212 @@ HWTEST_F(StorageSpaceManagerProviderTest, GetDataShareService_PermissionGranted,
     sptr<IRemoteObject> remoteObject;
     
     int32_t ret = provider_->GetDataShareService(uri, remoteObject);
-    
+
     EXPECT_EQ(ret, E_OK);
     EXPECT_NE(remoteObject, nullptr);
 
     GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_GetDataShareService_PermissionGranted end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_Provider_GetPublicDirSize_0001
+ * @tc.name: GetPublicDirSize_ServiceNotReady
+ * @tc.desc: Test GetPublicDirSize returns E_SERVICE_NOT_READY before the service is ready.
+ * @tc.type: FUNC
+ * @tc.level Level 2
+ * @tc.require: SR20260812026556
+ */
+HWTEST_F(StorageSpaceManagerProviderTest, GetPublicDirSize_ServiceNotReady, TestSize.Level2)
+{
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_GetPublicDirSize_ServiceNotReady start";
+
+    ASSERT_NE(provider_, nullptr);
+    ProviderStateGuard stateGuard(provider_);
+    provider_->serviceReady_.store(false);
+
+    int64_t publicDirSize = 1024;
+    int32_t ret = provider_->GetPublicDirSize(100, publicDirSize);
+    EXPECT_EQ(ret, E_SERVICE_NOT_READY);
+    EXPECT_EQ(publicDirSize, 0);
+
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_GetPublicDirSize_ServiceNotReady end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_Provider_GetPublicDirSize_0002
+ * @tc.name: GetPublicDirSize_PermissionDenied
+ * @tc.desc: Test GetPublicDirSize returns E_PERMISSION_DENIED when the caller lacks the permission.
+ * @tc.type: FUNC
+ * @tc.level Level 1
+ * @tc.require: SR20260812026556
+ */
+HWTEST_F(StorageSpaceManagerProviderTest, GetPublicDirSize_PermissionDenied, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_GetPublicDirSize_PermissionDenied start";
+
+    ASSERT_NE(provider_, nullptr);
+    ProviderStateGuard stateGuard(provider_);
+    provider_->serviceReady_.store(true);
+    g_mockVerifyAccessTokenResult = PERMISSION_DENIED;
+
+    int64_t publicDirSize = 1024;
+    int32_t ret = provider_->GetPublicDirSize(100, publicDirSize);
+    EXPECT_EQ(ret, E_PERMISSION_DENIED);
+    EXPECT_EQ(publicDirSize, 0);
+
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_GetPublicDirSize_PermissionDenied end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_Provider_GetPublicDirSize_0003
+ * @tc.name: GetPublicDirSize_NotNativeToken
+ * @tc.desc: Test GetPublicDirSize returns E_PERMISSION_DENIED for a non-native-token caller.
+ * @tc.type: FUNC
+ * @tc.level Level 1
+ * @tc.require: SR20260812026556
+ */
+HWTEST_F(StorageSpaceManagerProviderTest, GetPublicDirSize_NotNativeToken, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_GetPublicDirSize_NotNativeToken start";
+
+    ASSERT_NE(provider_, nullptr);
+    ProviderStateGuard stateGuard(provider_);
+    provider_->serviceReady_.store(true);
+    g_mockVerifyAccessTokenResult = PERMISSION_GRANTED;
+    g_mockTokenTypeFlag = 0; // not TOKEN_NATIVE
+
+    int64_t publicDirSize = 1024;
+    int32_t ret = provider_->GetPublicDirSize(100, publicDirSize);
+    EXPECT_EQ(ret, E_PERMISSION_DENIED);
+    EXPECT_EQ(publicDirSize, 0);
+
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_GetPublicDirSize_NotNativeToken end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_Provider_GetPublicDirSize_0004
+ * @tc.name: GetPublicDirSize_InvalidUserId
+ * @tc.desc: Test GetPublicDirSize returns E_INVALID_ARGUMENT for a negative userId.
+ * @tc.type: FUNC
+ * @tc.level Level 1
+ * @tc.require: SR20260812026556
+ */
+HWTEST_F(StorageSpaceManagerProviderTest, GetPublicDirSize_InvalidUserId, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_GetPublicDirSize_InvalidUserId start";
+
+    ASSERT_NE(provider_, nullptr);
+    ProviderStateGuard stateGuard(provider_);
+    provider_->serviceReady_.store(true);
+    g_mockVerifyAccessTokenResult = PERMISSION_GRANTED;
+    g_mockTokenTypeFlag = TOKEN_TYPE_NATIVE;
+
+    int64_t publicDirSize = 1024;
+    int32_t ret = provider_->GetPublicDirSize(-1, publicDirSize);
+    EXPECT_EQ(ret, E_INVALID_ARGUMENT);
+    EXPECT_EQ(publicDirSize, 0);
+
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_GetPublicDirSize_InvalidUserId end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_Provider_GetPublicDirSize_0005
+ * @tc.name: GetPublicDirSize_ValidCaller
+ * @tc.desc: Test GetPublicDirSize forwards to the connector for a valid native caller.
+ * @tc.type: FUNC
+ * @tc.level Level 1
+ * @tc.require: SR20260812026556
+ */
+HWTEST_F(StorageSpaceManagerProviderTest, GetPublicDirSize_ValidCaller, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_GetPublicDirSize_ValidCaller start";
+
+    ASSERT_NE(provider_, nullptr);
+    ProviderStateGuard stateGuard(provider_);
+    provider_->serviceReady_.store(true);
+    g_mockVerifyAccessTokenResult = PERMISSION_GRANTED;
+    g_mockTokenTypeFlag = TOKEN_TYPE_NATIVE;
+    const bool adapterAvailable = IsExtAdapterAvailable();
+    const int32_t ipcCountBefore = provider_->runningIpcCount_.load();
+
+    int64_t publicDirSize = 1024;
+    int32_t ret = provider_->GetPublicDirSize(100, publicDirSize);
+    if (adapterAvailable) {
+        EXPECT_EQ(ret, E_OK);
+    } else {
+        EXPECT_EQ(ret, E_FAIL);
+        EXPECT_EQ(publicDirSize, 0);
+    }
+    EXPECT_GE(publicDirSize, 0);
+    EXPECT_EQ(provider_->runningIpcCount_.load(), ipcCountBefore);
+
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_GetPublicDirSize_ValidCaller end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_Provider_GetPublicDirSize_0006
+ * @tc.name: GetPublicDirSize_ZeroUserId
+ * @tc.desc: Test GetPublicDirSize accepts userId 0 (system user) as a valid argument.
+ * @tc.type: FUNC
+ * @tc.level Level 2
+ * @tc.require: SR20260812026556
+ */
+HWTEST_F(StorageSpaceManagerProviderTest, GetPublicDirSize_ZeroUserId, TestSize.Level2)
+{
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_GetPublicDirSize_ZeroUserId start";
+
+    ASSERT_NE(provider_, nullptr);
+    ProviderStateGuard stateGuard(provider_);
+    provider_->serviceReady_.store(true);
+    g_mockVerifyAccessTokenResult = PERMISSION_GRANTED;
+    g_mockTokenTypeFlag = TOKEN_TYPE_NATIVE;
+    const bool adapterAvailable = IsExtAdapterAvailable();
+    const int32_t ipcCountBefore = provider_->runningIpcCount_.load();
+
+    int64_t publicDirSize = 1024;
+    int32_t ret = provider_->GetPublicDirSize(0, publicDirSize);
+    EXPECT_NE(ret, E_INVALID_ARGUMENT);
+    if (adapterAvailable) {
+        EXPECT_EQ(ret, E_OK);
+    } else {
+        EXPECT_EQ(ret, E_FAIL);
+        EXPECT_EQ(publicDirSize, 0);
+    }
+    EXPECT_GE(publicDirSize, 0);
+    EXPECT_EQ(provider_->runningIpcCount_.load(), ipcCountBefore);
+
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_GetPublicDirSize_ZeroUserId end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_Provider_OnAddSystemAbility_0004
+ * @tc.name: OnAddSystemAbility_WaitingForDeps
+ * @tc.desc: Test OnAddSystemAbility keeps waiting when dependent SAs remain after erasing one.
+ * @tc.type: FUNC
+ * @tc.level Level 2
+ * @tc.require: SR20260812026556
+ */
+HWTEST_F(StorageSpaceManagerProviderTest, OnAddSystemAbility_WaitingForDeps, TestSize.Level2)
+{
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_OnAddSystemAbility_WaitingForDeps start";
+
+    ASSERT_NE(provider_, nullptr);
+    ProviderStateGuard stateGuard(provider_);
+    provider_->serviceReady_.store(false);
+    {
+        std::lock_guard<std::mutex> lock(provider_->depSaIdsMtx_);
+        provider_->depSaIds_ = { BUNDLE_MGR_SERVICE_SYS_ABILITY_ID, COMMON_EVENT_SERVICE_ID };
+    }
+
+    provider_->OnAddSystemAbility(BUNDLE_MGR_SERVICE_SYS_ABILITY_ID, "");
+    EXPECT_FALSE(provider_->serviceReady_.load());
+    {
+        std::lock_guard<std::mutex> lock(provider_->depSaIdsMtx_);
+        EXPECT_EQ(provider_->depSaIds_.size(), static_cast<size_t>(1));
+        EXPECT_NE(provider_->depSaIds_.find(COMMON_EVENT_SERVICE_ID), provider_->depSaIds_.end());
+    }
+
+    GTEST_LOG_(INFO) << "StorageSpaceManagerProviderTest_OnAddSystemAbility_WaitingForDeps end";
 }
 
 } // namespace StorageSpaceManager
