@@ -13,17 +13,20 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
-#include <gmock/gmock.h>
-#include <fstream>
-#include <cstdio>
+#include <dlfcn.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 #include <climits>
 #include <cstdint>
-#include <unistd.h>
-#include <sys/stat.h>
+#include <cstdio>
+#include <fstream>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "cache_clean_controller/cache_clean_controller.h"
 #include "cache_clean_controller/clean_record_store.h"
-#include "i_quota_calculator.h"
+#include "include/i_quota_calculator.h"
 #include "storage_space_manager_errno.h"
 #include "storage_service_constant.h"
 

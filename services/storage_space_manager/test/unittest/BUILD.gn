@@ -17,6 +17,7 @@ import("//foundation/filemanagement/storage_service/services/storage_space_manag
 
 # 本目录下 ohos_unittest 共用：聚合 innerkits IDL 公开头、子系统 config、utils/mock 等；新增用例 configs 仅填本项即可。
 config("storage_space_manager_unittest_common") {
+  include_dirs = [ "${storage_space_manager_path}/interfaces/innerkits" ]
   configs = [
     "${storage_space_manager_path}/interfaces/innerkits:storage_space_manager_idl_public_config",
     "${storage_space_manager_path}/services/storage_space_manager:storage_space_manager_config",
@@ -117,6 +118,7 @@ ohos_unittest("cache_clean_controller_unittest") {
 
   sources = [
     "cache_clean_controller_test.cpp",
+    "cache_clean_controller_load_quota_test.cpp",
   ]
 
   deps = [
