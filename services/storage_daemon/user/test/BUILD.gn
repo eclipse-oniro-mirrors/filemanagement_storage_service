@@ -85,6 +85,7 @@ ohos_unittest("user_manager_test") {
     "ipc:libdbinder",
     "json:nlohmann_json_static",
     "os_account:os_account_innerkits",
+    "samgr:samgr_proxy",
   ]
 
   if (storage_service_cloud_fuse) {
