@@ -300,5 +300,42 @@ HWTEST_F(StorageSpaceManagerClientTest, OnAddSystemAbility_WithExistingState, Te
     EXPECT_FALSE(client->loadFinished_);
 }
 
+/**
+ * @tc.number: SUB_STORAGE_Client_GetPublicDirSize_0001
+ * @tc.name: GetPublicDirSize_ConnectFails
+ * @tc.desc: Test GetPublicDirSize propagates the Connect error when samgr is unavailable.
+ * @tc.type: FUNC
+ * @tc.level Level 1
+ * @tc.require: SR20260812026556
+ */
+HWTEST_F(StorageSpaceManagerClientTest, GetPublicDirSize_ConnectFails, TestSize.Level1)
+{
+    g_mockSamgrReturnNull = true;
+    auto *client = DelayedSingleton<StorageSpaceManagerClient>::GetInstance().get();
+    ASSERT_NE(client, nullptr);
+    int64_t publicDirSize = 1024;
+    // Connect fails (samgr unavailable) -> propagate E_SA_IS_NULLPTR without touching the proxy
+    EXPECT_EQ(client->GetPublicDirSize(100, publicDirSize), E_SA_IS_NULLPTR);
+}
+
+/**
+ * @tc.number: SUB_STORAGE_Client_GetPublicDirSize_0002
+ * @tc.name: GetPublicDirSize_ConnectFailsNegativeUser
+ * @tc.desc: Test GetPublicDirSize returns the Connect error regardless of userId (forwarded only).
+ * @tc.type: FUNC
+ * @tc.level Level 2
+ * @tc.require: SR20260812026556
+ */
+HWTEST_F(StorageSpaceManagerClientTest, GetPublicDirSize_ConnectFailsNegativeUser, TestSize.Level2)
+{
+    g_mockSamgrReturnNull = true;
+    auto *client = DelayedSingleton<StorageSpaceManagerClient>::GetInstance().get();
+    ASSERT_NE(client, nullptr);
+    int64_t publicDirSize = 0;
+    // The client only forwards; userId is validated on the provider side,
+    // so a Connect failure returns E_SA_IS_NULLPTR regardless of userId
+    EXPECT_EQ(client->GetPublicDirSize(-1, publicDirSize), E_SA_IS_NULLPTR);
+}
+
 } // namespace StorageSpaceManager
 } // namespace OHOS
