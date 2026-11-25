@@ -397,6 +397,21 @@ void StorageRadar::ReportAncoResult(const std::string &funcName, uint32_t userId
     StorageRadar::GetInstance().RecordFunctionResult(param);
 }
 
+void StorageRadar::ReportCaseFoldResult(const std::string &funcName, int ret, const std::string &extraData)
+{
+    RadarParameter param = {
+        .orgPkg = DEFAULT_ORGPKGNAME,
+        .userId = DEFAULT_USERID,
+        .funcName = funcName,
+        .bizScene = BizScene::EXTERNAL_VOLUME_MANAGER,
+        .bizStage = BizStage::BIZ_STAGE_MOUNT,
+        .keyElxLevel = "NA",
+        .errorCode = ret,
+        .extraData = extraData
+    };
+    StorageRadar::GetInstance().RecordFunctionResult(param);
+}
+ 
 bool StorageRadar::RecordFunctionResult(const RadarParameter &parRes, const std::string &eventName)
 {
     int32_t res = E_OK;
