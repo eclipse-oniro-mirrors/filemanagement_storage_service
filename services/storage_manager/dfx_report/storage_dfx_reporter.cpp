@@ -595,11 +595,7 @@ int32_t StorageDfxReporter::UpdateScanState(int64_t totalSize)
 {
     std::lock_guard<std::mutex> lock(scanStateMutex_);
     int64_t currentFreeSize = 0;
-#ifdef SLC_DYNAMIC_DISPLAY
-    int32_t err = StorageTotalStatusService::GetInstance().GetRawFreeSize(currentFreeSize);
-#else
     int32_t err = StorageTotalStatusService::GetInstance().GetFreeSize(currentFreeSize);
-#endif
     if (err != E_OK || currentFreeSize < 0) {
         LOGE("Failed to get free size, err=%{public}d", err);
         return E_ERR;
