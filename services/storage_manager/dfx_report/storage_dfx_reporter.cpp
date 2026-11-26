@@ -220,10 +220,10 @@ int32_t StorageDfxReporter::CollectStorageStats(int32_t userId, std::ostringstre
     int64_t totalSize = 0;
     int64_t dataTotalSize = 0;
     StorageTotalStatusService::GetInstance().GetRawFreeSize(freeSize);
-    storageTotalStatusService::GetInstance().GetSlcPartitionSize(slcPartitionSize);
-    storageTotalStatusService::GetInstance().GetSlcCapacityLoss(slcCapacityLoss);
-    if (storageTotalStatusService::GetInstance().GetTotalSize(totalSize) != E_OK &&
-        storageTotalStatusService::GetInstance().GetDataTotalSize(dataTotalSize) != E_OK &&
+    StorageTotalStatusService::GetInstance().GetSlcPartitionSize(slcPartitionSize);
+    StorageTotalStatusService::GetInstance().GetSlcCapacityLoss(slcCapacityLoss);
+    if (StorageTotalStatusService::GetInstance().GetTotalSize(totalSize) != E_OK &&
+        StorageTotalStatusService::GetInstance().GetDataTotalSize(dataTotalSize) != E_OK &&
         totalSize > dataTotalSize) {
         systemSize = totalSize - dataTotalSize;
     }
