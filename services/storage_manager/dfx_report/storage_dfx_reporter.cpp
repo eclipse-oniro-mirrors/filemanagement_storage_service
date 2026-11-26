@@ -219,6 +219,8 @@ int32_t StorageDfxReporter::CollectStorageStats(int32_t userId, std::ostringstre
     int64_t slcCapacityLoss = 0;
     StorageTotalStatusService::GetInstance().GetSlcSize(slcPartitionSize, slcCapacityLoss);
 #endif
+    StorageTotalStatusService::GetInstance().GetFreeSize(freeSize);
+    StorageTotalStatusService::GetInstance().GetSystemSize(systemSize);
     StorageStatusManager::GetInstance().GetSystemDataSize(systemDataSize);
     StorageStatusManager::GetInstance().GetExtBundleStats(userId, stats);
 
