@@ -58,7 +58,7 @@ private:
     int32_t GetSizeOfPath(const char *path, int32_t type, int64_t &size);
     int32_t GetInodeOfPath(const char *path, int32_t type, int64_t &inodeCnt);
 #ifdef SLC_DYNAMIC_DISPLAY
-    int32_t CalcDynamicSlcFreeSize(int64_t rawTotal, int64_t rawFree, int64_t slcTotalSize);
+    int64_t CalcDynamicSlcFreeSize(int64_t rawTotal, int64_t rawFree, int64_t slcTotalSize);
     void AddSlcToFreeSize(int64_t &freeSize);
     void AdjustSystemSizeBySlc(int64_t &systemSize);
 #endif
