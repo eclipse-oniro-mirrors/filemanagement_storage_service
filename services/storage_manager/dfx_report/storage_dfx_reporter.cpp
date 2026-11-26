@@ -217,19 +217,7 @@ int32_t StorageDfxReporter::CollectStorageStats(int32_t userId, std::ostringstre
 #ifdef SLC_DYNAMIC_DISPLAY
     int64_t slcPartitionSize = 0;
     int64_t slcCapacityLoss = 0;
-    int64_t totalSize = 0;
-    int64_t dataTotalSize = 0;
-    StorageTotalStatusService::GetInstance().GetRawFreeSize(freeSize);
-    StorageTotalStatusService::GetInstance().GetSlcPartitionSize(slcPartitionSize);
-    StorageTotalStatusService::GetInstance().GetSlcCapacityLoss(slcCapacityLoss);
-    if (StorageTotalStatusService::GetInstance().GetTotalSize(totalSize) != E_OK &&
-        StorageTotalStatusService::GetInstance().GetDataTotalSize(dataTotalSize) != E_OK &&
-        totalSize > dataTotalSize) {
-        systemSize = totalSize - dataTotalSize;
-    }
-#else
-    StorageTotalStatusService::GetInstance().GetFreeSize(freeSize);
-    StorageTotalStatusService::GetInstance().GetSystemSize(systemSize);
+    StorageTotalStatusService::GetInstance().GetSlcSize(slcPartitionSize, slcCapacityLoss);
 #endif
     StorageStatusManager::GetInstance().GetSystemDataSize(systemDataSize);
     StorageStatusManager::GetInstance().GetExtBundleStats(userId, stats);
@@ -246,7 +234,6 @@ int32_t StorageDfxReporter::CollectStorageStats(int32_t userId, std::ostringstre
 #ifdef SLC_DYNAMIC_DISPLAY
     extraData << ",slc partition size is:" << ConvertBytesToMB(slcPartitionSize, ACCURACY_NUM) << "MB";
     extraData << ",slc capacity loss is:" << ConvertBytesToMB(slcCapacityLoss, ACCURACY_NUM) << "MB";
-    extraData << ",slc total size is:" << ConvertBytesToMB(slcCapacityLoss + slcPartitionSize, ACCURACY_NUM) << "MB";
 #endif
     extraData << ",sys data size is:" << ConvertBytesToMB(systemDataSize, ACCURACY_NUM) << "MB";
     extraData << ",ext bundle size is:" << ConvertBytesToMB(stats.businessSize_, ACCURACY_NUM) << "MB}" << std::endl;

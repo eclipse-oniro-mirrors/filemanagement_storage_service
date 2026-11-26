@@ -40,6 +40,10 @@ ohos_unittest("storage_total_status_service_test") {
     "private = public",
   ]
 
+  if (pc_2in1_tablet_device_enable) {
+    defines += [ "SLC_DYNAMIC_DISPLAY" ]
+  }
+
   deps = [
     "${storage_daemon_path}:storage_common_utils",
     "${storage_daemon_path}:storage_daemon_ipc",
