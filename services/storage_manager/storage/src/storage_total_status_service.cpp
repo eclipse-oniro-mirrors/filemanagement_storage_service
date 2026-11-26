@@ -176,6 +176,9 @@ int32_t StorageTotalStatusService::GetFreeSize(int64_t &freeSize)
     if (ret != E_OK || metaDataSize <= 0) {
         LOGE("StorageTotalStatusService::GetFreeSize GetMetaDataSize failed, ret=%{public}d, skip freeMetadata, "
             "(/data)freeSize=%{public}lld", ret, static_cast<long long>(freeSize));
+#ifdef SLC_DYNAMIC_DISPLAY
+        AddSlcToFreeSize(freeSize);
+#endif
         return E_OK;
     }
 
@@ -184,6 +187,9 @@ int32_t StorageTotalStatusService::GetFreeSize(int64_t &freeSize)
     if (ret != E_OK || dataTotalSize <= 0) {
         LOGE("StorageTotalStatusService::GetFreeSize GetDataTotalSize failed, ret=%{public}d, skip freeMetadata, "
             "(/data)freeSize=%{public}lld", ret, static_cast<long long>(freeSize));
+#ifdef SLC_DYNAMIC_DISPLAY
+        AddSlcToFreeSize(freeSize);
+#endif
         return E_OK;
     }
 
@@ -207,8 +213,8 @@ int64_t StorageTotalStatusService::CalcDynamicSlcFreeSize(int64_t rawTotal, int6
     constexpr int64_t PERCENT_BASE = 100;
     constexpr int64_t FULL_FREE_USAGE_PERCENT = 30;
     constexpr int64_t ZERO_FREE_USAGE_PERCENT = 80;
-    if (rawTotal <= 0 || rawFree < 0) {
-       return 0;
+    if (rawTotal <= 0 || slcTotalSize <= 0) {
+        return 0;
     }
     int64_t usagePercent = (rawTotal - rawFree) * PERCENT_BASE / rawTotal;
     if (usagePercent <= FULL_FREE_USAGE_PERCENT) {
@@ -236,15 +242,15 @@ int32_t StorageTotalStatusService::GetSlcCapacityLoss(int64_t &slcCapacityLoss)
         return E_OK;
     }
     std::string content;
-    if (!OHOS::LoadStringFromResFile(BOOT_DEVICE_SIZE_PATH, content) || content.empty()) {
+    if (!OHOS::LoadStringFromFile(BOOT_DEVICE_SIZE_PATH, content) || content.empty()) {
         return E_OK;
     }
     int64_t sectorCount = atoll(content.c_str());
-    if (sectorCount <= 0 || sectorCount > INT64_MAX / SECTOR_SIZE) {
+    if (sectorCount <= 0 || sectorCount >= INT64_MAX / SECTOR_SIZE) {
         return E_OK;
     }
     int64_t bootSizeBytes = sectorCount * SECTOR_SIZE;
-    int64_t roundSize = GetroundSize(bootSizeBytes);
+    int64_t roundSize = GetRoundSize(bootSizeBytes);
     int64_t slcCapacityLossBytes = roundSize - bootSizeBytes;
     int64_t rawDataTotalSize = 0;
     if (GetSizeOfPath(PATH_DATA, static_cast<int32_t>(StorageStatType::TOTAL), rawDataTotalSize) != E_OK ||
@@ -252,14 +258,16 @@ int32_t StorageTotalStatusService::GetSlcCapacityLoss(int64_t &slcCapacityLoss)
         return E_OK;
     }
     if (slcCapacityLossBytes < ONE_GB || slcCapacityLossBytes > rawDataTotalSize) {
-        slcCapacityLoss = 0;
+        slcCapacityLossBytes = 0;
     }
     constexpr int64_t BYTES_PER_MB = 1024 * 1024;
     slcCapacityLoss = slcCapacityLossBytes / BYTES_PER_MB * BYTES_PER_MB;
+    cachedLoss.store(slcCapacityLoss, std::memory_order_relaxed);
     LOGI("StorageTotalStatusService::GetSlcCapacityLoss bootSize=%{public}lld, roundSize=%{public}lld, "
         "dataTotalSize=%{public}lld, slcCapacityLoss=%{public}lld",
         static_cast<long long>(bootSizeBytes), static_cast<long long>(roundSize),
         static_cast<long long>(rawDataTotalSize), static_cast<long long>(slcCapacityLoss));
+    return E_OK;
 }
 
 int32_t StorageTotalStatusService::GetSlcPartitionSize(int64_t &slcPartitionSize)
@@ -290,15 +298,15 @@ int32_t StorageTotalStatusService::GetSlcPartitionSize(int64_t &slcPartitionSize
     if (diskName.empty()) {
         return E_ERR;
     }
-    std::string sizePath = std::string("/sys/class/block/") + diskName + "/size";
+    std::string sizePath = "/sys/class/block/" + diskName + "/size";
     std::string content;
-    if (!OHOS::LoadStringFromResFile(sizePath, content) || content.empty()) {
+    if (!OHOS::LoadStringFromFile(sizePath, content) || content.empty()) {
         LOGW("StorageTotalStatusService::GetSlcPartitionSize read %{public}s failed, errno=%{public}d",
             sizePath.c_str(), errno);
         return E_ERR;
     }
     int64_t sectors = atoll(content.c_str());
-    if (sectors <= 0 || sectors > INT64_MAX / SECTOR_SIZE) {
+    if (sectors <= 0 || sectors >= INT64_MAX / SECTOR_SIZE) {
         return E_ERR;
     }
     slcPartitionSize = sectors * SECTOR_SIZE;
@@ -335,7 +343,7 @@ void StorageTotalStatusService::AddSlcToFreeSize(int64_t &freeSize)
     LOGD("SLC_DEBUG StorageTotalStatusService::AddSlcToFreeSize freeSizeIn=%{public}lld, "
         "rawDataTotalSize=%{public}lld, rawFreeSize=%{public}lld, slcCapacityLoss=%{public}lld, "
         "slcPartitionSize=%{public}lld, slcTotalSize=%{public}lld, slcFreeSize=%{public}lld, "
-        "maxFreeSize=%{public}lld, FreesizeOut=%{public}lld",
+        "maxFreeSize=%{public}lld, freeSizeOut=%{public}lld",
         static_cast<long long>(freeSizeIn), static_cast<long long>(rawDataTotalSize),
         static_cast<long long>(rawFreeSize), static_cast<long long>(slcCapacityLoss),
         static_cast<long long>(slcPartitionSize), static_cast<long long>(slcTotalSize),
@@ -354,16 +362,15 @@ void StorageTotalStatusService::AdjustSystemSizeBySlc(int64_t &systemSize)
     GetSlcCapacityLoss(slcCapacityLoss);
     int64_t slcTotalSize = slcCapacityLoss + slcPartitionSize;
     int64_t systemSizeIn = systemSize;
-    systemSize = systemSize > slcTotalSize ? systemSize - slcTotalSize : 0;
+    systemSize = (systemSize > slcTotalSize) ? (systemSize - slcTotalSize) : 0;
     LOGD("SLC_DEBUG StorageTotalStatusService::AdjustSystemSizeBySlc systemSizeIn=%{public}lld, "
-        "slcCapacityLoss=%{public}lld, slcPartitionSize=%{public}lld, slcTotalSize=%{public}lld,"
+        "slcCapacityLoss=%{public}lld, slcPartitionSize=%{public}lld, slcTotalSize=%{public}lld, "
         "systemSizeOut=%{public}lld",
-        static_cast<long long>(systemSize), static_cast<long long>(slcCapacityLoss),
+        static_cast<long long>(systemSizeIn), static_cast<long long>(slcCapacityLoss),
         static_cast<long long>(slcPartitionSize), static_cast<long long>(slcTotalSize),
         static_cast<long long>(systemSize));
 }
-
-#endif  // SLC_DYNAMIC_DISPLAY
+#endif // SLC_DYNAMIC_DISPLAY
 
 int32_t StorageTotalStatusService::GetTotalInodes(int64_t &totalInodes)
 {
