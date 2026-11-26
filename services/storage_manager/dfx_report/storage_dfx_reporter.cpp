@@ -214,8 +214,23 @@ int32_t StorageDfxReporter::CollectStorageStats(int32_t userId, std::ostringstre
     int64_t systemDataSize = 0;
     ExtBundleStats stats;
     stats.businessName_ = OHOS_FUSION_MANAGER;
+#ifdef SLC_DYNAMIC_DISPLAY
+    int64_t slcPartitionSize = 0;
+    int64_t slcCapacityLoss = 0;
+    int64_t totalSize = 0;
+    int64_t dataTotalSize = 0;
+    StorageTotalStatusService::GetInstance().GetRawFreeSize(freeSize);
+    storageTotalStatusService::GetInstance().GetSlcPartitionSize(slcPartitionSize);
+    storageTotalStatusService::GetInstance().GetSlcCapacityLoss(slcCapacityLoss);
+    if (storageTotalStatusService::GetInstance().GetTotalSize(totalSize) != E_OK &&
+        storageTotalStatusService::GetInstance().GetDataTotalSize(dataTotalSize) != E_OK &&
+        totalSize > dataTotalSize) {
+        systemSize = totalSize - dataTotalSize;
+    }
+#else
     StorageTotalStatusService::GetInstance().GetFreeSize(freeSize);
     StorageTotalStatusService::GetInstance().GetSystemSize(systemSize);
+#endif
     StorageStatusManager::GetInstance().GetSystemDataSize(systemDataSize);
     StorageStatusManager::GetInstance().GetExtBundleStats(userId, stats);
 
@@ -228,6 +243,11 @@ int32_t StorageDfxReporter::CollectStorageStats(int32_t userId, std::ostringstre
     extraData << ",total size is:" << std::to_string(ConvertBytesToMB(storageStatsInfo.total_, ACCURACY_NUM)) << "MB";
     extraData << ",sys size is:" << ConvertBytesToMB(systemSize, ACCURACY_NUM) << "MB";
     extraData << ",free size is:" << ConvertBytesToMB(freeSize, ACCURACY_NUM) << "MB";
+#ifdef SLC_DYNAMIC_DISPLAY
+    extraData << ",slc partition size is:" << ConvertBytesToMB(slcPartitionSize, ACCURACY_NUM) << "MB";
+    extraData << ",slc capacity loss is:" << ConvertBytesToMB(slcCapacityLoss, ACCURACY_NUM) << "MB";
+    extraData << ",slc total size is:" << ConvertBytesToMB(slcCapacityLoss + slcPartitionSize, ACCURACY_NUM) << "MB";
+#endif
     extraData << ",sys data size is:" << ConvertBytesToMB(systemDataSize, ACCURACY_NUM) << "MB";
     extraData << ",ext bundle size is:" << ConvertBytesToMB(stats.businessSize_, ACCURACY_NUM) << "MB}" << std::endl;
     return E_OK;
@@ -588,7 +608,11 @@ int32_t StorageDfxReporter::UpdateScanState(int64_t totalSize)
 {
     std::lock_guard<std::mutex> lock(scanStateMutex_);
     int64_t currentFreeSize = 0;
+#ifdef SLC_DYNAMIC_DISPLAY
+    int32_t err = StorageTotalStatusService::GetInstance().GetRawFreeSize(currentFreeSize);
+#else
     int32_t err = StorageTotalStatusService::GetInstance().GetFreeSize(currentFreeSize);
+#endif
     if (err != E_OK || currentFreeSize < 0) {
         LOGE("Failed to get free size, err=%{public}d", err);
         return E_ERR;
