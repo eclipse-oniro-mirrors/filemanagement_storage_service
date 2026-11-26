@@ -279,6 +279,22 @@ HWTEST_F(StorageRadarTest, StorageRadar_ReportKeyRingResult_001, TestSize.Level1
     GTEST_LOG_(INFO) << "StorageRadar_ReportKeyRingResult_001 end";
 }
 
+/**
+ * @tc.name: StorageRadar_ReportCaseFoldResult_001
+ * @tc.desc: Verify the ReportCaseFoldResult.
+ * @tc.type: FUNC
+ * @tc.require: AR000H0A8D
+ */
+HWTEST_F(StorageRadarTest, StorageRadar_ReportCaseFoldResult_001, TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageRadar_ReportCaseFoldResult_001 start";
+    std::string funcName = "SetRootDirCaseFold";
+    int ret = 0;
+    std::string extraData = "/mnt/data/voldata/data1";
+    StorageService::StorageRadar::ReportCaseFoldResult(funcName, ret, extraData);
+    GTEST_LOG_(INFO) << "StorageRadar_ReportCaseFoldResult_001 end";
+}
+
 HWTEST_F(StorageRadarTest, StorageRadar_ReportOsAccountResult_001, TestSize.Level1)
 {
     GTEST_LOG_(INFO) << "StorageRadar_ReportOsAccountResult_001 start";

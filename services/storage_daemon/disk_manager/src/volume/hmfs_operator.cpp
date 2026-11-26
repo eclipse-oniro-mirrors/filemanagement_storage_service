@@ -17,12 +17,17 @@
 #include "storage_service_log.h"
 #include "storage_service_errno.h"
 #include "utils/file_utils.h"
+#include "utils/storage_radar.h"
 
 #include <cerrno>
+#include <climits>
+#include <fcntl.h>
+#include <sys/ioctl.h>
 #include <sys/mount.h>
 #include <vector>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <linux/fs.h>
 
 namespace OHOS {
 namespace StorageDaemon {
@@ -32,6 +37,46 @@ constexpr unsigned long MOUNT_FLAG_MIGRATION_RO = 0x8000;
 constexpr uid_t ROOT_UID = 0;
 constexpr gid_t FILE_MANAGER_GID = 1006;
 constexpr mode_t MOUNT_DIR_MODE = 0775;
+constexpr const char* DATA_VOL_MOUNT_PATH_PREFIX = "/mnt/data/voldata/";
+constexpr uint64_t FDSAN_TAG = 1;
+constexpr uint64_t NEW_TAG = static_cast<uint64_t>(0xD004301) << 32 | FDSAN_TAG;
+ 
+static int32_t SetRootDirCaseFold(const std::string &mountPath)
+{
+    LOGI("HmfsOperator::SetRootDirCaseFold mountPath=%{public}s", GetAnonyString(mountPath).c_str());
+ 
+    char realPath[PATH_MAX] = {0};
+    if (realpath(mountPath.c_str(), realPath) == nullptr) {
+        LOGE("HmfsOperator::SetRootDirCaseFold realpath failed, errno=%{public}d", errno);
+        return E_PARAMS_INVALID;
+    }
+    int fd = open(realPath, O_RDONLY | O_CLOEXEC | O_DIRECTORY);
+    if (fd < 0) {
+        LOGE("HmfsOperator::SetRootDirCaseFold open failed, errno=%{public}d", errno);
+        return E_SYS_KERNEL_ERR;
+    }
+    fdsan_exchange_owner_tag(fd, 0, NEW_TAG);
+    uint32_t flags = 0;
+    if (ioctl(fd, FS_IOC_GETFLAGS, &flags) == -1) {
+        LOGE("HmfsOperator::SetRootDirCaseFold get flags failed, errno=%{public}d", errno);
+        fdsan_close_with_tag(fd, NEW_TAG);
+        return E_SYS_KERNEL_ERR;
+    }
+    if (flags & FS_CASEFOLD_FL) {
+        LOGI("HmfsOperator::SetRootDirCaseFold casefold already set");
+        fdsan_close_with_tag(fd, NEW_TAG);
+        return E_OK;
+    }
+    flags |= FS_CASEFOLD_FL;
+    if (ioctl(fd, FS_IOC_SETFLAGS, &flags) == -1) {
+        LOGE("HmfsOperator::SetRootDirCaseFold set casefold failed, errno=%{public}d", errno);
+        fdsan_close_with_tag(fd, NEW_TAG);
+        return E_SYS_KERNEL_ERR;
+    }
+    fdsan_close_with_tag(fd, NEW_TAG);
+    LOGI("HmfsOperator::SetRootDirCaseFold success");
+    return E_OK;
+}
 
 int32_t HmfsOperator::DoMount(const std::string& devPath,
     const std::string& mountPath,
@@ -72,6 +117,15 @@ int32_t HmfsOperator::DoMount(const std::string& devPath,
             return E_HMFS_MOUNT;
         }
         RestoreconDir(mountPath);
+
+        if (mountPath.rfind(DATA_VOL_MOUNT_PATH_PREFIX, 0) == 0) {
+            int32_t caseFoldRet = SetRootDirCaseFold(mountPath);
+            if (caseFoldRet != E_OK) {
+                LOGE("HmfsOperator::DoMount SetRootDirCaseFold failed, ret=%{public}d", caseFoldRet);
+                StorageService::StorageRadar::ReportCaseFoldResult("SetRootDirCaseFold", caseFoldRet,
+                    GetAnonyString(mountPath));
+            }
+        }
     }
 
     LOGI("HmfsOperator::DoMount success");
@@ -97,6 +151,10 @@ int32_t HmfsOperator::Format(const std::string& devPath,
         "-O", "verity",
         "-O", "sb_checksum",
         "-O", "extra_attr",
+        "-O", "casefold",
+        "-C", "utf8",
+        "-O", "extra_attr,compression",
+        "-O", "extra_attr,dedup",
         devPath
     };
 
