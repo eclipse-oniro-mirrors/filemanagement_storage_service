@@ -80,6 +80,10 @@ ohos_shared_library("storage_manager") {
     defines += [ "AUTO_CLEAN_BUNDLE_CACHE_ENABLE" ]
   }
 
+  if (car_device_enable) {
+    defines += [ "CDC_STORAGE" ]
+  }
+
   ldflags = [
     "-Wl,--gc-sections",
     "-Wl,-O1",
