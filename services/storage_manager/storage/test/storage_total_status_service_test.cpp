@@ -652,12 +652,13 @@ HWTEST_F(StorageTotalStatusServiceTest, Storage_total_status_GetRawFreeSize_0001
 /**
  * @tc.number: SUB_STORAGE_Storage_total_status_service_GetSlcSize_0000
  * @tc.name: Storage_total_status_service_GetSlcSize_0000
- * @tc.desc: Test GetSlcSize is environment-independent. Whether the device has an SLC partition
- *           (E_OK) or not (E_ERR) is a legitimate outcome; assert the corresponding contract.
+ * @tc.desc: Test GetSlcSize is environment-independent. No SLC partition is reported as E_OK with
+ *           zero partition size; a present partition yields a positive size; E_ERR means the SLC
+ *           partition info could not be read and both outputs are reset to 0.
  * @tc.size: MEDIUM
  * @tc.type: FUNC
  * @tc.level Level 1
- * @tc.require: AR20260114725643
+ * @tc.require: DTS2026112708317
  */
 HWTEST_F(StorageTotalStatusServiceTest, Storage_total_status_GetSlcSize_0000, testing::ext::TestSize.Level1)
 {
@@ -666,13 +667,16 @@ HWTEST_F(StorageTotalStatusServiceTest, Storage_total_status_GetSlcSize_0000, te
     int64_t slcPartitionSize = 0;
     int64_t slcCapacityLoss = 0;
     int32_t result = service.GetSlcSize(slcPartitionSize, slcCapacityLoss);
-    if (result == E_OK) {
+    if (result == E_OK && slcPartitionSize == 0) {
+        // No SLC partition: graceful degradation resets capacity loss to 0
+        EXPECT_EQ(slcCapacityLoss, 0);
+    } else if (result == E_OK) {
         // SLC partition present: valid partition size, non-negative and MB-aligned capacity loss
         EXPECT_GT(slcPartitionSize, 0);
         EXPECT_GE(slcCapacityLoss, 0);
         EXPECT_EQ(slcCapacityLoss % (1024 * 1024), 0);
     } else if (result == E_ERR) {
-        // No SLC partition: graceful degradation resets both outputs to 0
+        // SLC partition info unavailable: both outputs are reset to 0
         EXPECT_EQ(slcPartitionSize, 0);
         EXPECT_EQ(slcCapacityLoss, 0);
     } else {
@@ -689,7 +693,7 @@ HWTEST_F(StorageTotalStatusServiceTest, Storage_total_status_GetSlcSize_0000, te
  * @tc.size: MEDIUM
  * @tc.type: FUNC
  * @tc.level Level 1
- * @tc.require: AR20260114725643
+ * @tc.require: DTS2026112708317
  */
 HWTEST_F(StorageTotalStatusServiceTest, Storage_total_status_GetSlcSize_0001, testing::ext::TestSize.Level1)
 {
@@ -700,7 +704,11 @@ HWTEST_F(StorageTotalStatusServiceTest, Storage_total_status_GetSlcSize_0001, te
     int64_t slcPartitionSize = presetPartitionSize;
     int64_t slcCapacityLoss = presetCapacityLoss;
     int32_t result = service.GetSlcSize(slcPartitionSize, slcCapacityLoss);
-    if (result == E_OK) {
+    if (result == E_OK && slcPartitionSize == 0) {
+        // No SLC partition: both outputs must be overwritten with 0, not left at the preset values
+        EXPECT_EQ(slcPartitionSize, 0);
+        EXPECT_EQ(slcCapacityLoss, 0);
+    } else if (result == E_OK) {
         // Outputs must be overwritten by the real SLC figures, not left at the preset values
         EXPECT_NE(slcPartitionSize, presetPartitionSize);
         EXPECT_GT(slcPartitionSize, 0);
@@ -708,6 +716,7 @@ HWTEST_F(StorageTotalStatusServiceTest, Storage_total_status_GetSlcSize_0001, te
         EXPECT_GE(slcCapacityLoss, 0);
         EXPECT_EQ(slcCapacityLoss % (1024 * 1024), 0);
     } else if (result == E_ERR) {
+        // SLC partition info unavailable: both outputs are reset to 0, not left at the preset values
         EXPECT_EQ(slcPartitionSize, 0);
         EXPECT_EQ(slcCapacityLoss, 0);
     } else {
@@ -724,7 +733,7 @@ HWTEST_F(StorageTotalStatusServiceTest, Storage_total_status_GetSlcSize_0001, te
  * @tc.size: MEDIUM
  * @tc.type: FUNC
  * @tc.level Level 1
- * @tc.require: AR20260114725643
+ * @tc.require: DTS2026112708317
  */
 HWTEST_F(StorageTotalStatusServiceTest, Storage_total_status_GetSlcSize_0002, testing::ext::TestSize.Level1)
 {
@@ -737,13 +746,19 @@ HWTEST_F(StorageTotalStatusServiceTest, Storage_total_status_GetSlcSize_0002, te
     int64_t secondCapacityLoss = 0;
     int32_t secondResult = service.GetSlcSize(secondPartitionSize, secondCapacityLoss);
     ASSERT_EQ(firstResult, secondResult) << "GetSlcSize returned inconsistent results across calls";
-    if (firstResult == E_OK) {
+    if (firstResult == E_OK && firstPartitionSize == 0) {
+        // No SLC partition: both calls report zero partition size and zero capacity loss
+        EXPECT_EQ(secondPartitionSize, 0);
+        EXPECT_EQ(firstCapacityLoss, 0);
+        EXPECT_EQ(secondCapacityLoss, 0);
+    } else if (firstResult == E_OK) {
         EXPECT_EQ(firstPartitionSize, secondPartitionSize);
         EXPECT_EQ(firstCapacityLoss, secondCapacityLoss);
         EXPECT_GT(firstPartitionSize, 0);
         EXPECT_GE(firstCapacityLoss, 0);
         EXPECT_EQ(firstCapacityLoss % (1024 * 1024), 0);
     } else if (firstResult == E_ERR) {
+        // SLC partition info unavailable: both calls reset all outputs to 0
         EXPECT_EQ(firstPartitionSize, 0);
         EXPECT_EQ(secondPartitionSize, 0);
         EXPECT_EQ(firstCapacityLoss, 0);
