@@ -647,3 +647,125 @@ HWTEST_F(StorageTotalStatusServiceTest, Storage_total_status_GetRawFreeSize_0001
     EXPECT_GE(freeSize, rawFreeSize);
     GTEST_LOG_(INFO) << "StorageTotalStatusServiceTest-end Storage_total_status_service_GetRawFreeSize_0001";
 }
+
+#ifdef SLC_DYNAMIC_DISPLAY
+/**
+ * @tc.number: SUB_STORAGE_Storage_total_status_service_GetSlcSize_0000
+ * @tc.name: Storage_total_status_service_GetSlcSize_0000
+ * @tc.desc: Test GetSlcSize is environment-independent. No SLC partition is reported as E_OK with
+ *           zero partition size; a present partition yields a positive size; E_ERR means the SLC
+ *           partition info could not be read and both outputs are reset to 0.
+ * @tc.size: MEDIUM
+ * @tc.type: FUNC
+ * @tc.level Level 1
+ * @tc.require: DTS2026112708317
+ */
+HWTEST_F(StorageTotalStatusServiceTest, Storage_total_status_GetSlcSize_0000, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageTotalStatusServiceTest-begin Storage_total_status_service_GetSlcSize_0000";
+    StorageTotalStatusService& service = StorageTotalStatusService::GetInstance();
+    int64_t slcPartitionSize = 0;
+    int64_t slcCapacityLoss = 0;
+    int32_t result = service.GetSlcSize(slcPartitionSize, slcCapacityLoss);
+    if (result == E_OK && slcPartitionSize == 0) {
+        // No SLC partition: graceful degradation resets capacity loss to 0
+        EXPECT_EQ(slcCapacityLoss, 0);
+    } else if (result == E_OK) {
+        // SLC partition present: valid partition size, non-negative and MB-aligned capacity loss
+        EXPECT_GT(slcPartitionSize, 0);
+        EXPECT_GE(slcCapacityLoss, 0);
+        EXPECT_EQ(slcCapacityLoss % (1024 * 1024), 0);
+    } else if (result == E_ERR) {
+        // SLC partition info unavailable: both outputs are reset to 0
+        EXPECT_EQ(slcPartitionSize, 0);
+        EXPECT_EQ(slcCapacityLoss, 0);
+    } else {
+        FAIL() << "GetSlcSize returned unexpected result: " << result;
+    }
+    GTEST_LOG_(INFO) << "StorageTotalStatusServiceTest-end Storage_total_status_service_GetSlcSize_0000";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_Storage_total_status_service_GetSlcSize_0001
+ * @tc.name: Storage_total_status_service_GetSlcSize_0001
+ * @tc.desc: Test GetSlcSize overwrites pre-set non-zero output parameters with the real result,
+ *           branching on the return value so the case is environment-independent.
+ * @tc.size: MEDIUM
+ * @tc.type: FUNC
+ * @tc.level Level 1
+ * @tc.require: DTS2026112708317
+ */
+HWTEST_F(StorageTotalStatusServiceTest, Storage_total_status_GetSlcSize_0001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageTotalStatusServiceTest-begin Storage_total_status_service_GetSlcSize_0001";
+    StorageTotalStatusService& service = StorageTotalStatusService::GetInstance();
+    constexpr int64_t presetPartitionSize = 12345;
+    constexpr int64_t presetCapacityLoss = 67890;
+    int64_t slcPartitionSize = presetPartitionSize;
+    int64_t slcCapacityLoss = presetCapacityLoss;
+    int32_t result = service.GetSlcSize(slcPartitionSize, slcCapacityLoss);
+    if (result == E_OK && slcPartitionSize == 0) {
+        // No SLC partition: both outputs must be overwritten with 0, not left at the preset values
+        EXPECT_EQ(slcPartitionSize, 0);
+        EXPECT_EQ(slcCapacityLoss, 0);
+    } else if (result == E_OK) {
+        // Outputs must be overwritten by the real SLC figures, not left at the preset values
+        EXPECT_NE(slcPartitionSize, presetPartitionSize);
+        EXPECT_GT(slcPartitionSize, 0);
+        EXPECT_NE(slcCapacityLoss, presetCapacityLoss);
+        EXPECT_GE(slcCapacityLoss, 0);
+        EXPECT_EQ(slcCapacityLoss % (1024 * 1024), 0);
+    } else if (result == E_ERR) {
+        // SLC partition info unavailable: both outputs are reset to 0, not left at the preset values
+        EXPECT_EQ(slcPartitionSize, 0);
+        EXPECT_EQ(slcCapacityLoss, 0);
+    } else {
+        FAIL() << "GetSlcSize returned unexpected result: " << result;
+    }
+    GTEST_LOG_(INFO) << "StorageTotalStatusServiceTest-end Storage_total_status_service_GetSlcSize_0001";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_Storage_total_status_service_GetSlcSize_0002
+ * @tc.name: Storage_total_status_service_GetSlcSize_0002
+ * @tc.desc: Test GetSlcSize returns stable result across repeated calls, branching on the
+ *           return value so the case is environment-independent.
+ * @tc.size: MEDIUM
+ * @tc.type: FUNC
+ * @tc.level Level 1
+ * @tc.require: DTS2026112708317
+ */
+HWTEST_F(StorageTotalStatusServiceTest, Storage_total_status_GetSlcSize_0002, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "StorageTotalStatusServiceTest-begin Storage_total_status_service_GetSlcSize_0002";
+    StorageTotalStatusService& service = StorageTotalStatusService::GetInstance();
+    int64_t firstPartitionSize = 0;
+    int64_t firstCapacityLoss = 0;
+    int32_t firstResult = service.GetSlcSize(firstPartitionSize, firstCapacityLoss);
+    int64_t secondPartitionSize = 0;
+    int64_t secondCapacityLoss = 0;
+    int32_t secondResult = service.GetSlcSize(secondPartitionSize, secondCapacityLoss);
+    ASSERT_EQ(firstResult, secondResult) << "GetSlcSize returned inconsistent results across calls";
+    if (firstResult == E_OK && firstPartitionSize == 0) {
+        // No SLC partition: both calls report zero partition size and zero capacity loss
+        EXPECT_EQ(secondPartitionSize, 0);
+        EXPECT_EQ(firstCapacityLoss, 0);
+        EXPECT_EQ(secondCapacityLoss, 0);
+    } else if (firstResult == E_OK) {
+        EXPECT_EQ(firstPartitionSize, secondPartitionSize);
+        EXPECT_EQ(firstCapacityLoss, secondCapacityLoss);
+        EXPECT_GT(firstPartitionSize, 0);
+        EXPECT_GE(firstCapacityLoss, 0);
+        EXPECT_EQ(firstCapacityLoss % (1024 * 1024), 0);
+    } else if (firstResult == E_ERR) {
+        // SLC partition info unavailable: both calls reset all outputs to 0
+        EXPECT_EQ(firstPartitionSize, 0);
+        EXPECT_EQ(secondPartitionSize, 0);
+        EXPECT_EQ(firstCapacityLoss, 0);
+        EXPECT_EQ(secondCapacityLoss, 0);
+    } else {
+        FAIL() << "GetSlcSize returned unexpected result: " << firstResult;
+    }
+    GTEST_LOG_(INFO) << "StorageTotalStatusServiceTest-end Storage_total_status_service_GetSlcSize_0002";
+}
+#endif // SLC_DYNAMIC_DISPLAY

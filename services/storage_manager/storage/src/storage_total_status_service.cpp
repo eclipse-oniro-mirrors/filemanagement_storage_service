@@ -16,6 +16,7 @@
 #include "storage/storage_total_status_service.h"
 
 #include "hitrace_meter.h"
+#include <climits>
 #include <cerrno>
 #include <cstdint>
 #include <cstdlib>
@@ -81,6 +82,9 @@ int32_t StorageTotalStatusService::GetSystemSize(int64_t &systemSize)
         return E_OK;
     }
     systemSize = roundSize - totalSize;
+#ifdef SLC_DYNAMIC_DISPLAY
+    AdjustSystemSizeBySlc(systemSize);
+#endif
     LOGE("StorageTotalStatusService::GetSystemSize success, roundSize=%{public}lld, (/data)totalSize=%{public}lld, "
         "systemSize=%{public}lld",
         static_cast<long long>(roundSize), static_cast<long long>(totalSize), static_cast<long long>(systemSize));
@@ -171,6 +175,9 @@ int32_t StorageTotalStatusService::GetFreeSize(int64_t &freeSize)
     if (ret != E_OK || metaDataSize <= 0) {
         LOGE("StorageTotalStatusService::GetFreeSize GetMetaDataSize failed, ret=%{public}d, skip freeMetadata, "
             "(/data)freeSize=%{public}lld", ret, static_cast<long long>(freeSize));
+#ifdef SLC_DYNAMIC_DISPLAY
+        AddSlcToFreeSize(freeSize);
+#endif
         return E_OK;
     }
 
@@ -179,6 +186,9 @@ int32_t StorageTotalStatusService::GetFreeSize(int64_t &freeSize)
     if (ret != E_OK || dataTotalSize <= 0) {
         LOGE("StorageTotalStatusService::GetFreeSize GetDataTotalSize failed, ret=%{public}d, skip freeMetadata, "
             "(/data)freeSize=%{public}lld", ret, static_cast<long long>(freeSize));
+#ifdef SLC_DYNAMIC_DISPLAY
+        AddSlcToFreeSize(freeSize);
+#endif
         return E_OK;
     }
 
@@ -190,8 +200,209 @@ int32_t StorageTotalStatusService::GetFreeSize(int64_t &freeSize)
     LOGD("StorageTotalStatusService::GetFreeSize success, rawFreeSize=%{public}lld, freeMetaSize=%{public}lld, "
         "freeSize=%{public}lld", static_cast<long long>(freeSize - freeMetadata),
         static_cast<long long>(freeMetadata), static_cast<long long>(freeSize));
+#ifdef SLC_DYNAMIC_DISPLAY
+    AddSlcToFreeSize(freeSize);
+#endif
     return E_OK;
 }
+
+#ifdef SLC_DYNAMIC_DISPLAY
+int64_t StorageTotalStatusService::CalcDynamicSlcFreeSize(int64_t rawTotal, int64_t rawFree, int64_t slcTotalSize)
+{
+    constexpr int64_t PERCENT_BASE = 100;
+    constexpr int64_t FULL_FREE_USAGE_PERCENT = 30;
+    constexpr int64_t ZERO_FREE_USAGE_PERCENT = 80;
+    constexpr int64_t RATIO_RANGE = ZERO_FREE_USAGE_PERCENT - FULL_FREE_USAGE_PERCENT;
+    if (rawTotal <= 0 || slcTotalSize <= 0 || rawFree < 0 || rawFree > rawTotal) {
+        return 0;
+    }
+    int64_t usedSize = rawTotal - rawFree;
+    int64_t usagePercent = 0;
+    if (usedSize > 0) {
+        if (usedSize <= INT64_MAX / PERCENT_BASE) {
+            usagePercent = usedSize * PERCENT_BASE / rawTotal;
+        } else {
+            usagePercent = usedSize / rawTotal * PERCENT_BASE;
+        }
+    }
+    if (usagePercent <= FULL_FREE_USAGE_PERCENT) {
+        return slcTotalSize;
+    }
+    if (usagePercent >= ZERO_FREE_USAGE_PERCENT) {
+        return 0;
+    }
+    int64_t remainRatio = ZERO_FREE_USAGE_PERCENT - usagePercent;
+    if (slcTotalSize > INT64_MAX / remainRatio) {
+        return slcTotalSize / RATIO_RANGE * remainRatio;
+    }
+    return slcTotalSize * remainRatio / RATIO_RANGE;
+}
+
+int32_t StorageTotalStatusService::GetSlcPartitionSize(int64_t &slcPartitionSize)
+{
+    constexpr const char *SLC_PARTITION_PATH = "/dev/block/by-name/hyperhold_slc";
+    char resolvedPath[PATH_MAX] = {0};
+    if (realpath(SLC_PARTITION_PATH, resolvedPath) == nullptr) {
+        LOGD("StorageTotalStatusService::GetSlcPartitionSize no slc partition");
+        slcPartitionSize = 0;
+        return E_OK;
+    }
+    std::string devName(resolvedPath);
+    size_t slashPos = devName.rfind('/');
+    if (slashPos == std::string::npos) {
+        return E_ERR;
+    }
+    devName = devName.substr(slashPos + 1);
+    if (devName.empty()) {
+        return E_ERR;
+    }
+    std::string diskName = devName;
+    while (!diskName.empty() && diskName.back() >= '0' && diskName.back() <= '9') {
+        diskName.pop_back();
+    }
+    if (diskName.empty()) {
+        return E_ERR;
+    }
+    std::string sizePath = "/sys/class/block/" + diskName + "/size";
+    std::string content;
+    if (!OHOS::LoadStringFromFile(sizePath, content) || content.empty()) {
+        LOGW("StorageTotalStatusService::GetSlcPartitionSize read %{public}s failed", sizePath.c_str());
+        return E_ERR;
+    }
+    int64_t sectors = 0;
+    if (!SafeStrToInt64(content, sectors) || sectors <= 0 || sectors >= INT64_MAX / SECTOR_SIZE) {
+        return E_ERR;
+    }
+    int64_t partitionSize = sectors * SECTOR_SIZE;
+    LOGD("StorageTotalStatusService::GetSlcPartitionSize path=%{public}s, slcPartitionSize=%{public}lld",
+        sizePath.c_str(), static_cast<long long>(partitionSize));
+    slcPartitionSize = partitionSize;
+    return E_OK;
+}
+
+int32_t StorageTotalStatusService::GetSlcCapacityLoss(int64_t &slcCapacityLoss)
+{
+    slcCapacityLoss = 0;
+    std::string content;
+    if (!OHOS::LoadStringFromFile(BOOT_DEVICE_SIZE_PATH, content) || content.empty()) {
+        return E_ERR;
+    }
+    int64_t sectorCount = 0;
+    if (!SafeStrToInt64(content, sectorCount) || sectorCount <= 0 || sectorCount >= INT64_MAX / SECTOR_SIZE) {
+        return E_ERR;
+    }
+    int64_t deviceSizeBytes = sectorCount * SECTOR_SIZE;
+    int64_t roundSize = GetRoundSize(deviceSizeBytes);
+    int64_t lossBytes = (roundSize >= deviceSizeBytes) ? (roundSize - deviceSizeBytes) : 0;
+    int64_t rawDataTotalSize = 0;
+    if (GetSizeOfPath(PATH_DATA, static_cast<int32_t>(StorageStatType::TOTAL), rawDataTotalSize) != E_OK ||
+        rawDataTotalSize <= 0) {
+        return E_ERR;
+    }
+    // loss < 1GB is a rounding artifact of GetRoundSize (2^n GB round-up), not real SLC reserve
+    if (lossBytes < ONE_GB || lossBytes > rawDataTotalSize) {
+        lossBytes = 0;
+    }
+    constexpr int64_t BYTES_PER_MB = 1024 * 1024;
+    slcCapacityLoss = lossBytes / BYTES_PER_MB * BYTES_PER_MB;
+    LOGD("StorageTotalStatusService::GetSlcCapacityLoss deviceSize=%{public}lld, "
+        "roundDeviceSize=%{public}lld, rawDataTotalSize=%{public}lld, slcCapacityLoss=%{public}lld",
+        static_cast<long long>(deviceSizeBytes), static_cast<long long>(roundSize),
+        static_cast<long long>(rawDataTotalSize), static_cast<long long>(slcCapacityLoss));
+    return E_OK;
+}
+
+int32_t StorageTotalStatusService::GetSlcSize(int64_t &slcPartitionSize, int64_t &slcCapacityLoss)
+{
+    if (GetSlcPartitionSize(slcPartitionSize) != E_OK) {
+        slcPartitionSize = 0;
+        slcCapacityLoss = 0;
+        return E_ERR;
+    }
+    if (slcPartitionSize == 0) {
+        slcCapacityLoss = 0;
+        return E_OK;
+    }
+    if (GetSlcCapacityLoss(slcCapacityLoss) != E_OK) {
+        slcPartitionSize = 0;
+        slcCapacityLoss = 0;
+        return E_ERR;
+    }
+    return E_OK;
+}
+
+void StorageTotalStatusService::AddSlcToFreeSize(int64_t &freeSize)
+{
+    if (freeSize < 0) {
+        LOGD("StorageTotalStatusService::AddSlcToFreeSize invalid negative freeSize, skip");
+        return;
+    }
+    int64_t slcPartitionSize = 0;
+    int64_t slcCapacityLoss = 0;
+    if (GetSlcSize(slcPartitionSize, slcCapacityLoss) != E_OK || slcPartitionSize <= 0) {
+        LOGD("StorageTotalStatusService::AddSlcToFreeSize no slc partition, skip");
+        return;
+    }
+    if (slcCapacityLoss > INT64_MAX - slcPartitionSize) {
+        LOGD("StorageTotalStatusService::AddSlcToFreeSize slc total size overflow, skip");
+        return;
+    }
+    int64_t slcTotalSize = slcCapacityLoss + slcPartitionSize;
+    int64_t rawDataTotalSize = 0;
+    int64_t rawFreeSize = 0;
+    if (GetDataTotalSize(rawDataTotalSize) != E_OK || GetRawFreeSize(rawFreeSize) != E_OK) {
+        return;
+    }
+    if (rawDataTotalSize <= 0 || slcCapacityLoss > INT64_MAX - rawDataTotalSize) {
+        LOGD("StorageTotalStatusService::AddSlcToFreeSize invalid data total size or overflow, skip");
+        return;
+    }
+    int64_t maxFreeSize = rawDataTotalSize + slcCapacityLoss;
+    int64_t slcFreeSize = CalcDynamicSlcFreeSize(rawDataTotalSize, rawFreeSize, slcTotalSize);
+    if (freeSize > maxFreeSize || slcFreeSize > maxFreeSize - freeSize) {
+        LOGD("StorageTotalStatusService::AddSlcToFreeSize slc free size out of range, skip");
+        return;
+    }
+    int64_t newFreeSize = freeSize + slcFreeSize;
+    LOGD("StorageTotalStatusService::AddSlcToFreeSize freeSizeIn=%{public}lld, "
+        "rawDataTotalSize=%{public}lld, rawFreeSize=%{public}lld, slcCapacityLoss=%{public}lld, "
+        "slcPartitionSize=%{public}lld, slcFreeSize=%{public}lld, freeSizeOut=%{public}lld",
+        static_cast<long long>(freeSize), static_cast<long long>(rawDataTotalSize),
+        static_cast<long long>(rawFreeSize), static_cast<long long>(slcCapacityLoss),
+        static_cast<long long>(slcPartitionSize), static_cast<long long>(slcFreeSize),
+        static_cast<long long>(newFreeSize));
+    freeSize = newFreeSize;
+}
+
+void StorageTotalStatusService::AdjustSystemSizeBySlc(int64_t &systemSize)
+{
+    int64_t slcPartitionSize = 0;
+    int64_t slcCapacityLoss = 0;
+    if (GetSlcSize(slcPartitionSize, slcCapacityLoss) != E_OK || slcPartitionSize <= 0) {
+        LOGD("StorageTotalStatusService::AdjustSystemSizeBySlc no slc partition, skip");
+        return;
+    }
+    if (slcCapacityLoss > INT64_MAX - slcPartitionSize) {
+        LOGD("StorageTotalStatusService::AdjustSystemSizeBySlc slc total size overflow, skip");
+        return;
+    }
+    int64_t slcTotalSize = slcCapacityLoss + slcPartitionSize;
+    if (systemSize <= slcTotalSize) {
+        LOGD("StorageTotalStatusService::AdjustSystemSizeBySlc systemSize=%{public}lld "
+            "not greater than slcTotalSize=%{public}lld, keep original",
+            static_cast<long long>(systemSize), static_cast<long long>(slcTotalSize));
+        return;
+    }
+    int64_t newSystemSize = systemSize - slcTotalSize;
+    LOGD("StorageTotalStatusService::AdjustSystemSizeBySlc systemSizeIn=%{public}lld, "
+        "slcCapacityLoss=%{public}lld, slcPartitionSize=%{public}lld, slcTotalSize=%{public}lld, "
+        "systemSizeOut=%{public}lld",
+        static_cast<long long>(systemSize), static_cast<long long>(slcCapacityLoss),
+        static_cast<long long>(slcPartitionSize), static_cast<long long>(slcTotalSize),
+        static_cast<long long>(newSystemSize));
+    systemSize = newSystemSize;
+}
+#endif // SLC_DYNAMIC_DISPLAY
 
 int32_t StorageTotalStatusService::GetTotalInodes(int64_t &totalInodes)
 {

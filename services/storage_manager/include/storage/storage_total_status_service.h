@@ -47,12 +47,22 @@ public:
     int32_t GetFreeInodes(int64_t &freeInodes);
     int32_t GetUsedInodes(int64_t &usedInodes);
     int32_t GetCurrentBundleInodes(int64_t &curInodes);
+#ifdef SLC_DYNAMIC_DISPLAY
+    int32_t GetSlcSize(int64_t &slcPartitionSize, int64_t &slcCapacityLoss);
+#endif
 
 private:
     StorageTotalStatusService();
     ~StorageTotalStatusService();
     int32_t GetSizeOfPath(const char *path, int32_t type, int64_t &size);
     int32_t GetInodeOfPath(const char *path, int32_t type, int64_t &inodeCnt);
+#ifdef SLC_DYNAMIC_DISPLAY
+    int64_t CalcDynamicSlcFreeSize(int64_t rawTotal, int64_t rawFree, int64_t slcTotalSize);
+    int32_t GetSlcPartitionSize(int64_t &slcPartitionSize);
+    int32_t GetSlcCapacityLoss(int64_t &slcCapacityLoss);
+    void AddSlcToFreeSize(int64_t &freeSize);
+    void AdjustSystemSizeBySlc(int64_t &systemSize);
+#endif
     const int DEFAULT_APP_INDEX = 0;
     const std::vector<std::string> mountDir = {"/debug_ramdisk", "/patch_hw",
         "/metadata", "/", "/cust", "/hw_product", "/odm", "/preas", "/vendor",

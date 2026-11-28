@@ -65,7 +65,10 @@ ohos_shared_library("storage_manager") {
   }
 
   if (pc_2in1_tablet_device_enable) {
-    defines += [ "PC_USER_MANAGER" ]
+    defines += [
+      "PC_USER_MANAGER",
+      "SLC_DYNAMIC_DISPLAY",
+    ]
   }
 
   if (storage_service_media_fuse) {
