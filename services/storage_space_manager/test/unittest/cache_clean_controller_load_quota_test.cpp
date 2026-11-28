@@ -30,6 +30,9 @@
 
 namespace OHOS {
 namespace StorageSpaceManager {
+using namespace testing;
+using namespace testing::ext;
+
 namespace {
 constexpr int32_t TOP_COUNT = 20;
 constexpr int32_t QUOTA_SIZE = 100;
