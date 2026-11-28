@@ -564,5 +564,646 @@ HWTEST_F(StorageUtilsTest, SUB_STORAGE_IsPcMode_Stable_0000, testing::ext::TestS
 
     GTEST_LOG_(INFO) << "SUB_STORAGE_IsPcMode_Stable_0000 end";
 }
+
+/**
+ * @tc.number: SUB_STORAGE_GetAnonyString_ShortLen_001
+ * @tc.name: GetAnonyString_ShortLen_001
+ * @tc.desc: Test GetAnonyString with length less than minimum (3) returns "******".
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, GetAnonyString_ShortLen_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetAnonyString_ShortLen_001 start";
+
+    EXPECT_EQ(GetAnonyString(""), "******");
+    EXPECT_EQ(GetAnonyString("a"), "******");
+    EXPECT_EQ(GetAnonyString("ab"), "******");
+
+    GTEST_LOG_(INFO) << "GetAnonyString_ShortLen_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_GetAnonyString_MinLen_001
+ * @tc.name: GetAnonyString_MinLen_001
+ * @tc.desc: Test GetAnonyString with exact minimum length (3).
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, GetAnonyString_MinLen_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetAnonyString_MinLen_001 start";
+
+    EXPECT_EQ(GetAnonyString("abc"), "a******c");
+
+    GTEST_LOG_(INFO) << "GetAnonyString_MinLen_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_GetAnonyString_ShortId_001
+ * @tc.name: GetAnonyString_ShortId_001
+ * @tc.desc: Test GetAnonyString with length within short id range (3-20).
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, GetAnonyString_ShortId_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetAnonyString_ShortId_001 start";
+
+    EXPECT_EQ(GetAnonyString("1234567890"), "1******0");
+
+    GTEST_LOG_(INFO) << "GetAnonyString_ShortId_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_GetAnonyString_ShortIdBoundary_001
+ * @tc.name: GetAnonyString_ShortIdBoundary_001
+ * @tc.desc: Test GetAnonyString with exact short id boundary length (20).
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, GetAnonyString_ShortIdBoundary_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetAnonyString_ShortIdBoundary_001 start";
+
+    std::string value(20, 'x');
+    std::string expected = std::string("x") + "******" + "x";
+    EXPECT_EQ(GetAnonyString(value), expected);
+
+    GTEST_LOG_(INFO) << "GetAnonyString_ShortIdBoundary_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_GetAnonyString_LongId_001
+ * @tc.name: GetAnonyString_LongId_001
+ * @tc.desc: Test GetAnonyString with length greater than short id length (20) uses first4+******+last4.
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, GetAnonyString_LongId_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetAnonyString_LongId_001 start";
+
+    std::string value = "123456789012345678901234567890"; // len=30
+    std::string expected = "1234******7890";
+    EXPECT_EQ(GetAnonyString(value), expected);
+
+    GTEST_LOG_(INFO) << "GetAnonyString_LongId_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_IsPathStartWithDlp_Empty_001
+ * @tc.name: IsPathStartWithDlp_Empty_001
+ * @tc.desc: Test IsPathStartWithDlp with empty path returns false.
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, IsPathStartWithDlp_Empty_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "IsPathStartWithDlp_Empty_001 start";
+
+    EXPECT_FALSE(IsPathStartWithDlp(""));
+
+    GTEST_LOG_(INFO) << "IsPathStartWithDlp_Empty_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_IsPathStartWithDlp_ValidPrefix_001
+ * @tc.name: IsPathStartWithDlp_ValidPrefix_001
+ * @tc.desc: Test IsPathStartWithDlp with valid dlp prefix returns true.
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, IsPathStartWithDlp_ValidPrefix_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "IsPathStartWithDlp_ValidPrefix_001 start";
+
+    EXPECT_TRUE(IsPathStartWithDlp("/data/service/el1/public/dlp_credential_service/file"));
+
+    GTEST_LOG_(INFO) << "IsPathStartWithDlp_ValidPrefix_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_IsPathStartWithDlp_ExactPrefix_001
+ * @tc.name: IsPathStartWithDlp_ExactPrefix_001
+ * @tc.desc: Test IsPathStartWithDlp with exact dlp prefix path returns true.
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, IsPathStartWithDlp_ExactPrefix_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "IsPathStartWithDlp_ExactPrefix_001 start";
+
+    EXPECT_TRUE(IsPathStartWithDlp("/data/service/el1/public/dlp_credential_service/"));
+
+    GTEST_LOG_(INFO) << "IsPathStartWithDlp_ExactPrefix_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_IsPathStartWithDlp_Mismatch_001
+ * @tc.name: IsPathStartWithDlp_Mismatch_001
+ * @tc.desc: Test IsPathStartWithDlp with mismatched prefix returns false.
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, IsPathStartWithDlp_Mismatch_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "IsPathStartWithDlp_Mismatch_001 start";
+
+    EXPECT_FALSE(IsPathStartWithDlp("/data/local/evil"));
+
+    GTEST_LOG_(INFO) << "IsPathStartWithDlp_Mismatch_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_IsPathStartWithDlp_PartialMismatch_001
+ * @tc.name: IsPathStartWithDlp_PartialMismatch_001
+ * @tc.desc: Test IsPathStartWithDlp with partially matching prefix returns false.
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, IsPathStartWithDlp_PartialMismatch_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "IsPathStartWithDlp_PartialMismatch_001 start";
+
+    EXPECT_FALSE(IsPathStartWithDlp("/data/service/el1/public/other_service/file"));
+
+    GTEST_LOG_(INFO) << "IsPathStartWithDlp_PartialMismatch_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_CheckPkgNameRange_Empty_001
+ * @tc.name: CheckPkgNameRange_Empty_001
+ * @tc.desc: Test CheckPkgNameRange with empty pkgName returns false.
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, CheckPkgNameRange_Empty_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "CheckPkgNameRange_Empty_001 start";
+
+    EXPECT_FALSE(CheckPkgNameRange(""));
+
+    GTEST_LOG_(INFO) << "CheckPkgNameRange_Empty_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_CheckPkgNameRange_Valid_001
+ * @tc.name: CheckPkgNameRange_Valid_001
+ * @tc.desc: Test CheckPkgNameRange with valid pkgName returns true.
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, CheckPkgNameRange_Valid_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "CheckPkgNameRange_Valid_001 start";
+
+    EXPECT_TRUE(CheckPkgNameRange("com.example.app"));
+
+    GTEST_LOG_(INFO) << "CheckPkgNameRange_Valid_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_CheckPkgNameRange_Boundary_001
+ * @tc.name: CheckPkgNameRange_Boundary_001
+ * @tc.desc: Test CheckPkgNameRange with exact max length (128) returns true.
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, CheckPkgNameRange_Boundary_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "CheckPkgNameRange_Boundary_001 start";
+
+    std::string pkgName(128, 'a');
+    EXPECT_TRUE(CheckPkgNameRange(pkgName));
+
+    GTEST_LOG_(INFO) << "CheckPkgNameRange_Boundary_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_CheckPkgNameRange_Exceed_001
+ * @tc.name: CheckPkgNameRange_Exceed_001
+ * @tc.desc: Test CheckPkgNameRange with length exceeding max (129) returns false.
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, CheckPkgNameRange_Exceed_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "CheckPkgNameRange_Exceed_001 start";
+
+    std::string pkgName(129, 'a');
+    EXPECT_FALSE(CheckPkgNameRange(pkgName));
+
+    GTEST_LOG_(INFO) << "CheckPkgNameRange_Exceed_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_CheckAppIndexRange_Negative_001
+ * @tc.name: CheckAppIndexRange_Negative_001
+ * @tc.desc: Test CheckAppIndexRange with negative value returns false.
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, CheckAppIndexRange_Negative_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "CheckAppIndexRange_Negative_001 start";
+
+    EXPECT_FALSE(CheckAppIndexRange(-1));
+
+    GTEST_LOG_(INFO) << "CheckAppIndexRange_Negative_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_CheckAppIndexRange_Zero_001
+ * @tc.name: CheckAppIndexRange_Zero_001
+ * @tc.desc: Test CheckAppIndexRange with zero returns true.
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, CheckAppIndexRange_Zero_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "CheckAppIndexRange_Zero_001 start";
+
+    EXPECT_TRUE(CheckAppIndexRange(0));
+
+    GTEST_LOG_(INFO) << "CheckAppIndexRange_Zero_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_CheckAppIndexRange_Positive_001
+ * @tc.name: CheckAppIndexRange_Positive_001
+ * @tc.desc: Test CheckAppIndexRange with positive value returns true.
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, CheckAppIndexRange_Positive_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "CheckAppIndexRange_Positive_001 start";
+
+    EXPECT_TRUE(CheckAppIndexRange(5));
+
+    GTEST_LOG_(INFO) << "CheckAppIndexRange_Positive_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_CheckLevelRange_ValidLow_001
+ * @tc.name: CheckLevelRange_ValidLow_001
+ * @tc.desc: Test CheckLevelRange with EL1_SYS_KEY (0) returns true.
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, CheckLevelRange_ValidLow_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "CheckLevelRange_ValidLow_001 start";
+
+    EXPECT_TRUE(CheckLevelRange(0));
+
+    GTEST_LOG_(INFO) << "CheckLevelRange_ValidLow_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_CheckLevelRange_ValidMid_001
+ * @tc.name: CheckLevelRange_ValidMid_001
+ * @tc.desc: Test CheckLevelRange with mid range value (3) returns true.
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, CheckLevelRange_ValidMid_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "CheckLevelRange_ValidMid_001 start";
+
+    EXPECT_TRUE(CheckLevelRange(3));
+
+    GTEST_LOG_(INFO) << "CheckLevelRange_ValidMid_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_CheckLevelRange_ValidHigh_001
+ * @tc.name: CheckLevelRange_ValidHigh_001
+ * @tc.desc: Test CheckLevelRange with EL5_USER_KEY (5) returns true.
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, CheckLevelRange_ValidHigh_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "CheckLevelRange_ValidHigh_001 start";
+
+    EXPECT_TRUE(CheckLevelRange(5));
+
+    GTEST_LOG_(INFO) << "CheckLevelRange_ValidHigh_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_CheckLevelRange_AboveRange_001
+ * @tc.name: CheckLevelRange_AboveRange_001
+ * @tc.desc: Test CheckLevelRange with value above EL5_USER_KEY (6) returns false.
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, CheckLevelRange_AboveRange_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "CheckLevelRange_AboveRange_001 start";
+
+    EXPECT_FALSE(CheckLevelRange(6));
+
+    GTEST_LOG_(INFO) << "CheckLevelRange_AboveRange_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_CheckInputListRange_Empty_001
+ * @tc.name: CheckInputListRange_Empty_001
+ * @tc.desc: Test CheckInputListRange with empty list returns false.
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, CheckInputListRange_Empty_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "CheckInputListRange_Empty_001 start";
+
+    std::vector<std::string> emptyList;
+    EXPECT_FALSE(CheckInputListRange(emptyList));
+
+    GTEST_LOG_(INFO) << "CheckInputListRange_Empty_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_CheckInputListRange_Valid_001
+ * @tc.name: CheckInputListRange_Valid_001
+ * @tc.desc: Test CheckInputListRange with valid list returns true.
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, CheckInputListRange_Valid_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "CheckInputListRange_Valid_001 start";
+
+    std::vector<std::string> list = {"a", "b"};
+    EXPECT_TRUE(CheckInputListRange(list));
+
+    GTEST_LOG_(INFO) << "CheckInputListRange_Valid_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_CheckInputListRange_Boundary_001
+ * @tc.name: CheckInputListRange_Boundary_001
+ * @tc.desc: Test CheckInputListRange with exact max size (50000) returns true.
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, CheckInputListRange_Boundary_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "CheckInputListRange_Boundary_001 start";
+
+    std::vector<std::string> list(50000, "a");
+    EXPECT_TRUE(CheckInputListRange(list));
+
+    GTEST_LOG_(INFO) << "CheckInputListRange_Boundary_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_CheckInputListRange_Exceed_001
+ * @tc.name: CheckInputListRange_Exceed_001
+ * @tc.desc: Test CheckInputListRange with size exceeding max (50001) returns false.
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, CheckInputListRange_Exceed_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "CheckInputListRange_Exceed_001 start";
+
+    std::vector<std::string> list(50001, "a");
+    EXPECT_FALSE(CheckInputListRange(list));
+
+    GTEST_LOG_(INFO) << "CheckInputListRange_Exceed_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_CheckIdRange_Empty_001
+ * @tc.name: CheckIdRange_Empty_001
+ * @tc.desc: Test CheckIdRange with empty id returns false.
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, CheckIdRange_Empty_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "CheckIdRange_Empty_001 start";
+
+    EXPECT_FALSE(CheckIdRange(""));
+
+    GTEST_LOG_(INFO) << "CheckIdRange_Empty_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_CheckIdRange_InvalidUnderscore_001
+ * @tc.name: CheckIdRange_InvalidUnderscore_001
+ * @tc.desc: Test CheckIdRange with underscore (not in [0-9a-zA-Z]) returns false.
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, CheckIdRange_InvalidUnderscore_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "CheckIdRange_InvalidUnderscore_001 start";
+
+    EXPECT_FALSE(CheckIdRange("abc_def"));
+
+    GTEST_LOG_(INFO) << "CheckIdRange_InvalidUnderscore_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_CheckIdRange_InvalidSpace_001
+ * @tc.name: CheckIdRange_InvalidSpace_001
+ * @tc.desc: Test CheckIdRange with space returns false.
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, CheckIdRange_InvalidSpace_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "CheckIdRange_InvalidSpace_001 start";
+
+    EXPECT_FALSE(CheckIdRange("abc def"));
+
+    GTEST_LOG_(INFO) << "CheckIdRange_InvalidSpace_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_CheckIdRange_InvalidSlash_001
+ * @tc.name: CheckIdRange_InvalidSlash_001
+ * @tc.desc: Test CheckIdRange with slash returns false.
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, CheckIdRange_InvalidSlash_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "CheckIdRange_InvalidSlash_001 start";
+
+    EXPECT_FALSE(CheckIdRange("abc/def"));
+
+    GTEST_LOG_(INFO) << "CheckIdRange_InvalidSlash_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_CheckIdRange_Valid_001
+ * @tc.name: CheckIdRange_Valid_001
+ * @tc.desc: Test CheckIdRange with valid alphanumeric id returns true.
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, CheckIdRange_Valid_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "CheckIdRange_Valid_001 start";
+
+    EXPECT_TRUE(CheckIdRange("abc123"));
+
+    GTEST_LOG_(INFO) << "CheckIdRange_Valid_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_CheckIdRange_ValidSingle_001
+ * @tc.name: CheckIdRange_ValidSingle_001
+ * @tc.desc: Test CheckIdRange with single character (min length) returns true.
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, CheckIdRange_ValidSingle_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "CheckIdRange_ValidSingle_001 start";
+
+    EXPECT_TRUE(CheckIdRange("a"));
+
+    GTEST_LOG_(INFO) << "CheckIdRange_ValidSingle_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_CheckIdRange_Boundary65_001
+ * @tc.name: CheckIdRange_Boundary65_001
+ * @tc.desc: Test CheckIdRange with exact max length (65) returns true.
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, CheckIdRange_Boundary65_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "CheckIdRange_Boundary65_001 start";
+
+    std::string id(65, 'a');
+    EXPECT_TRUE(CheckIdRange(id));
+
+    GTEST_LOG_(INFO) << "CheckIdRange_Boundary65_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_CheckIdRange_Exceed65_001
+ * @tc.name: CheckIdRange_Exceed65_001
+ * @tc.desc: Test CheckIdRange with length exceeding max (66) returns false.
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, CheckIdRange_Exceed65_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "CheckIdRange_Exceed65_001 start";
+
+    std::string id(66, 'a');
+    EXPECT_FALSE(CheckIdRange(id));
+
+    GTEST_LOG_(INFO) << "CheckIdRange_Exceed65_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_IsFilePathInvalid_DotDotNotPrecededBySlash_001
+ * @tc.name: IsFilePathInvalid_DotDotNotPrecededBySlash_001
+ * @tc.desc: Test "../" not preceded by '/' does not trigger invalid (loop continues, returns false).
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, IsFilePathInvalid_DotDotNotPrecededBySlash_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "IsFilePathInvalid_DotDotNotPrecededBySlash_001 start";
+
+    EXPECT_FALSE(IsFilePathInvalid("abc../def"));
+
+    GTEST_LOG_(INFO) << "IsFilePathInvalid_DotDotNotPrecededBySlash_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_IsFilePathInvalid_DotDotSlashAtPos0_001
+ * @tc.name: IsFilePathInvalid_DotDotSlashAtPos0_001
+ * @tc.desc: Test "../" at position 0 triggers invalid (pos == 0 branch, returns true).
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, IsFilePathInvalid_DotDotSlashAtPos0_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "IsFilePathInvalid_DotDotSlashAtPos0_001 start";
+
+    EXPECT_TRUE(IsFilePathInvalid("../etc"));
+
+    GTEST_LOG_(INFO) << "IsFilePathInvalid_DotDotSlashAtPos0_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_IsFilePathInvalid_SlashDotDotNotAtTail_001
+ * @tc.name: IsFilePathInvalid_SlashDotDotNotAtTail_001
+ * @tc.desc: Test "/.." found in middle (not at tail) returns false.
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, IsFilePathInvalid_SlashDotDotNotAtTail_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "IsFilePathInvalid_SlashDotDotNotAtTail_001 start";
+
+    EXPECT_FALSE(IsFilePathInvalid("/mnt/data/..sub"));
+
+    GTEST_LOG_(INFO) << "IsFilePathInvalid_SlashDotDotNotAtTail_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_IsUserUnlocked_InvalidUser_001
+ * @tc.name: IsUserUnlocked_InvalidUser_001
+ * @tc.desc: Test IsUserUnlocked with invalid userId returns false (error branch).
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, IsUserUnlocked_InvalidUser_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "IsUserUnlocked_InvalidUser_001 start";
+
+    EXPECT_FALSE(IsUserUnlocked(-1));
+
+    GTEST_LOG_(INFO) << "IsUserUnlocked_InvalidUser_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_GetForegroundUserIDFromOs_001
+ * @tc.name: GetForegroundUserIDFromOs_001
+ * @tc.desc: Test GetForegroundUserIDFromOs returns INVALID_USER_ID on error or valid id on success.
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, GetForegroundUserIDFromOs_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetForegroundUserIDFromOs_001 start";
+
+    int32_t result = GetForegroundUserIDFromOs();
+    EXPECT_TRUE(result == INVALID_USER_ID || result >= 0);
+
+    GTEST_LOG_(INFO) << "GetForegroundUserIDFromOs_001 end";
+}
+
+/**
+ * @tc.number: SUB_STORAGE_GetCurrentUserId_001
+ * @tc.name: GetCurrentUserId_001
+ * @tc.desc: Test GetCurrentUserId returns appUid/200000 without crash.
+ * @tc.type: FUNC
+ * @tc.require: SR000H0372
+ */
+HWTEST_F(StorageUtilsTest, GetCurrentUserId_001, testing::ext::TestSize.Level1)
+{
+    GTEST_LOG_(INFO) << "GetCurrentUserId_001 start";
+
+    int result = GetCurrentUserId();
+    GTEST_LOG_(INFO) << "GetCurrentUserId returned: " << result;
+    EXPECT_GE(result, 0);
+
+    GTEST_LOG_(INFO) << "GetCurrentUserId_001 end";
+}
 } // namespace StorageManager
 } // namespace OHOS
